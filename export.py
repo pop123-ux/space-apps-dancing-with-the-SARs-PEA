@@ -59,6 +59,12 @@ SCENARIOS = {           # summary.json fit name → label on the page
     "weather_model": "Weather-model troposphere (ECMWF IFS, acquisition time)",
 }
 WINDOW = "jul_oct"
+# Sentinel-1 windows. jul_oct is the default; jan_oct (049 dates, 1 Jan to 5 Oct 2026) covers NISAR's 18 Jan to 23 Jun
+# gap, so the page offers it there (docs/ui.md, "Sentinel-1 fills NISAR's gap", 15 Nov 2026).
+S1_WINDOWS = {
+    "jul_oct": dict(label="July to October 2026", analysis="analysis", assets="assets", prefix="s1"),
+    "jan_oct": dict(label="January to October 2026", analysis="analysis_jan_oct", assets="assets_jan_oct", prefix="s1/jan_oct"),
+}
 # What the page says when a zone has no series in a window (docs/ui.md, "Zone review and historical context"):
 # July to October: the zone has no connected pixels on that track; January to October: no zone pixel stays connected
 # across all 49 dates, so the extended fit gives no continuous series.
@@ -91,17 +97,18 @@ def iso(d: str) -> str:
     return f"{d[:4]}-{d[4:6]}-{d[6:]}"
 
 
-def load_summary() -> dict:
-    return json.loads((S1_DIR / "analysis" / "summary.json").read_text(encoding="utf-8"))
+def load_summary(window: str = WINDOW) -> dict:
+    return json.loads((S1_DIR / S1_WINDOWS[window]["analysis"] / "summary.json").read_text(encoding="utf-8"))
 
 
-def load_grid(track: str):
+def load_grid(track: str, window: str = WINDOW):
     """Join the committed chunks of <track>.npz in memory and check them against SHA256SUMS."""
     import numpy as np
-    sums = {name: digest for digest, name in (l.split() for l in (S1_DIR / "assets" / "SHA256SUMS").read_text().splitlines())}
-    payload = b"".join(p.read_bytes() for p in sorted((S1_DIR / "assets").glob(f"{track}.npz.part*")))
-    if hashlib.sha256(payload).hexdigest() != sums[f"analysis/{track}.npz"]:
-        raise SystemExit(f"sentinel1/assets/{track}.npz.part*: checksum mismatch, the grids do not match SHA256SUMS")
+    w = S1_WINDOWS[window]
+    sums = {name: digest for digest, name in (l.split() for l in (S1_DIR / w["assets"] / "SHA256SUMS").read_text().splitlines())}
+    payload = b"".join(p.read_bytes() for p in sorted((S1_DIR / w["assets"]).glob(f"{track}.npz.part*")))
+    if hashlib.sha256(payload).hexdigest() != sums[f"{w['analysis']}/{track}.npz"]:
+        raise SystemExit(f"sentinel1/{w['assets']}/{track}.npz.part*: checksum mismatch, the grids do not match SHA256SUMS")
     return np.load(io.BytesIO(payload), allow_pickle=False)
 
 
@@ -183,12 +190,13 @@ def overlay_png(arr, path: pathlib.Path, vmax: float) -> None:
 
 
 # ------------------------------------------------------------------------------------------------ Sentinel-1
-def export_s1(out: pathlib.Path, summary: dict):
+def export_s1(out: pathlib.Path, summary: dict, window: str = WINDOW):
     """→ (sensor block for the manifest, display bounds)."""
     meta = C.SENSORS["s1"]
+    pre = S1_WINDOWS[window]["prefix"]
     frames, layers, bounds, points = {}, [], None, {}
     for track in meta["tracks"]:
-        z = load_grid(track)
+        z = load_grid(track, window)
         dates = [str(d) for d in z["dates"]]
         if dates != summary[track]["dates"]:
             raise SystemExit(f"{track}: grid dates differ from sentinel1/analysis/summary.json; ask 03 to repack the grids")
@@ -196,21 +204,21 @@ def export_s1(out: pathlib.Path, summary: dict):
         bounds = bounds or grid.bounds
         pngs = []
         for k, d in enumerate(dates):
-            png = f"s1/frames/{track}/{iso(d)}.png"
+            png = f"{pre}/frames/{track}/{iso(d)}.png"
             overlay_png(grid.sample(z["displacement_mm"][k]), out / png, CHANGE_VMAX)
             pngs.append(png)
         frames[track] = dict(dates=[iso(d) for d in dates], pngs=pngs, vmin=-CHANGE_VMAX, vmax=CHANGE_VMAX,
                              units="mm since first date", direction=meta["tracks"][track], gaps=[],
-                             window=WINDOW, saturates=True)
-        png = f"s1/los_{track}.png"
+                             window=window, saturates=True)
+        png = f"{pre}/los_{track}.png"
         overlay_png(grid.sample(z["rate_mm_yr"]), out / png, RATE_VMAX)
-        pts_file = f"s1/points_{track}.json"
+        pts_file = f"{pre}/points_{track}.json"
         n_pts = write_points(z, out / pts_file, track, dates)
         points[track] = pts_file
         layers.append(dict(id=f"los_{track}", label=f"Sentinel-1 {track}: line-of-sight rate, annualized short-window slope",
                            png=png, units="mm/yr", vmin=-RATE_VMAX, vmax=RATE_VMAX, track=track, experimental=False,
-                           window=WINDOW, scenario="baseline", saturates=True))
-        print(f"  s1 {track}: {len(dates)} frames + rate map + {n_pts} points, {grid.shape[1]}×{grid.shape[0]} px, "
+                           window=window, scenario="baseline", saturates=True))
+        print(f"  s1 {window} {track}: {len(dates)} frames + rate map + {n_pts} points, {grid.shape[1]}×{grid.shape[0]} px, "
               f"{dates[0]}..{dates[-1]}, {summary[track]['pair_count']} pairs")
     block = {k: meta[k] for k in ("label", "agency", "band", "wavelength_cm", "status", "reference", "credit")}
     block.update(layers=layers, frames=frames, points=points, look=meta["look"], product=meta["product"])
@@ -454,6 +462,17 @@ def run(site_key: str) -> None:
                             frames=s1["frames"], layers=s1["layers"], points=s1["points"], variants=variants,
                             maps_scenario="baseline",
                             quality={t: summary[t]["fits"]["quality"] for t in s1["frames"]})}
+    sj = load_summary("jan_oct")
+    s1j, _ = export_s1(out, sj, "jan_oct")
+    _, variants_j = export_series(sj, site)
+    windows["jan_oct"] = dict(label=S1_WINDOWS["jan_oct"]["label"], empty_zone_label=EMPTY_ZONE_LABEL["jan_oct"],
+                              dates={t: [f["dates"][0], f["dates"][-1]] for t, f in s1j["frames"].items()},
+                              frames=s1j["frames"], layers=s1j["layers"], points=s1j["points"], variants=variants_j,
+                              maps_scenario="baseline", quality={t: sj[t]["fits"].get("quality") for t in s1j["frames"]},
+                              fills_gap=dict(sensor="nisar", gap=["2026-01-18", "2026-06-23"],
+                                             note="Sentinel-1 kept imaging the town while NISAR had no acquisitions. Its "
+                                                  "values are its own line of sight and reference, not NISAR's."),
+                              provenance="sentinel1/analysis_jan_oct/README.md (job IDs only; not reproducible from the repository alone)")
     C.save_json(out / "sensitivity.json", dict(windows=windows, scenarios=SCENARIOS, default_window=WINDOW,
                                                 note="Selectors choose stored results; maps exist for the baseline only. "
                                                      "The single-date omission range is diagnostic, not a confidence interval."))
@@ -479,7 +498,7 @@ def run(site_key: str) -> None:
         default=dict(sat="nisar", view="coverage", track="129A"),
         compare=dict(ready=False, reason="Compare waits for both NISAR tracks to pass T3 and a shared window and "
                                           "reference (O-19); NISAR 094D is under review."),
-        windows={WINDOW: windows[WINDOW]["label"]}, default_window=WINDOW,
+        windows={k: v["label"] for k, v in windows.items()}, default_window=WINDOW,
         checks={k: sum(c.get("status") == k for c in checks) for k in ("pass", "warn", "fail", "info")},
         zone_notes=ZONE_NOTES, track_notes=TRACK_NOTES,
         egms=egms_block(out),

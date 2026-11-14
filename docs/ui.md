@@ -69,6 +69,14 @@ The team's sketch ([docs/figures/02_ui_sketch_v4.jpg](figures/02_ui_sketch_v4.jp
 - Compare and Agreement stay off with the manifest's `compare.reason` until both NISAR tracks pass T3.
 - The forecast block shows Chronos-2 only, with its 80 % range as two light dashed lines, a "Forecast date" slider (keyboard accessible, `aria-valuetext` is the date), the NISAR October check and the baselines in the footnote.
 
+## Sentinel-1 fills NISAR's gap (15 Nov 2026)
+
+NISAR has no acquisitions over the town from 18 Jan to 23 Jun 2026 (NASA CMR; cause unknown, O-14). Sentinel-1 029A imaged it every 6 days through those months, and its January to October fit is now exported as a second Sentinel-1 window (`sensitivity.json` `windows.jan_oct`, frames under `products/<site>/s1/jan_oct/`, `fills_gap` naming the NISAR gap).
+
+- **Timeline:** in NISAR mode the hatched gap carries a "Sentinel-1 covers this →" button. It switches to Sentinel-1, the same direction of flight (129A ascending → 029A ascending), the January to October window, at the acquisition nearest the middle of the gap.
+- **Zone charts:** NISAR's zone chart adds the Sentinel-1 January to October line through the gap months, in Sentinel-1's colour, with a note: it is Sentinel-1's own line of sight and reference, so its shape, not its offset from the NISAR line, carries information. The two are never spliced into one line: the geometry (left- vs right-looking) and the reference differ (O-19).
+- **Caveats carried over:** the January to October fit cannot be rerun from the repository (job IDs only), has no weather-model scenario, and has no zone series on 007D or for Zone 3.
+
 ## Implementation status (r06/page, 14 Nov 2026, 16:15)
 
 | Part | Status | Notes |
