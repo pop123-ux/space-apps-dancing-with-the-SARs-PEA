@@ -660,7 +660,7 @@ function chart({ lines, from, to, gaps = [], window = null, height = 130 }) {
 }
 function table(lines) {
   const dates = [...new Set(lines.flatMap(l => l.dates))].sort();
-  const val = (l, d) => { const i = l.dates.indexOf(d); return i < 0 || l.mm[i] === null ? '' : l.mm[i]; };
+  const val = (l, d) => { const i = l.dates.indexOf(d); return i < 0 || l.mm[i] === null ? '' : (typeof l.mm[i] === 'number' ? l.mm[i].toFixed(2) : l.mm[i]); };
   return `<table class="data"><thead><tr><th>Date</th>${lines.map(l => `<th>${esc(l.label)}, mm</th>`).join('')}</tr></thead><tbody>${dates.map(d => `<tr><td>${d}</td>${lines.map(l => `<td>${val(l, d)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
 }
 function lineOf(point, sat, trk, opts = {}) {
@@ -766,19 +766,22 @@ function forecastPanel() {
       !obs.dates.every((date, index) => date === f.training_dates[index] &&
         Number.isFinite(obs.mm[index]) && Math.abs(obs.mm[index] - f.observed_mm[index]) <= .011)) return '';
   const labels = { persistence: 'Persistence', theil_sen: 'Theil–Sen trend', gaussian_process: 'Gaussian process', long_term: 'Long-term trend (EGMS 2020–2025)', chronos2: 'Chronos-2 (zero-shot)' };
+  const lab = k => labels[k] || k;
   const model = Object.hasOwn(f.model_paths_mm || {}, S.forecastModel) ? S.forecastModel : f.model;
   const path = f.model_paths_mm?.[model] || f.forecast_mm;
-  const modelChoices = Object.keys(f.model_paths_mm || {}).map(key => `<button type="button" data-forecast-model="${esc(key)}" aria-pressed="${key === model}">${esc(labels[key])}</button>`).join('');
+  const modelChoices = Object.keys(f.model_paths_mm || {}).map(key => `<button type="button" data-forecast-model="${esc(key)}" aria-pressed="${key === model}">${esc(lab(key))}</button>`).join('');
+  const iv = f.intervals?.[model];
+  const ivText = iv ? ` ${Math.round(iv.level * 100)} % interval at the endpoint: ${fmt(iv.q10.at(-1), 2)} to ${fmt(iv.q90.at(-1), 2)} mm (backtested coverage in docs/forecast.md).` : '';
   const lines = [
     { label: 'Radar estimate', color: SATS.s1.color, shape: SATS.s1.shape, dates: f.training_dates, mm: f.observed_mm, gaps: [] },
     { label: 'Model extrapolation', color: '#7C3AED', dates: [f.last_observation, ...f.dates],
       mm: [f.observed_mm.at(-1), ...path], dash: true, gaps: [] },
   ];
-  const scores = Object.entries(f.metrics).map(([k, v]) => `${esc(labels[k])} ${fmt(v.mae_mm, 2)} mm`).join(' · ');
+  const scores = Object.entries(f.metrics).map(([k, v]) => `${esc(lab(k))} ${Number(v.mae_mm).toFixed(2)} mm`).join(' · ');
   const retro = f.status === 'retrospective' || f.end_date <= new Date().toISOString().slice(0, 10);
-  return block('zone-forecast', `Zone 4 · ${retro ? 'Retrospective forecast' : 'Experimental forecast'}`,
-    `<span class="badge">${f.horizon_days} days · 029A LOS</span>`, lines, {
-      top: `<p class="reason">${esc(labels[model])} through ${esc(f.end_date)}, from radar data ending ${esc(f.last_observation)}. The dashed segment is a line-of-sight scenario. The long horizon has no comparable backtest.</p><div class="seg" role="group" aria-label="Forecast model">${modelChoices}</div><p class="reason">Endpoint ${fmt(path.at(-1), 2)} mm relative to the first acquisition. Rainfall and soil moisture were tested and did not improve the forecast, so there is no weather control yet (docs/forecast.md).</p>${keys(lines)}`,
+  return block('zone-forecast', `${esc(supported.label || f.zone)} · ${retro ? 'Retrospective forecast' : 'Experimental forecast'}`,
+    `<span class="badge">${f.horizon_days} days · ${esc(f.track)} LOS</span>`, lines, {
+      top: `<p class="reason">${esc(lab(model))} through ${esc(f.end_date)}, from radar data ending ${esc(f.last_observation)}. The dashed segment is a line-of-sight scenario. The long horizon has no comparable backtest.</p><div class="seg wrap" role="group" aria-label="Forecast model">${modelChoices}</div><p class="reason">Endpoint ${fmt(path.at(-1), 2)} mm relative to the first acquisition.${ivText} Rainfall and soil moisture were tested and did not improve the forecast, so there is no weather control yet (docs/forecast.md).</p>${keys(lines)}`,
       foot: `30-day backtest MAE from ${f.folds.length} overlapping historical cutoffs: ${scores}. ${esc(f.interval_reason)}`,
     });
 }

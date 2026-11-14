@@ -97,6 +97,8 @@ h3 { font-size: 15px; font-weight: 600; }
 /* segmented control */
 .seg { display: inline-flex; background: var(--soft); border-radius: 999px; padding: 4px; gap: 2px; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
 .seg::-webkit-scrollbar { display: none; }
+.seg.wrap { flex-wrap: wrap; border-radius: 16px; overflow: visible; }
+.seg.wrap button { white-space: normal; }
 .seg button { border: 0; background: none; border-radius: 999px; padding: 8px 16px; color: var(--muted); font-weight: 500; white-space: nowrap; }
 .seg button:hover { color: var(--ink); }
 .seg button[aria-pressed="true"] { background: var(--card); color: var(--ink); box-shadow: 0 1px 3px rgba(28,25,23,.14); }
