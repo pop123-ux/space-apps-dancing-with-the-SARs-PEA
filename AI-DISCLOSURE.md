@@ -1,0 +1,57 @@
+# AI disclosure
+
+**Owner:** all roles append to the log; 01 finalises section 1
+
+This file says how we used AI tools to build **Dancing on Salt** for NASA Space Apps 2026 (Cluj-Napoca, 14 to 15 Nov 2026), and what people did and checked. Space Apps allows AI tools (it now calls them "SI"), and the submission must say how they were used. The disclosure below is the text for the project page. The log underneath is the record it is built from.
+
+**Exact wording:** 01 (Mario) checks the required wording and field against the 2026 Project Submission Guide (13 Nov) and the Cluj-Napoca participant's guide, then finalises section 1 in hours 30 to 36.
+
+**Everyone appends to the log** (section 5) when an AI tool produces code, text, figures or analysis that ends up in the project, and says what a person checked. Never rewrite someone else's line.
+
+## 1. Disclosure for the submission
+
+Draft of Sat 14 Nov 2026, 14:30 Europe/Bucharest. 01 finalises it from the log.
+
+> We used AI coding assistants throughout. Each of our six team members ran Claude Code (Anthropic) for their own role, under shared written rules (`CLAUDE.md`, `prompts/build.md`). It set up the repository and its plan documents, wrote and reviewed processing code, and helped draft text. Before the event, one member used ChatGPT (OpenAI) to summarise our advisor's plan and rehearsal material.
+>
+> AI did not produce any of our data or results. Every number on the page comes from our pipeline running on open data (NISAR, EGMS, EuVeM2022, NGL, Sentinel-1). It is checked against independent references by a team member who does not edit the science code. We used no AI image, video, voice or music generation. People made every team decision, typed every login, and reviewed and merged every change. The full log is in `AI-DISCLOSURE.md` in our repository.
+
+## 2. Tools
+
+| Tool | Maker | Who used it | For what |
+| --- | --- | --- | --- |
+| Claude Code | Anthropic | All six roles, one session each | Repository and plan documents, pipeline code and stubs, tests, data checks (for example the NISAR catalogue query), drafting text |
+| ChatGPT | OpenAI | 02/03 (Alexandru), before the event | A research summary of the advisor's deck and rehearsal kit |
+
+Add a row the moment anyone uses another AI tool.
+
+## 3. What AI was not used for
+
+- **Data and results.** No number on the page, on the slides or in the submission is produced or adjusted by AI. All of them come from `products/ocnele_mari/`, written by the pipeline (`CLAUDE.md`, "Honest numbers").
+- **Media.** No generated images, video, voices or music. Map overlays are computed from radar data. Any diagram is drawn from simple shapes and carries the note "Diagram made with AI assistance".
+- **Decisions.** Team decisions (the site, the story, the frozen methods) are made by people at the checkpoints and logged in `docs/build-spec.md`. AI sessions record only small working choices, in `DECISIONS.md`, where anyone can see and overturn them.
+- **Accounts.** AI never sees passwords or tokens. People log in themselves.
+
+## 4. How people checked AI output
+
+- **Ownership:** each file has one owner (`CLAUDE.md`, "Who owns what"), who reviews and merges the AI-written changes to it.
+- **Tests:** `pytest -q` runs before every push and in GitHub Actions on every push.
+- **Contract:** `checkpoint.py` checks that the products match the file contracts, at hours 2, 12, 24 and 40.
+- **Independent validation:** the validator (05) owns `validate.py`, which no one else edits. It runs the checks nobody tuned: the sign of the motion, held-out GNSS stations, EGMS on stable ground, Sentinel-1 and closure.
+- **Known answer:** a synthetic stack with a known truth, including a planted lying station, runs through the same code.
+- **Red team:** the advisor red-teams the work at hours 12, 24 and 40.
+
+## 5. Log
+
+One row per substantive use. The "checked" column says what a person verified, not what the tool claimed.
+
+| Date and time (Europe/Bucharest) | Who (role) | Tool | What it produced | What a person checked |
+| --- | --- | --- | --- | --- |
+| 13 to 14 Nov 2026, before the event | Alexandru (02/03) | ChatGPT | A research summary of the advisor's deck and rehearsal kit | To fill in |
+| Sat 14 Nov 2026, about 12:45 | Alexandru (02/03) | Claude Code | The repository skeleton: plan documents, `common.py`, the pipeline stubs (interfaces only, no science), `checkpoint.py`, `run_all.py`, `mock_products.py`, the smoke test. It also ran the NISAR GUNW catalogue query on NASA CMR (22 pairs) | To fill in: each owner reviews the stub and section for their role |
+| Sat 14 Nov 2026, about 13:30 | Alexandru (02/03) | Claude Code | Restructured the documents (`STATUS.md`, `DECISIONS.md`, `CITATIONS.md`, `docs/`, `prompts/`); wrote `data/scenes/ocnele_mari_gunw.csv` from CMR | To fill in |
+| Sat 14 Nov 2026, about 14:30 | Alexandru (02/03) | Claude Code | `docs/schedule.md` (who does what, hour by hour) and this disclosure file | To fill in: 01 checks the wording against the guides |
+| Sat 14 Nov 2026, about 15:00 | Alexandru (02/03) | Claude Code | `OWNERS.md`, an owner line in every file, `tests/test_owners.py`; switched the plan from a video to the 7-slide PowerPoint (D-003) with an owner per slide | To fill in: each role checks its rows in `OWNERS.md` and its slide |
+| Sat 14 Nov 2026, about 15:30 | Alexandru (02/03) | Claude Code | D-004 design: `docs/ui.md` (satellite switch, five views, comparison rules); the sensor-aware draft contract in `checkpoint.py` and `mock_products.py` (both radars); D-004 through the plan documents; a Sentinel-1 coverage check on NASA CMR | To fill in: 06 reviews `docs/ui.md`; 03 and 04 review the comparison rules (O-19) |
+| Sat 14 Nov, about 13:20 | Matei (04) | Claude Code | `refs.py` (EuVeM2022 and NGL MIDAS download and parsing, distance filter, published rates, synthetic stand-ins with a lying station), `calibrate.py` (model to LOS, tie mask, offset or plane fit with 3σ clipping, model swap, `calib.json`), the VLC2 vertical in `common.PUBLISHED`. Synthetic known-answer runs: offsets −8.81 and −6.02 mm/yr for truths −8.8 and −6.0; plane slope 3.99 for 4.0 mm/yr per 10 km. | To fill in: Matei checks the VLC2 row of Table S3 on the PDF page by eye, and runs `refs.py ocnele_mari` on real data |
+| Sat 14 Nov 2026 | R04 integration review | ChatGPT | Cross-checked the cited station rows and reproduced the synthetic calibration with independent inputs. Corrected VLC2 east/north, restored owner headers and integrated the disclosure and status updates. | Pending: Matei reviews real station output and runs T8 with 05. |

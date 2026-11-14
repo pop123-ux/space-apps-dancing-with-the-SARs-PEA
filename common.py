@@ -1,6 +1,7 @@
+# Owner: shared · announce changes; 01 reviews
 """Shared settings and small helpers. Every script imports this as `import common as C`.
 
-Owner: shared. A value changed here changes everyone's results, so announce it to the team and get the Lead's (01) OK in
+A value changed here changes everyone's results, so announce it to the team and get the Lead's (01) OK in
 the PR. Nothing here talks to the network, and nothing heavy is imported at the top, so `python <script>.py --help`
 works on a bare Python before the environment is installed.
 
@@ -58,15 +59,37 @@ SITES = {
 SITES["demo"] = dict(SITES["ocnele_mari"], name="Ocnele Mari · synthetic demo", synthetic=True,
                      story="Invented ground motion with a known answer. Simulated, not data.")
 
+# ---------------------------------------------------------------------------------------------------------- sensors
+# D-004 (locked): we fit both NISAR and Sentinel-1, and the page switches between them (docs/ui.md).
+# Tracks and dates checked on NASA CMR and in sentinel1/analysis/summary.json, 14 Nov 2026. The page's labels come from
+# here through export.py, so a sensor is described once. Keys are used in file names: products/<site>/<sensor>/…
+SENSORS = {
+    "nisar": dict(
+        label="NISAR", agency="NASA–ISRO", band="L-band", wavelength_cm=24.4, look="left",
+        product="NISAR L2 GUNW, frequency A, HH (beta and provisional)", status="beta/provisional",
+        tracks={"129A": "Ascending", "094D": "Descending"},
+        reference="tied to the EuVeM2022 velocity model (04; DRAFT until the tie exists)",
+        credit="NISAR L2 GUNW (NASA–ISRO, ASF DAAC); beta and provisional products, not intended for scientific research",
+        fitted_by="fetch.py (02) → stack.py (03) → calibrate.py (04)"),
+    "s1": dict(
+        label="Sentinel-1", agency="ESA / Copernicus", band="C-band", wavelength_cm=5.55, look="right",
+        product="Sentinel-1C/D VV burst InSAR, ASF HyP3 INSAR_ISCE_BURST, 10x2 looks", status="operational",
+        tracks={"029A": "Ascending", "007D": "Descending"},
+        reference="relative to surrounding terrain, a 3 to 6.5 km band (sentinel1/analysis/README.md)",
+        credit="Contains modified Copernicus Sentinel data 2026, processed by ASF HyP3",
+        fitted_by="sentinel1/scripts/fit.py (03)"),
+}
+COMMON_WINDOW = ("2026-07-07", "2026-10-04")   # dates both sensors cover: Sentinel-1 fit window inside NISAR's Jun to Oct
+VIEWS = ("change", "rate", "zones", "agreement", "coverage")   # the page's view switch (docs/ui.md)
+
 # Published station rates: Muntean et al. 2026, Solid Earth 17, 747–762, supplement Tables S1/S3, Eurasia-fixed.
 # station: (lat, lon, ve, vn, vu, se, sn, su) in mm/yr; NaN = not published. Owner 04 fills the vertical from Table S3.
 # Cite the paper; do not copy the table into the repository (open question Q4 on quoting it in the app).
-# 04, 14 Nov 2026: VLC2 vu 0.86 ± 0.61 mm/yr from Table S3 (Tstart 2 Aug 2019, span 5.82 yr; the PDF row runs its
-# fields together, the split is confirmed by su = 0.61 already read). HORE is not in Table S3: its vertical stays NaN
-# here and comes from NGL MIDAS instead.
+# VLC2 east/north and uncertainties use Table S1's Vlon/Vlat and Siglon/Siglat columns.
+# VLC2 up comes from Table S3. HORE has no Table S3 entry. Its separate historical up rate is from NGL MIDAS.
 _nan = float("nan")
 PUBLISHED = {
-    "VLC2": (45.1074, 24.3664, 0.15, 0.14, 0.86, 0.21, 0.19, 0.61),
+    "VLC2": (45.1074, 24.3664, -0.84, 0.77, 0.86, 0.21, 0.19, 0.61),
     "HORE": (45.1456, 23.9891, -0.50, 0.41, _nan, 0.09, 0.11, _nan),
 }
 

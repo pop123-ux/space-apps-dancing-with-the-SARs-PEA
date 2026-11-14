@@ -1,6 +1,7 @@
+# Owner: 04 · Geodesist (Matei)
 """04 · Geodesist: the open references: a velocity model and station rates, all Eurasia-fixed (mm/yr).
 
-Owner: 04 · Geodesist (Matei). Status: WORKING (synthetic path tested offline; real path to be run on a laptop with
+Status: WORKING (synthetic path tested offline; real path to be run on a laptop with
 internet, the build machine could not reach the two servers on 14 Nov 2026).
 
     python refs.py ocnele_mari            # download EuVeM2022 (Romania grid) and NGL MIDAS (Eurasia-fixed); add published rates

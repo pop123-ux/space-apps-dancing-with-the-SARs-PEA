@@ -1,0 +1,6 @@
+# Owner: 03 · InSAR analyst (Alexandru, Eric)
+raw/
+__pycache__/
+analysis/*.npz
+*.jwt
+.env

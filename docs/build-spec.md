@@ -1,10 +1,12 @@
 # Dancing on Salt: Build spec and plan
 
+**Owner:** 01 · Lead and story (Mario); each role checks its own section
+
 Version 1, Sat 14 Nov 2026. This is the companion to [overview.md](overview.md). The evidence it rests on is the advisor's rehearsal, summarised in [rehearsal.md](rehearsal.md), and the data notes in [data.md](data.md).
 
-It covers what each of the six roles builds, in what format, with which fixed numbers, and when it hands off. It exists so the hours go to building, not debating. It contains no code. Every role's Claude Code session works from it through [../prompts/build.md](../prompts/build.md).
+It covers what each of the six roles builds, in what format, with which fixed numbers, and when it hands off. It exists so the hours go to building, not debating. It contains no code. Every role's Claude Code session works from it through [../prompts/build.md](../prompts/build.md). The same steps laid out hour by hour, one column per role, are in [schedule.md](schedule.md).
 
-**How decisions work here.** Only D-001 and D-002 are locked. Everything else in "Decisions to fix by hour 2" is **proposed**. The team reviews it at the hour-2 checkpoint, and from then on it is frozen: nobody changes a cut, threshold, window or test after seeing a result. Any later change goes in the change log at the end of this file, with a reason that comes from a test, not from a result. Day-to-day choices go in [../DECISIONS.md](../DECISIONS.md).
+**How decisions work here.** Only D-001 to D-004 are locked. Everything else in "Decisions to fix by hour 2" is **proposed**. The team reviews it at the hour-2 checkpoint, and from then on it is frozen: nobody changes a cut, threshold, window or test after seeing a result. Any later change goes in the change log at the end of this file, with a reason that comes from a test, not from a result. Day-to-day choices go in [../DECISIONS.md](../DECISIONS.md).
 
 ## Decisions
 
@@ -14,6 +16,8 @@ It covers what each of the six roles builds, in what format, with which fixed nu
 | --- | --- | --- |
 | D-001 | **Ocnele Mari is the only site.** Praid and Slănic, from the advisor's deck and kit, are out of scope. | Our hometown story, done well at one site. |
 | D-002 | **The map opens zoomed on the Ocnele Mari area:** the Google Maps view at 45.086281° N, 24.2704806° E, zoom 13. When the user zooms out, Romania shows as deliberately blurred, de-emphasised context, not data. | Only our area of interest matters on the map. |
+| D-003 | **The submission is a 7-slide PowerPoint, with no video.** Each slide has an owner role ([overview.md](overview.md#the-slides)). 01 assembles the deck at `slides/dancing-on-salt.pptx`. | Team decision, Sat 14 Nov 2026. |
+| D-004 | **Two radars, one switch.** We fit both NISAR (L-band) and Sentinel-1 (C-band) over Ocnele Mari. The page has a satellite switch (NISAR, Sentinel-1, Compare) and several views of the same subsidence (change over time, rate, zone histories, agreement, coverage). The design is in [ui.md](ui.md). | Team decision, Sat 14 Nov 2026. Sentinel-1 is already fitted (`sentinel1/`, 58 HyP3 burst pairs, 16 dates per track) and covers the summer window NISAR also covers. |
 
 ### To fix by hour 2 (proposed)
 
@@ -51,7 +55,7 @@ It covers what each of the six roles builds, in what format, with which fixed nu
 | Station check | \|NISAR − GNSS\| ≤ max(2 mm/yr, 2σ combined), per LOS. The tolerance is shown in every pin. | The rehearsal's tolerances were 35 to 60 mm/yr: an "agree" that big must be visible. |
 | EGMS check | The median of NISAR up minus EGMS up is below 1.5 mm/yr in absolute value, on EGMS points with \|v\| < 1.5 mm/yr outside the zones plus 500 m. | The rehearsal reached +6.4 mm/yr after the troposphere fix, so this check is a real test. |
 | Closure | Ratio of 12-day to 24-day rates between 0.8 and 1.2 if triplets exist; otherwise reported as "not tested". | There are 0 triplets in the GUNW stack (decision O-07). |
-| Second radar | The Sentinel-1 zone rate over the same months agrees with NISAR's within the errors. | It is the independent check the deck promised. |
+| Second radar (check 8) | Over the common window (7 Jul to 4 Oct 2026), the Sentinel-1 zone change agrees with NISAR's within the errors, compared as zone minus outer reference band until the references match (O-19). | D-004: both radars are on the page, so their agreement is a check, not a footnote. |
 
 **The page** (06, 01)
 
@@ -60,9 +64,13 @@ It covers what each of the six roles builds, in what format, with which fixed nu
 | Opening view | D-002. | Locked. |
 | Slider | One frame per acquisition date per track. No frames across gaps: 18 Jan to 23 Jun 2026 shows "no data". | We never interpolate data we do not have. |
 | Colours | RdBu diverging, red = sinking or moving away, with a fixed symmetric scale per layer. Never red and green alone. | Colour-blind safe. |
-| Pins | NISAR against GNSS per track, with the tolerance, an agree flag and a reason. A red pin means they disagree. | Honest pins, as the deck promised. |
+| Pins | Each satellite's track against GNSS, with the tolerance, an agree flag and a reason. A red pin means they disagree. | Honest pins, as the deck promised. |
+| Satellite switch (D-004) | NISAR (default), Sentinel-1, Compare. View, track and date persist across switches; a satellite without products is disabled with the reason, never hidden. | Locked; see [ui.md](ui.md). |
+| Views (D-004) | Change (default), Rate, Zones, Agreement, Coverage. Up and east only behind an "experimental" toggle. | Several ways to see the same trend; derived components stay experimental until 03 and 04 sign them off. |
+| Comparison rules | Same months (the common window), same reference (zone minus outer band until O-19), each satellite in its own line of sight, one shared legend per quantity, every view says satellite, band, track, dates, reference and sign. | Two radars side by side must mean the same thing, or say what differs. |
+| State in the URL | `#sat=…&track=…&view=…&date=…&exp=…`. Story stops and slide 5 screenshots are links. | Judges and slides jump straight to a view. |
 | Labels | "Simulated, not data" whenever `synthetic` is true. "NISAR beta/provisional products" always. | Judges trust a map that names its limits. |
-| Numbers | Every number on the page, in the video and in the submission comes from `products/ocnele_mari/`. Before submitting, `___`, `TODO`, `TBD` and `computing` appear nowhere in the page, `SUBMISSION.md` or the captions. | Honest numbers, no silent placeholders. |
+| Numbers | Every number on the page, on the slides and in the submission comes from `products/ocnele_mari/`. Before submitting, `___`, `TODO`, `TBD` and `computing` appear nowhere in the page, `SUBMISSION.md` or the slides. | Honest numbers, no silent placeholders. |
 
 ## File contracts
 
@@ -78,7 +86,8 @@ Roles hand each other files, never notebooks. Internal hand-offs live in `data/w
 | `<track>/ts.npz` | 03 (`stack.py`) | 04, 05, 06 | dates, cum (mm), vel, vel_sig, rate12/rate24, gaps, pair_days, coh_mean | 14 |
 | `<track>/cal.npz` | 04 (`calibrate.py`) | 03, 05, 06 | vel_cal, cum_cal, model_los, tie mask | 20 |
 | `up_east.npz` | 03 (`split.py`) | 05, 06 | up, east, sig_up, sig_east on the common window, with a note | 26 |
-| `s1/` | 05 (`hyp3_order.py`) | 05 | Sentinel-1 HyP3 products and `jobs.json` | ordered at 1, ready about 8 |
+| `sentinel1/analysis/029A.npz`, `007D.npz`, `summary.json` | 03 (`sentinel1/scripts/fit.py`) | 04, 05, 06 | The Sentinel-1 fit: 40 m EPSG:32635 grids, per-date displacement, LOS slope, look vectors; zone and outer-band histories with sensitivity runs | done (Sat 14 Nov, 13:37) |
+| `sentinel1/provenance/` | 02 | 02, 05 | The 58 HyP3 jobs, product names, links and SHA-256 checksums | done; mirror the ZIPs before the links expire |
 | `products/<site>/calib.json` | 04 | 05, 06 | The tie per track and the model-swap number | 20 |
 | `products/<site>/checks.json`, `checks.md`, `stations.geojson` | 05 (`validate.py`) | 06, 01 | Every check (pass, warn, fail or info) and the honest pins | 28 |
 | `products/<site>/manifest.json`, `*.png`, `frames/`, `series.json`, `up.tif`, `east.tif`, `products/index.json` | 06 (`export.py`) | the page, 01 | Below | first real set 18, final 40 |
@@ -89,17 +98,19 @@ Roles hand each other files, never notebooks. Internal hand-offs live in `data/w
 - `site`, `name`, `story` (01's sentence), `synthetic`, `note`, `built`.
 - `bounds` `[[S, W], [N, E]]` and `center`.
 - `view` `{center, zoom, min_zoom, context: "romania-blurred"}`, which carries D-002.
-- `layers` `[{id, label, png, units, vmin, vmax}]`.
-- `frames` `{track: {dates, pngs, vmin, vmax, units, direction, gaps: [[from, to]]}}`.
+- `sensors` `{nisar: {…}, s1: {…}}` (D-004). Each sensor has `label`, `agency`, `band`, `wavelength_cm`, `status`, `reference`, `credit`, and:
+  - `layers` `[{id, label, png, units, vmin, vmax, track, experimental}]`, with PNGs under `<sensor>/`.
+  - `frames` `{track: {dates, pngs, vmin, vmax, units, direction, gaps: [[from, to]]}}`, with PNGs under `<sensor>/frames/<track>/`.
+- `views` (a subset of change, rate, zones, agreement, coverage), `common_window` `[from, to]`, and `default` `{sat, view, track}`.
 - `checks` `{pass, warn, fail, info}`, and `credits`.
 
-**`series.json`:** `[{id, label, kind: zone|station, lat, lon, up, series: {track: {dates, mm, rate}}}]`.
+**`series.json`:** `[{id, label, kind: zone|control|station, lat, lon, up: {sensor: value}, series: {"<sensor>:<track>": {dates, mm, rate, n_pixels}}}]`. The `control` point is the outer reference band.
 
-**`stations.geojson`:** a FeatureCollection of points. Each has `station`, `source`, `t_end`, `dist_km`, `tracks {track: {nisar, gnss, diff, tol}}`, `agree` (true, false or null), `reason`, `nisar_up` and `gnss_up`.
+**`stations.geojson`:** a FeatureCollection of points. Each has `station`, `source`, `t_end`, `dist_km`, `tracks {"<sensor>:<track>": {radar, gnss, diff, tol}}`, `agree` (true, false or null), `reason` and `gnss_up`.
 
 **`checks.json`:** `[{id, status: pass|warn|fail|info, title, detail, value}]`.
 
-**`calib.json`:** `{model, tracks: [{track, direction, method, offset_mm_yr, slope_east_mm_yr_per_10km, slope_north_mm_yr_per_10km, n_tie_pixels, residual_std_mm_yr, residual_mad_mm_yr, model_los_mean_mm_yr, swap_delta_mm_yr}]}`.
+**`calib.json`:** `{model, tracks: [{sensor, track, direction, method, offset_mm_yr, slope_east_mm_yr_per_10km, slope_north_mm_yr_per_10km, n_tie_pixels, residual_std_mm_yr, residual_mad_mm_yr, model_los_mean_mm_yr, swap_delta_mm_yr}]}`.
 
 `checkpoint.py` enforces this contract, and `mock_products.py` writes it. Once frozen at hour 2, a change needs 01 and 06 and goes into `checkpoint.py`, `mock_products.py` and the page in the same PR.
 
@@ -109,21 +120,21 @@ Everyone works on their own laptop. 02 streams the window on one machine: about 
 
 ## 01 · Lead and story (Mario)
 
-01 owns scope, the cut lines, the checkpoints, the story, the video and the submission. Files: `checkpoint.py`, `README.md`, `STATUS.md` (the team view), this spec's change log, and `SUBMISSION.md` (created at hour 30).
+01 owns scope, the cut lines, the checkpoints, the story, the 7-slide deck (D-003) and the submission. Files: `checkpoint.py`, `README.md`, `STATUS.md` (the team view), this spec's change log, `slides/dancing-on-salt.pptx` and `SUBMISSION.md` (created at hour 30).
 
 1. **Hour 0 to 2.**
    - Set hour 0 and `EVENT_TZ` in `STATUS.md` (O-04).
    - Read the 13 Nov guide aloud: prior work, format, judging. Settle O-02 and O-03.
    - Run the hour-2 review of the proposed decisions above with the team, and freeze the contract with 06.
    - Check that everyone has an Earthdata login and has run `pytest -q`.
-2. **Hour 2 to 6.** Settle the story framing (O-01). Write the story stops, one sentence each, and the first ten seconds of the video. Reassign the freed Praid slots (O-15).
+2. **Hour 2 to 6.** Settle the story framing (O-01). Write the story stops, one sentence each, and the 7-slide outline with one owner per slide ([overview.md](overview.md#the-slides)). Reassign the freed Praid slots (O-15).
 3. **Checkpoints at hours 12 and 24.**
    - Run `python checkpoint.py ocnele_mari` and read every WARN and FAIL aloud.
    - Give each one an owner and a verdict (fix, cut or explain), and write them in `STATUS.md`.
    - The advisor joins.
-4. **Hour 18 to 30.** Video script, then a rough cut on the mock or demo site with the banner visible.
-5. **Hour 30 to 40.** `SUBMISSION.md`: name, summary, demo link, details, data, AI use (from [AI_USE.md](AI_USE.md)), prior work and credits (from [../CITATIONS.md](../CITATIONS.md)).
-6. **Hour 40.** Freeze: no number changes after this. Then the final video, the project page, and the submission (a person clicks).
+4. **Hour 18 to 30.** First draft of the slides. Each slide's owner sends its content. Screenshots come from the mock or demo site with the banner visible, until the real site exists.
+5. **Hour 30 to 40.** `SUBMISSION.md`: name, summary, demo link, details, data, AI use (section 1 of [../AI-DISCLOSURE.md](../AI-DISCLOSURE.md)), prior work and credits (from [../CITATIONS.md](../CITATIONS.md)).
+6. **Hour 40.** Freeze: no number changes after this. Then the final slides with the frozen numbers, the project page, and the submission (a person clicks).
 
 Watch out: our copy of the deck still says −250 mm/yr. Never quote it.
 
@@ -153,8 +164,9 @@ Watch out: the mask layer is a bitfield (see [data.md](data.md)). The first pair
 2. **Hour 6 to 14.** `stack.py`: the troposphere slope, the stable-ground reference, the inversion, the rate with group offsets, and σ. Run T3 (the sign) with 05 and T4 (the troposphere) on the first rate map.
 3. **Hour 14 to 20.** Zone medians with bootstrap intervals. Name the zones with 01.
 4. **Hour 20 to 26.** `split.py` on the common window.
-5. **Hour 26 to 40.** Grey out \|rate\| < 2σ with 06. Error maps. Freeze at hour 40.
-6. **Tier 3.**
+5. **Sentinel-1 (D-004), alongside.** Keep `sentinel1/` in line with the NISAR conventions: per-date zone and outer-band histories, sign positive toward the satellite, and the sensitivity runs listed in `sentinel1/docs/TEAM_HANDOFF.md` (closure residuals, reference choice, dropping influential dates).
+6. **Hour 26 to 40.** Grey out \|rate\| < 2σ with 06. Error maps. Freeze at hour 40.
+7. **Tier 3.**
    - The GUNW `radarGrid` weather-model troposphere against the elevation slope.
    - Closure from GSLC pairs.
    - An ML/AI component (O-08), only if it beats a simple baseline on held-out checks.
@@ -174,7 +186,7 @@ Watch out:
    - Fill the NaN verticals in `common.PUBLISHED` (VLC2, HORE) from Muntean et al. 2026 Table S3, by eye.
    - `synthetic()` stand-ins, including one station that lies (+6 mm/yr up).
 2. **Hour 14 to 20.** `calibrate.py`: the model to LOS, the tie mask, offset or plane, and `calib.json`. Plot NISAR minus model on the tie pixels.
-3. **Hour 18 to 30.** The model swap with the EGMS GNSS model (O-06), and the EGMS stable-ground cross-check with 05 (T8).
+3. **Hour 18 to 30.** The model swap with the EGMS GNSS model (O-06), and the EGMS stable-ground cross-check with 05 (T8). Confirm the Sentinel-1 line-of-sight convention and look vectors, and propose the shared quantity for Compare (O-19).
 4. **Hour 30 to 40.** The final tie and the frame paragraph for the page. Freeze at hour 40.
 
 Watch out:
@@ -187,11 +199,11 @@ Watch out:
 
 05 proves or disproves the numbers with things nobody tuned. Nobody else edits `validate.py`, and 05 edits no science script. Files: `validate.py`, `hyp3_order.py` and [validation-log.md](validation-log.md).
 
-1. **Hour 0 to 1.** Order Sentinel-1 on HyP3 for 1 Nov 2025 to 31 Jan 2026 and 15 Jun to 31 Oct 2026, both geometries, short and long pairs. It queues for hours. Log the jobs.
+1. **Hour 0 to 1.** The Sentinel-1 jobs are already done: 58 HyP3 burst pairs, ordered and fitted by 02/03 (`sentinel1/provenance/hyp3_jobs.json`). Start instead on the EGMS 2020 to 2025 Ortho tile E54N25 (Up and East–West). Use `hyp3_order.py` only for extra pairs, such as January to June 2026 to cover NISAR's gap.
 2. **Hour 1 to 6.**
    - Cut the EGMS L3 Ortho Up 2020 to 2024 tile to `refs/egms_up.csv`.
    - Screen every station: roof, mast or pillar? What does EGMS show on its own building?
-3. **Hour 6 to 18.** The Sentinel-1 zone rates for the same months.
+3. **Hour 6 to 18.** Check 8: NISAR against Sentinel-1 per zone over the common window, as zone minus outer reference band (D-004). Look for GNSS or another radar with 2026 dates as a third witness.
 4. **Hour 18 to 30.** `validate.py`, checks 1 to 8 (see the table above and the docstring). Explain every WARN.
 5. **Hour 30 to 40.** Final agree flags; red team with the advisor.
 6. **Hour 40 to 48.** Rerun every check on the frozen build and log it.
@@ -206,9 +218,9 @@ Watch out: HAR1's mast swings 38 mm a year, so stations can lie. A station serie
 2. **Hour 2 to 6.**
    - The page live on GitHub Pages with the mock site, so the first deploy is not the last.
    - The basemap and the Romania blur (O-09).
-3. **Hour 6 to 18.** Map (D-002), slider with honest gaps, legend, units, both labels. `export.py` as soon as `up_east.npz` exists.
-4. **Hour 18 to 30.** Pins, story mode, phone layout, keyboard use, a colour-blind check (T9).
-5. **Hour 30 to 40.** Captions, accessibility, the demo link.
+3. **Hour 6 to 18.** Map (D-002), **the satellite switch and the view switch (D-004, [ui.md](ui.md))**, slider with honest gaps, legend, units, both labels. `export.py` as soon as either satellite has outputs: Sentinel-1 first (`sentinel1/analysis/` exists now), NISAR when `ts.npz` lands.
+4. **Hour 18 to 30.** Compare (swipe and overlaid charts), the Agreement and Coverage views, pins, story mode as URL states, phone layout, keyboard use, a colour-blind check (T9).
+5. **Hour 30 to 40.** Accessibility, the demo link, and the screenshots for slide 5 from the real site.
 
 Watch out: Leaflet image overlays are axis-aligned, so resample to lon/lat for the PNGs. The GeoTIFFs keep the UTM grid.
 
@@ -222,14 +234,14 @@ A tier is done when every box is ticked, not when the code runs. Tick them durin
 - [ ] `ts.npz` per track; T3's sign result written down (03).
 - [ ] The tie per track in `calib.json` (04).
 - [ ] `checks.json` covers every check, and every WARN and FAIL is explained (05).
-- [ ] `products/ocnele_mari/` passes `checkpoint.py`. The page is live with the D-002 view, the slider with honest gaps, the pins and both labels, and it works on two phones (06).
-- [ ] Story stops, video, project page, AI use, prior work and credits (01).
+- [ ] `products/ocnele_mari/` passes `checkpoint.py` with **both satellites**. The page is live with the D-002 view, **the satellite switch and at least the Change, Zones and Coverage views (D-004)**, the slider with honest gaps, the pins and both labels, and it works on two phones (06).
+- [ ] Story stops, the 7 slides with every number from the frozen build, project page, AI use, prior work and credits (01, with each slide's owner).
 
 **Tier 2**
 
 - [ ] Up and east on the common window (03).
 - [ ] Zone medians with bootstrap intervals in `series.json` (03, 06).
-- [ ] The Sentinel-1 comparison in `checks.json` (05).
+- [ ] Compare (swipe) and the Agreement view; check 8 in `checks.json` (05, 06).
 - [ ] The model swap number in `calib.json` (04).
 - [ ] Story mode and phone polish (06).
 
@@ -256,7 +268,7 @@ Each maps to a test in [../prompts/early-tests.md](../prompts/early-tests.md), a
 | Holding stations out of the tie makes a measurable difference | T7 | Report it either way |
 | The model swap changes LOS rates by under 1 mm/yr | T8 | Report the model's share as an error term |
 | The page works on two phones | T9 | Collapse to map, slider and one card |
-| HyP3 jobs finish within about 8 hours | T10 | Sentinel-1 moves to Tier 3 |
+| Sentinel-1 fit holds up under the handoff's sensitivity checks | T10 | Show Sentinel-1 with its caveats; Agreement says "not testable" where it doesn't |
 
 ## Open team decisions
 
@@ -273,11 +285,12 @@ Each maps to a test in [../prompts/early-tests.md](../prompts/early-tests.md), a
 | O-09 | Basemap and the Romania blur | Tile source; CSS blur or opacity below a zoom; an outline only | 06 | 6 |
 | O-10 | Accept the file contracts above as written | | 01, 06 | 2 |
 | O-11 | Window size | 50 km (kit) or smaller; the D-002 view is independent | 02, 04 | 6 |
-| O-12 | HAR1 in the app, or only in the video | | 01 | 24 |
+| O-12 | HAR1 in the app, or only on a slide | | 01 | 24 |
 | O-13 | May the app quote Muntean et al. 2026 supplement values? | Ask INFP; else "see paper" | 01 | 24 |
 | O-14 | Why is there no NISAR over Romania from mid-January to late June 2026? | ASF or NISAR forum | 02 | 24 |
 | O-15 | The slots freed by dropping Praid (02 and 03, hours 6 to 30) | Zone series, closure, Sentinel-1, O-08 | 01 | 6 |
 | O-16 | How `data/work/` is shared | A shared folder, or everyone streams their own | 02 | 4 |
+| O-19 | The shared quantity for Compare and Agreement (D-004) | Zone minus outer reference band per satellite (proposed default); vertical-equivalent (LOS ÷ cos incidence, assumes no horizontal motion); up and east from both satellites (experimental) | 03, 04 | 18 |
 | O-17 | Licence | MIT now (repo owner); Space Apps distributes submissions under Apache 2.0, so check the 2026 guide | 01 | 30 |
 
 ## Change log

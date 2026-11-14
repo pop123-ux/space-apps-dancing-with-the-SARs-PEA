@@ -1,6 +1,7 @@
+# Owner: 02 · NISAR data (Alexandru, Eric)
 """02 · NISAR data: find the GUNW pairs over the site and stream only the site window out of each ~2.4 GB file.
 
-Owner: 02 · NISAR data (Alexandru & Eric). Status: STUB (interfaces only).
+Status: STUB (interfaces only).
 
     python fetch.py ocnele_mari --list           # search only: pairs per track, pair lengths
     python fetch.py ocnele_mari                  # stream every pair's window (needs EARTHDATA_TOKEN)

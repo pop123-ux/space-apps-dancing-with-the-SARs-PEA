@@ -1,5 +1,7 @@
 # Citations
 
+**Owner:** all roles append; 01 checks links and licences
+
 These are the data, software, documents and prior work this project uses, with where each was fetched. Started Sat 14 Nov 2026 and completed during the event.
 
 **Append a row the moment you use a source.** 01 checks every link and licence in hours 30 to 40. Third-party data are linked and credited, never copied into the repository.
@@ -9,7 +11,7 @@ These are the data, software, documents and prior work this project uses, with w
 | Product | Used for | Fetched from | Owner |
 | --- | --- | --- | --- |
 | NISAR L2 GUNW, beta (`NISAR_L2_GUNW_BETA_V1`) and provisional (`NISAR_L2_GUNW_PROVISIONAL_V1`), frequency A, HH | Every NISAR layer | ASF, `https://nisar.asf.earthdatacloud.nasa.gov/NISAR/<collection>/`. The 22 granules are in `data/scenes/ocnele_mari_gunw.csv` (CMR, 14 Nov 2026) | 02 |
-| Sentinel-1 interferograms, ASF HyP3 `INSAR_GAMMA` | The second-radar check | [HyP3](https://hyp3-docs.asf.alaska.edu/); jobs logged in `docs/validation-log.md` | 05 |
+| Sentinel-1C/D VV burst interferograms, ASF HyP3 `INSAR_ISCE_BURST` (10x2 looks), 58 pairs on tracks 029A and 007D, 6 Jul to 5 Oct 2026 | The second radar (D-004): its own view in the app, and check 8 | [HyP3](https://hyp3-docs.asf.alaska.edu/); jobs, product names and checksums in `sentinel1/provenance/`; earlier note: jobs logged in `docs/validation-log.md` | 05 |
 
 ## References and ancillary layers
 
@@ -40,6 +42,8 @@ These are the data, software, documents and prior work this project uses, with w
 | NISAR GUNW product specification (mask bitfield, spec 1.4) | Linked from the ASF NISAR docs; 02 records the exact version |
 | EuVeM2022 README and paper | doi:10.23701/euvem2022; Steffen et al. 2025, *GJI*, doi:10.1093/gji/ggaf052 |
 | NGL MIDAS | Blewitt, Hammond and Kreemer 2018, *Eos* 99 |
+| NASA Space Apps Cluj-Napoca 2026, participant's guide | https://app.notion.com/p/Participant-s-Guide-NASA-Space-Apps-Challenge-Cluj-Napoca-2026-40903dd4dbcc80eab387c2962430efef (Notion; 01 reads it at hour 0) |
+| Cluj-Napoca event at ClujHUB, 14 to 15 Nov 2026 | https://www.romania-insider.com/nasa-space-apps-challenge-registrations-romania-2026 |
 | Space Apps challenge and resources | https://www.spaceappschallenge.org/2026/challenges/dancing-with-the-sars/?tab=resources (unreachable from the setup machine on 14 Nov; 01 adds what we use) |
 
 ## Prior work and advisor help

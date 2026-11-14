@@ -1,5 +1,7 @@
 # Early tests: Claude Code prompt
 
+**Owner:** 01 · Lead and story (Mario); each test names its owner
+
 ## How to use this
 
 These tests check the plan in `docs/build-spec.md` against the real data in the first hours of the event, before the team leans on it. Each test has one owner. The owner's Claude Code session runs it when they say **"Read prompts/early-tests.md and run T<n>."**
@@ -58,6 +60,6 @@ Tie with EuVeM2022, then with the second model (O-06), or a rigid plate if its C
 
 Open the Pages link on two phones. **Passes** if the map opens on the town (D-002), the slider plays with the gap labelled, the text is readable, and the synthetic banner shows on `mock`. **If not:** collapse to the map, the slider and one card.
 
-## T10. HyP3 queue (05; check every 2 h after the order)
+## T10. Sentinel-1 holds up (05 with 03; timebox 1 h)
 
-Record the job count, status and time in queue. **Passes** if the products are back by about hour 8. **If not:** Sentinel-1 moves to Tier 3.
+The Sentinel-1 fit is done (`sentinel1/`, 58 HyP3 burst pairs). Read `sentinel1/analysis/summary.json` and the handoff's sensitivity runs: strict coherence, west and east reference, elevation correction, closure. For each zone, record whether the sign holds across the runs and how far the change moves. **Passes** where the sign holds and the spread is smaller than the change. **If not:** that zone shows as "not testable" in the Agreement view, with the reason.

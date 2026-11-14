@@ -1,14 +1,18 @@
+# Owner: 06 · App developer (Darius)
 """06 · App developer: turn the numbers into what the page reads: products/<site>/.
 
-Owner: 06 · App developer (Darius). Status: STUB (interfaces only). Until it works, build the page on
+Status: STUB (interfaces only). Until it works, build the page on
 `python mock_products.py` (products/mock/), which writes the same contract with invented values.
 
     python export.py ocnele_mari
 
-Reads: up_east.npz (split.py), per track meta.json/ts.npz/cal.npz, products/<site>/stations.geojson + checks.json
-(validate.py) and calib.json (calibrate.py).
-Writes products/<site>/ (file contracts in docs/build-spec.md): manifest.json, up.png, east.png, los_<track>.png,
-frames/<track>/<date>.png, series.json, up.tif, east.tif, and updates products/index.json.
+Reads, for both radars (D-004):
+  NISAR: up_east.npz (split.py), per track meta.json/ts.npz/cal.npz;
+  Sentinel-1: sentinel1/analysis/029A.npz, 007D.npz, summary.json (03; restore the grids with sentinel1/scripts/restore_grids.py);
+  products/<site>/stations.geojson + checks.json (validate.py) and calib.json (calibrate.py).
+Writes products/<site>/ (file contracts in docs/build-spec.md): manifest.json with a `sensors` block, <sensor>/los_<track>.png,
+<sensor>/frames/<track>/<date>.png, experimental <sensor>/up.png and east.png, series.json keyed "<sensor>:<track>",
+up.tif, east.tif, and updates products/index.json. The page design is docs/ui.md.
 
 Starting points (advisor kit + D-002):
 - Leaflet image overlays are axis-aligned: resample UTM grids to a lon/lat grid (~100 m) for the PNGs; the GeoTIFFs keep

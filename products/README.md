@@ -1,5 +1,7 @@
 # products/
 
+**Owner:** 06 · App developer (Darius)
+
 `products/<site>/` is what the page reads, and nothing else. Scripts write it, never people: `export.py` (06), `validate.py` (05) and `calibrate.py` (04). The file contracts are in [docs/build-spec.md](../docs/build-spec.md#file-contracts), and 01 and 06 freeze them at hour 2.
 
 | Folder | What | Written by |

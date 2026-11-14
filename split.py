@@ -1,6 +1,7 @@
+# Owner: 03 · InSAR analyst (Alexandru, Eric)
 """03 · InSAR analyst: ascending + descending calibrated rates → vertical and east–west.
 
-Owner: 03 · InSAR analyst (Alexandru & Eric). Status: STUB (interfaces only).
+Status: STUB (interfaces only).
 
     python split.py ocnele_mari
 

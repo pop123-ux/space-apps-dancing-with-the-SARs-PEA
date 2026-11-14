@@ -1,6 +1,7 @@
+# Owner: 04 · Geodesist (Matei)
 """04 · Geodesist: tie each track to the GNSS velocity model, the way EGMS calibrates its own product.
 
-Owner: 04 · Geodesist (Matei). Status: WORKING on a synthetic track (known offset and plane recovered); waits for real
+Status: WORKING on a synthetic track (known offset and plane recovered); waits for real
 meta.json / geom.npz (02) and ts.npz (03).
 
     python calibrate.py ocnele_mari                  # tie to EuVeM2022; model swap against EGMS if model_egms.csv exists,

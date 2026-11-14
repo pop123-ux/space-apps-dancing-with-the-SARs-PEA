@@ -1,6 +1,7 @@
+# Owner: 01 · Lead and story (Mario)
 """01 · Lead: is products/<site>/ complete and sane? Run it at hours 2, 12, 24 and 40, and before pushing products.
 
-Owner: 01 · Lead & story (Mario). Status: WORKS (checks the file contracts in docs/build-spec.md).
+Status: WORKS (checks the file contracts in docs/build-spec.md).
 
     python checkpoint.py ocnele_mari
     python checkpoint.py mock                         # the invented set from mock_products.py
@@ -21,7 +22,8 @@ import common as C
 
 NEED = ["manifest.json", "series.json", "stations.geojson", "calib.json", "checks.json"]
 MANIFEST_KEYS = ("site", "name", "story", "synthetic", "built", "bounds", "center", "view",
-                 "layers", "frames", "checks", "credits")
+                 "sensors", "views", "default", "checks", "credits")
+SENSOR_KEYS = ("label", "agency", "band", "status", "reference", "credit", "layers", "frames")
 LAYER_KEYS = ("id", "label", "png", "units", "vmin", "vmax")
 STATUSES = ("pass", "warn", "fail", "info")
 ISO = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -44,19 +46,34 @@ def check(site: str, root: pathlib.Path) -> tuple[list[str], list[str], dict | N
     v = m.get("view") or {}
     if not (isinstance(v.get("center"), list) and len(v["center"]) == 2 and isinstance(v.get("zoom"), int)):
         bad.append("manifest.view needs center [lat, lon] and an integer zoom (D-002)")
-    for layer in m.get("layers", []):
-        bad += [f"layer {layer.get('id')} has no '{k}'" for k in LAYER_KEYS if k not in layer]
-        if "png" in layer and not (out / layer["png"]).exists():
-            bad.append(f"layer png missing: {layer['png']}")
-    for t, f in m.get("frames", {}).items():
-        dates, pngs = f.get("dates", []), f.get("pngs", [])
-        if len(dates) != len(pngs):
-            bad.append(f"track {t}: {len(dates)} dates but {len(pngs)} pngs")
-        if any(not ISO.match(d) for d in dates) or dates != sorted(dates):
-            bad.append(f"track {t}: dates must be sorted YYYY-MM-DD")
-        if len(dates) < 5:
-            notes.append(f"track {t}: only {len(dates)} frames")
-        bad += [f"frame missing: {p}" for p in pngs if not (out / p).exists()][:3]
+    sensors = m.get("sensors") or {}
+    if not sensors:
+        bad.append("manifest.sensors is empty: the page needs at least one satellite (D-004)")
+    missing = [k for k in C.SENSORS if k not in sensors]
+    if missing:
+        notes.append(f"D-004: the satellite switch needs {', '.join(C.SENSORS)}; missing {', '.join(missing)}")
+    for sn, sv in sensors.items():
+        bad += [f"sensor {sn} has no '{k}'" for k in SENSOR_KEYS if k not in sv]
+        for layer in sv.get("layers", []):
+            bad += [f"{sn} layer {layer.get('id')} has no '{k}'" for k in LAYER_KEYS if k not in layer]
+            if "png" in layer and not (out / layer["png"]).exists():
+                bad.append(f"{sn} layer png missing: {layer['png']}")
+        for t, f in sv.get("frames", {}).items():
+            dates, pngs = f.get("dates", []), f.get("pngs", [])
+            if len(dates) != len(pngs):
+                bad.append(f"{sn} track {t}: {len(dates)} dates but {len(pngs)} pngs")
+            if any(not ISO.match(d) for d in dates) or dates != sorted(dates):
+                bad.append(f"{sn} track {t}: dates must be sorted YYYY-MM-DD")
+            if not isinstance(f.get("gaps", []), list):
+                bad.append(f"{sn} track {t}: gaps must be a list of [from, to]")
+            if len(dates) < 5:
+                notes.append(f"{sn} track {t}: only {len(dates)} frames")
+            bad += [f"frame missing: {p}" for p in pngs if not (out / p).exists()][:3]
+    views = m.get("views", [])
+    bad += [f"unknown view '{v}' (allowed: {', '.join(C.VIEWS)})" for v in views if v not in C.VIEWS]
+    d = m.get("default") or {}
+    if d.get("sat") not in list(sensors) + ["compare"] or d.get("view") not in views:
+        bad.append("manifest.default needs sat (a sensor key or 'compare') and view (one of manifest.views)")
     if m.get("synthetic"):
         notes.append("SYNTHETIC / MOCK site: the page must show the 'simulated, not data' banner")
     if "TODO" in str(m.get("story", "")):
@@ -70,6 +87,10 @@ def check(site: str, root: pathlib.Path) -> tuple[list[str], list[str], dict | N
             miss = [k for k in ("id", "label", "kind", "lat", "lon", "series") if k not in p]
             if miss:
                 bad.append(f"series point {p.get('id')} has no {', '.join(miss)}")
+                break
+            odd = [k for k in p["series"] if k.split(":")[0] not in sensors or ":" not in k]
+            if odd:
+                bad.append(f"series point {p['id']}: keys must be '<sensor>:<track>', got {odd[:3]}")
                 break
     gj = C.load_json(out / "stations.geojson")
     if gj.get("type") != "FeatureCollection":
@@ -90,7 +111,8 @@ def report(site: str, bad: list[str], notes: list[str], m: dict | None, checks: 
     print(f"== checkpoint · {site}")
     if m:
         print(f"   {m.get('name')} · {'SYNTHETIC' if m.get('synthetic') else 'real data'} · built {m.get('built')} · "
-              f"{len(m.get('layers', []))} layers · tracks {', '.join(m.get('frames', {})) or 'none'}")
+              + " · ".join(f"{sn}: {len(sv.get('layers', []))} layers, tracks {', '.join(sv.get('frames', {})) or 'none'}"
+                           for sn, sv in m.get("sensors", {}).items()))
     for b in bad:
         print("   CONTRACT ✘", b)
     for n in notes:

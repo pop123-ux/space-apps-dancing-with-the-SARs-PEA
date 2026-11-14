@@ -1,0 +1,700 @@
+{
+  "jobs": [
+    {
+      "name": "ocnele-mari-2026-007D-20260706-20260712",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_013694_IW2_20260706T042920_VV_FF17-BURST",
+          "S1_013694_IW2_20260712T042908_VV_6D3E-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-007D-20260706-20260718",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_013694_IW2_20260706T042920_VV_FF17-BURST",
+          "S1_013694_IW2_20260718T042921_VV_51A1-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-007D-20260712-20260718",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_013694_IW2_20260712T042908_VV_6D3E-BURST",
+          "S1_013694_IW2_20260718T042921_VV_51A1-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-007D-20260712-20260724",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_013694_IW2_20260712T042908_VV_6D3E-BURST",
+          "S1_013694_IW2_20260724T042908_VV_724A-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-007D-20260718-20260724",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_013694_IW2_20260718T042921_VV_51A1-BURST",
+          "S1_013694_IW2_20260724T042908_VV_724A-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-007D-20260718-20260730",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_013694_IW2_20260718T042921_VV_51A1-BURST",
+          "S1_013694_IW2_20260730T042922_VV_7A3E-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-007D-20260724-20260730",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_013694_IW2_20260724T042908_VV_724A-BURST",
+          "S1_013694_IW2_20260730T042922_VV_7A3E-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-007D-20260724-20260805",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_013694_IW2_20260724T042908_VV_724A-BURST",
+          "S1_013694_IW2_20260805T042909_VV_7C2E-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-007D-20260730-20260805",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_013694_IW2_20260730T042922_VV_7A3E-BURST",
+          "S1_013694_IW2_20260805T042909_VV_7C2E-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-007D-20260730-20260811",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_013694_IW2_20260730T042922_VV_7A3E-BURST",
+          "S1_013694_IW2_20260811T042922_VV_AEEA-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-007D-20260805-20260811",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_013694_IW2_20260805T042909_VV_7C2E-BURST",
+          "S1_013694_IW2_20260811T042922_VV_AEEA-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-007D-20260805-20260817",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_013694_IW2_20260805T042909_VV_7C2E-BURST",
+          "S1_013694_IW2_20260817T042910_VV_35C6-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-007D-20260811-20260817",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_013694_IW2_20260811T042922_VV_AEEA-BURST",
+          "S1_013694_IW2_20260817T042910_VV_35C6-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-007D-20260811-20260823",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_013694_IW2_20260811T042922_VV_AEEA-BURST",
+          "S1_013694_IW2_20260823T042923_VV_3750-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-007D-20260817-20260823",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_013694_IW2_20260817T042910_VV_35C6-BURST",
+          "S1_013694_IW2_20260823T042923_VV_3750-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-007D-20260817-20260829",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_013694_IW2_20260817T042910_VV_35C6-BURST",
+          "S1_013694_IW2_20260829T042910_VV_7474-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-007D-20260823-20260829",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_013694_IW2_20260823T042923_VV_3750-BURST",
+          "S1_013694_IW2_20260829T042910_VV_7474-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-007D-20260823-20260904",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_013694_IW2_20260823T042923_VV_3750-BURST",
+          "S1_013694_IW2_20260904T042923_VV_46AB-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-007D-20260829-20260904",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_013694_IW2_20260829T042910_VV_7474-BURST",
+          "S1_013694_IW2_20260904T042923_VV_46AB-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-007D-20260829-20260910",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_013694_IW2_20260829T042910_VV_7474-BURST",
+          "S1_013694_IW2_20260910T042911_VV_202E-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-007D-20260904-20260910",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_013694_IW2_20260904T042923_VV_46AB-BURST",
+          "S1_013694_IW2_20260910T042911_VV_202E-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-007D-20260904-20260916",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_013694_IW2_20260904T042923_VV_46AB-BURST",
+          "S1_013694_IW2_20260916T042924_VV_A271-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-007D-20260910-20260916",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_013694_IW2_20260910T042911_VV_202E-BURST",
+          "S1_013694_IW2_20260916T042924_VV_A271-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-007D-20260910-20260922",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_013694_IW2_20260910T042911_VV_202E-BURST",
+          "S1_013694_IW2_20260922T042911_VV_973C-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-007D-20260916-20260922",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_013694_IW2_20260916T042924_VV_A271-BURST",
+          "S1_013694_IW2_20260922T042911_VV_973C-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-007D-20260916-20260928",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_013694_IW2_20260916T042924_VV_A271-BURST",
+          "S1_013694_IW2_20260928T042924_VV_8D5E-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-007D-20260922-20260928",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_013694_IW2_20260922T042911_VV_973C-BURST",
+          "S1_013694_IW2_20260928T042924_VV_8D5E-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-007D-20260922-20261004",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_013694_IW2_20260922T042911_VV_973C-BURST",
+          "S1_013694_IW2_20261004T042912_VV_BB7A-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-007D-20260928-20261004",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_013694_IW2_20260928T042924_VV_8D5E-BURST",
+          "S1_013694_IW2_20261004T042912_VV_BB7A-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-029A-20260707-20260713",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_060407_IW2_20260707T161648_VV_72A7-BURST",
+          "S1_060407_IW2_20260713T161635_VV_3BE5-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-029A-20260707-20260719",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_060407_IW2_20260707T161648_VV_72A7-BURST",
+          "S1_060407_IW2_20260719T161649_VV_41DF-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-029A-20260713-20260719",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_060407_IW2_20260713T161635_VV_3BE5-BURST",
+          "S1_060407_IW2_20260719T161649_VV_41DF-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-029A-20260713-20260725",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_060407_IW2_20260713T161635_VV_3BE5-BURST",
+          "S1_060407_IW2_20260725T161636_VV_0BCA-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-029A-20260719-20260725",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_060407_IW2_20260719T161649_VV_41DF-BURST",
+          "S1_060407_IW2_20260725T161636_VV_0BCA-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-029A-20260719-20260731",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_060407_IW2_20260719T161649_VV_41DF-BURST",
+          "S1_060407_IW2_20260731T161649_VV_6938-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-029A-20260725-20260731",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_060407_IW2_20260725T161636_VV_0BCA-BURST",
+          "S1_060407_IW2_20260731T161649_VV_6938-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-029A-20260725-20260806",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_060407_IW2_20260725T161636_VV_0BCA-BURST",
+          "S1_060407_IW2_20260806T161636_VV_278F-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-029A-20260731-20260806",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_060407_IW2_20260731T161649_VV_6938-BURST",
+          "S1_060407_IW2_20260806T161636_VV_278F-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-029A-20260731-20260812",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_060407_IW2_20260731T161649_VV_6938-BURST",
+          "S1_060407_IW2_20260812T161650_VV_EE91-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-029A-20260806-20260812",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_060407_IW2_20260806T161636_VV_278F-BURST",
+          "S1_060407_IW2_20260812T161650_VV_EE91-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-029A-20260806-20260818",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_060407_IW2_20260806T161636_VV_278F-BURST",
+          "S1_060407_IW2_20260818T161637_VV_7D83-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-029A-20260812-20260818",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_060407_IW2_20260812T161650_VV_EE91-BURST",
+          "S1_060407_IW2_20260818T161637_VV_7D83-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-029A-20260812-20260824",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_060407_IW2_20260812T161650_VV_EE91-BURST",
+          "S1_060407_IW2_20260824T161650_VV_DC4D-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-029A-20260818-20260824",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_060407_IW2_20260818T161637_VV_7D83-BURST",
+          "S1_060407_IW2_20260824T161650_VV_DC4D-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-029A-20260818-20260830",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_060407_IW2_20260818T161637_VV_7D83-BURST",
+          "S1_060407_IW2_20260830T161638_VV_F31D-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-029A-20260824-20260830",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_060407_IW2_20260824T161650_VV_DC4D-BURST",
+          "S1_060407_IW2_20260830T161638_VV_F31D-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-029A-20260824-20260905",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_060407_IW2_20260824T161650_VV_DC4D-BURST",
+          "S1_060407_IW2_20260905T161651_VV_4F78-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-029A-20260830-20260905",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_060407_IW2_20260830T161638_VV_F31D-BURST",
+          "S1_060407_IW2_20260905T161651_VV_4F78-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-029A-20260830-20260911",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_060407_IW2_20260830T161638_VV_F31D-BURST",
+          "S1_060407_IW2_20260911T161638_VV_35A2-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-029A-20260905-20260911",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_060407_IW2_20260905T161651_VV_4F78-BURST",
+          "S1_060407_IW2_20260911T161638_VV_35A2-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-029A-20260905-20260917",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_060407_IW2_20260905T161651_VV_4F78-BURST",
+          "S1_060407_IW2_20260917T161651_VV_70BA-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-029A-20260911-20260917",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_060407_IW2_20260911T161638_VV_35A2-BURST",
+          "S1_060407_IW2_20260917T161651_VV_70BA-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-029A-20260911-20260923",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_060407_IW2_20260911T161638_VV_35A2-BURST",
+          "S1_060407_IW2_20260923T161638_VV_B7CB-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-029A-20260917-20260923",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_060407_IW2_20260917T161651_VV_70BA-BURST",
+          "S1_060407_IW2_20260923T161638_VV_B7CB-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-029A-20260917-20260929",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_060407_IW2_20260917T161651_VV_70BA-BURST",
+          "S1_060407_IW2_20260929T161651_VV_6062-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-029A-20260923-20260929",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_060407_IW2_20260923T161638_VV_B7CB-BURST",
+          "S1_060407_IW2_20260929T161651_VV_6062-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-029A-20260923-20261005",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_060407_IW2_20260923T161638_VV_B7CB-BURST",
+          "S1_060407_IW2_20261005T161639_VV_528C-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    },
+    {
+      "name": "ocnele-mari-2026-029A-20260929-20261005",
+      "job_type": "INSAR_ISCE_BURST",
+      "job_parameters": {
+        "granules": [
+          "S1_060407_IW2_20260929T161651_VV_6062-BURST",
+          "S1_060407_IW2_20261005T161639_VV_528C-BURST"
+        ],
+        "looks": "10x2",
+        "apply_water_mask": true
+      }
+    }
+  ]
+}

@@ -1,6 +1,7 @@
+# Owner: 05 · Validator (Paul)
 """05 · Validator: the checks the team did not tune. Nobody else edits this file.
 
-Owner: 05 · Validator (Paul). Status: STUB (interfaces only).
+Status: STUB (interfaces only).
 
     python validate.py ocnele_mari
 
@@ -20,7 +21,8 @@ The checks (DRAFT thresholds from the advisor kit; 05 owns them):
 6 egms      EGMS Ortho Up 2020–2024, stable ground: median |NISAR − EGMS| < 1.5 mm/yr; the bowl then vs now is reported,
             not judged (a difference is the story, not an error).
 7 truth     synthetic site only: up bias < 1 mm/yr, zones within 15 %.
-8 s1        Sentinel-1 (HyP3) over the bowl for the same months: same zone rate within the errors (hyp3_order.py).
+8 s1        NISAR against Sentinel-1 (D-004), per zone over the common window (C.COMMON_WINDOW), as zone minus outer
+            reference band until O-19 decides: agree within the combined errors, disagree, or not testable (too few pixels).
 """
 from __future__ import annotations
 
@@ -43,7 +45,7 @@ def check_closure(site, add):   raise C.todo("05", "check 4: 12- vs 24-day closu
 def check_gaps(site, add):      raise C.todo("05", "check 5: chain gaps")
 def check_egms(site, add):      raise C.todo("05", "check 6: EGMS Ortho stable ground; bowl then vs now")
 def check_truth(site, add):     raise C.todo("05", "check 7: synthetic truth recovered (demo only)")
-def check_sentinel1(site, add): raise C.todo("05", "check 8: Sentinel-1 bowl rate, same months")
+def check_sentinel1(site, add): raise C.todo("05", "check 8: NISAR against Sentinel-1 per zone, common window")
 
 
 def run(site: str) -> list[dict]:

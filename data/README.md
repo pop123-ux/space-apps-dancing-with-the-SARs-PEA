@@ -1,5 +1,7 @@
 # data/
 
+**Owner:** 02 · NISAR data (Alexandru, Eric)
+
 Everything here stays local and git-ignored, except this file and the small query lists in `data/scenes/`. Scripts create the layout below. Nobody writes here by hand, except 05 for the EGMS file.
 
 ```

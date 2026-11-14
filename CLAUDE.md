@@ -1,26 +1,29 @@
 # CLAUDE.md
 
+**Owner:** 01 · Lead and story (Mario); changes agreed by the team
+
 Context for Claude Code sessions in this repo. Six people each run their own session, one per role, so these rules keep six sessions from colliding.
 
 ## What this is
 
-This is the team repo for NASA Space Apps 2026 (14 to 15 Nov), challenge "Dancing with the SARs". The project, **Dancing on Salt**, uses NISAR L-band interferograms to show how the ground moves above the salt-brine fields of **Ocnele Mari**, Romania. It ties the radar to open GNSS velocity models, and checks it against held-out stations, EGMS Ortho, Sentinel-1 and a synthetic stack with a known answer. The output is a static web page: a map that opens on the town, a time slider with honest gaps, station pins that say whether satellite and ground agree, and story stops.
+This is the team repo for NASA Space Apps 2026 (14 to 15 Nov), challenge "Dancing with the SARs". The project, **Dancing on Salt**, uses two radars, **NISAR** (L-band) and **Sentinel-1** (C-band), to show how the ground moves above the salt-brine fields of **Ocnele Mari**, Romania (D-004). It ties the radar to open GNSS velocity models, and checks it against held-out stations, EGMS Ortho, the other radar and a synthetic stack with a known answer. The output is a static web page: a map that opens on the town, a **satellite switch** (NISAR, Sentinel-1, Compare), several views of the same trend, a time slider with honest gaps, station pins that say whether satellite and ground agree, and story stops. We present it in a **7-slide PowerPoint, with no video** (D-003).
 
 **Status:** skeleton. The plan, the rules, the pipeline interfaces (stubs) and the working tools are in place, and there is no page yet. The advisor's rehearsal showed that the signal (about −25 mm/yr at most) is below NISAR's first-months per-pixel noise (37 to 51 mm/yr), so the story framing is open (O-01). See `STATUS.md` for where things stand right now.
 
 ## Read first
 
 1. `STATUS.md`: where the build is, and what is waiting on whom.
-2. `docs/build-spec.md`: the locked and proposed decisions, the file contracts, **your role's section**, done-criteria, unknowns, open decisions and the change log.
-3. `docs/overview.md`: what we build and why, the candidate claims and how each could fail, scope, schedule, risks.
-4. `docs/data.md` and `docs/rehearsal.md`: the data, its traps, and what the rehearsal found.
-5. `DECISIONS.md`: what was decided without the whole team, and why.
+2. `docs/schedule.md`: your role's column, hour by hour, with the gates and cut lines.
+3. `docs/build-spec.md`: the locked and proposed decisions, the file contracts, **your role's section**, done-criteria, unknowns, open decisions and the change log.
+4. `docs/overview.md`: what we build and why, the candidate claims and how each could fail, scope, schedule, risks.
+5. `docs/data.md` and `docs/rehearsal.md`: the data, its traps, and what the rehearsal found.
+6. `DECISIONS.md`: what was decided without the whole team, and why.
 
 `docs/synopsis.md` is the one-page version, and `prompts/build.md` is the prompt that drives a role's session.
 
 ## Who owns what
 
-**Find out which role you work for first:** ask the human, or read the branch name (`r01/…` to `r06/…`). Edit only that role's files. If a task needs a change in another role's file, write the proposed change for your human to pass on.
+**Find out which role you work for first:** ask the human, or read the branch name (`r01/…` to `r06/…`). Edit only that role's files. **The full list, file by file, is [OWNERS.md](OWNERS.md)**, and every file says its owner in its first lines (`# Owner:` or `**Owner:**`). When you create a file, add a row to `OWNERS.md` and an owner line to the file in the same PR; `pytest -q` checks both. If a task needs a change in another role's file, write the proposed change for your human to pass on.
 
 | Path | Owner |
 | --- | --- |
@@ -31,7 +34,7 @@ This is the team repo for NASA Space Apps 2026 (14 to 15 Nov), challenge "Dancin
 | `validate.py`, `hyp3_order.py`, `docs/validation-log.md` | 05 · Validator (Paul) |
 | `export.py`, `mock_products.py`, `index.html` and the page's assets (not created yet), the Pages workflow when it exists | 06 · App developer (Darius) |
 | `common.py`, `run_all.py`, `tests/`, `requirements.txt`, `.github/` | shared: announce changes; 01 reviews |
-| `DECISIONS.md`, `CITATIONS.md`, `docs/AI_USE.md`, your row of `STATUS.md` | everyone appends; never rewrite others' lines |
+| `DECISIONS.md`, `CITATIONS.md`, the log in `AI-DISCLOSURE.md`, your row of `STATUS.md` | everyone appends; never rewrite others' lines |
 | `products/<site>/` | written by scripts only, never by hand |
 | `docs/` other than the above, `prompts/`, `INFO.md`, `LICENSE` | do not edit unasked; report problems instead |
 
@@ -45,15 +48,17 @@ This is the team repo for NASA Space Apps 2026 (14 to 15 Nov), challenge "Dancin
   Small committed lists such as `data/scenes/*.csv` are fine. GeoTIFFs and PNGs are allowed only under `products/<site>/`.
 - **Scope is Ocnele Mari only (D-001).** `demo` and `mock` are test sites, not sites.
 - **The map opens on Ocnele Mari, with Romania blurred when zoomed out (D-002).**
+- **The submission is a 7-slide PowerPoint, with no video (D-003).** Each slide has an owner role; see `docs/overview.md`, "The slides".
+- **Two radars, one switch (D-004).** Both NISAR and Sentinel-1 are fitted. The page has a satellite switch and the views in `docs/ui.md`. Compare them only on the same months and reference, each in its own line of sight, on one shared legend (`docs/ui.md`, "Honest comparison rules"). Sentinel-1 lives in `sentinel1/` (03).
 - **Decisions in `docs/build-spec.md` are frozen after the hour-2 review.** Don't change cuts, thresholds, windows, tests or the file contracts. If one looks wrong, write a proposal with the evidence; the team decides, and 01 logs it in the change log.
 - **Honest numbers.**
-  - Every number on the page, in the video and in the submission comes from `products/ocnele_mari/`, written by the pipeline.
+  - Every number on the page, in the slides and in the submission comes from `products/ocnele_mari/`, written by the pipeline.
   - Never hard-code a number, round it to flatter, or tune it until it looks right.
   - Never flip the phase sign to pass a check.
   - Never quote −250 mm/yr: it was a factor-10 error in the deck.
-- **No silent placeholders.** Mock and synthetic outputs carry `synthetic: true` and show "Simulated, not data". Before submitting, `___`, `TODO`, `TBD` and `computing` must appear nowhere in the page, `SUBMISSION.md` or the captions.
+- **No silent placeholders.** Mock and synthetic outputs carry `synthetic: true` and show "Simulated, not data". Before submitting, `___`, `TODO`, `TBD` and `computing` must appear nowhere in the page, `SUBMISSION.md` or the slides.
 - **The validator is independent.** Nobody else edits `validate.py`, and 05 edits no science script.
-- **Freeze at hour 40.** After that, nothing that changes a number; only text, captions, styling and video.
+- **Freeze at hour 40.** After that, nothing that changes a number; only text, styling and the slides.
 - **Ask your human before you:**
   - run `sudo` or any system-level install;
   - push to a branch other than your own role branch, or deploy;
@@ -65,7 +70,7 @@ This is the team repo for NASA Space Apps 2026 (14 to 15 Nov), challenge "Dancin
 - **Log as you go:**
   - a line in `DECISIONS.md` for any choice you make without asking;
   - a row in `CITATIONS.md` for any source;
-  - a line in `docs/AI_USE.md` for anything substantive you produce;
+  - a row in the log of `AI-DISCLOSURE.md` for anything substantive you produce;
   - your row in `STATUS.md` at each checkpoint.
 
 ## Conventions
