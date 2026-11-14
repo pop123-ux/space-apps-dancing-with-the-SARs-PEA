@@ -231,6 +231,11 @@ def box_sigma(cal, r_px: int = STATION_R_PX, step: int = 9) -> float:
     return float(1.4826 * np.median(np.abs(m - np.median(m))))
 
 
+def zlabel(zid: str, site: str = "ocnele_mari") -> str:
+    z = next((z for z in C.SITES[site]["zones"] if z["id"] == zid), {"id": zid})
+    return C.zone_label(z)
+
+
 def check_tie(site, add):
     calib = C.load_json(C.PRODUCTS / site / "calib.json")
     for e in calib.get("tracks", []):
@@ -304,7 +309,7 @@ def check_sentinel1(site, add):
             num = z[1:]
             if not (a and b and ca and cb) or min(a["n_pixels"], b["n_pixels"]) < S1_MIN_PX or u_s1 is None:
                 why = "a satellite has no series here" if not (a and b) else f"fewer than {S1_MIN_PX} pixels" if (a and b) else ""
-                add(f"agree-z{num}-{t}", "info", f"Zone {num}: NISAR {t} against Sentinel-1 {s1t}",
+                add(f"agree-z{num}-{t}", "info", f"{zlabel(z, site)}: NISAR {t} against Sentinel-1 {s1t}",
                     f"Not testable: {why or 'no shared geometry'}.", None)
                 continue
 
@@ -325,7 +330,7 @@ def check_sentinel1(site, add):
             tol = 2 * math.sqrt((sn * k) ** 2 + ss ** 2)
             status = "fail" if abs(diff) > tol else ("pass" if tol <= S1_TOL_DECISIVE else "warn")
             same = (rn < 0) == (rs < 0)
-            add(f"agree-z{num}-{t}", status, f"Zone {num}: NISAR {t} against Sentinel-1 {s1t}",
+            add(f"agree-z{num}-{t}", status, f"{zlabel(z, site)}: NISAR {t} against Sentinel-1 {s1t}",
                 f"Zone minus outer comparison area, {w0} to {w1}: NISAR {rn * k:+.1f} (scaled ×{k:.2f}; tracks paired by "
                 f"east sensitivity, so east-west motion cancels) against Sentinel-1 {rs:+.1f} mm/yr; difference {diff:+.1f}, tolerance ±{tol:.1f} "
                 f"(2σ, dates assumed independent: a lower bound); {nn} and {ns} dates, {a['n_pixels']} and {b['n_pixels']} px. "

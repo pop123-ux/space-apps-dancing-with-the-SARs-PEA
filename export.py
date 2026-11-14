@@ -229,7 +229,8 @@ def zone_points(site: dict) -> list[dict]:
     pts = []
     for z in site["zones"]:
         n = z["id"].lstrip("z")
-        pts.append(dict(id=z["id"], key=f"zone_{n}", label=f"Zone {n}", kind="zone", lat=z["lat"], lon=z["lon"], r_m=z["r_m"]))
+        pts.append(dict(id=z["id"], key=f"zone_{n}", label=C.zone_label(z), kind="zone", lat=z["lat"], lon=z["lon"],
+                        r_m=z["r_m"], place=z.get("place")))
     pts.append(dict(id="outer_control", key="outer_control", label="Outer comparison area (6.5 to 8 km)", kind="control",
                     lat=site["lat"], lon=site["lon"]))
     return pts
@@ -532,10 +533,25 @@ def run(site_key: str) -> None:
           + (f" · pending files written: {', '.join(made)}" if made else ""))
 
 
+def relabel(site_key: str) -> None:
+    """Copy the zone names from common.py into an existing series.json without re-exporting any data."""
+    site = C.SITES[site_key]
+    f = C.PRODUCTS / site_key / "series.json"
+    names = {p["id"]: p for p in zone_points(site) if p["kind"] == "zone"}
+    series = C.load_json(f)
+    for p in series:
+        if p.get("id") in names:
+            p["label"], p["place"] = names[p["id"]]["label"], names[p["id"]]["place"]
+    C.save_json(f, series)
+    print(f"{f}: zone labels {', '.join(n['label'] for n in names.values())}")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("site", choices=C.SITES)
-    run(ap.parse_args().site)
+    ap.add_argument("--labels-only", action="store_true", help="only copy the zone names from common.py into series.json")
+    a = ap.parse_args()
+    relabel(a.site) if a.labels_only else run(a.site)
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 [
  {
   "id": "z1",
-  "label": "Zone 1",
+  "label": "Lacul Țeica",
   "kind": "zone",
   "lat": 45.0892,
   "lon": 24.2872,
@@ -128,11 +128,12 @@
     "n_pixels": 32,
     "fitted_change_mm": -9.23
    }
-  }
+  },
+  "place": "2001 collapse lake over Câmpul II de sonde, Dealul Țeica"
  },
  {
   "id": "z2",
-  "label": "Zone 2",
+  "label": "Țeica east",
   "kind": "zone",
   "lat": 45.0882,
   "lon": 24.2892,
@@ -259,11 +260,12 @@
     "n_pixels": 21,
     "fitted_change_mm": -11.58
    }
-  }
+  },
+  "place": "Ground just east of Lacul Țeica, on the same brine field"
  },
  {
   "id": "z3",
-  "label": "Zone 3",
+  "label": "Ocnița · Goruniș",
   "kind": "zone",
   "lat": 45.093,
   "lon": 24.2565,
@@ -349,11 +351,12 @@
     "n_pixels": 12,
     "fitted_change_mm": 3.41
    }
-  }
+  },
+  "place": "Goruniș quarter of Ocnița, next to Lunca: the old Ocnița mine and its collapse lakes"
  },
  {
   "id": "z4",
-  "label": "Zone 4",
+  "label": "Slătioarele",
   "kind": "zone",
   "lat": 45.0826,
   "lon": 24.2628,
@@ -480,7 +483,8 @@
     "n_pixels": 20,
     "fitted_change_mm": -5.29
    }
-  }
+  },
+  "place": "Village of Slătioarele, Coșota"
  },
  {
   "id": "outer_control",

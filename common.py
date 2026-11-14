@@ -42,13 +42,20 @@ SITES = {
         lat=45.088, lon=24.290,     # DRAFT (02/04) analysis-window centre; town pin is 45.0838382, 24.2859745
         half_km=25,                 # DRAFT (04/05) half-size of the analysis window: big enough for stable ground and stations
         height_m=400,               # DRAFT (02) reference height for the line-of-sight vectors
-        # DRAFT (03 with 01): salt zones kept out of the tie and used for zone medians. Positions from the advisor kit;
-        # names still to be matched to INFO.md (Țeica/Socon, Câmpul I and II de sonde, Lunca, Ocnița).
+        # Salt zones kept out of the tie and used for zone medians. Positions from the advisor kit. Names (14 Nov 2026)
+        # from the nearest mapped place (OpenStreetMap, Overpass) matched to INFO.md and ocnele-mari-geography.md:
+        # z1 centre lies 10 m from the salt lake "Lacul Țeica", the 2001 collapse over Câmpul II de sonde (Dealul Țeica);
+        # z2 is the ground just east of that lake (190 m); z3 is the Goruniș quarter of Ocnița (420 m), next to Lunca;
+        # z4 is the village of Slătioarele, Coșota (230 m). `place` says where each name comes from.
         zones=[
-            dict(id="z1", name="TODO", lat=45.0892, lon=24.2872, r_m=300),
-            dict(id="z2", name="TODO", lat=45.0882, lon=24.2892, r_m=250),
-            dict(id="z3", name="TODO", lat=45.0930, lon=24.2565, r_m=300),
-            dict(id="z4", name="TODO", lat=45.0826, lon=24.2628, r_m=250),
+            dict(id="z1", name="Lacul Țeica", lat=45.0892, lon=24.2872, r_m=300,
+                 place="2001 collapse lake over Câmpul II de sonde, Dealul Țeica"),
+            dict(id="z2", name="Țeica east", lat=45.0882, lon=24.2892, r_m=250,
+                 place="Ground just east of Lacul Țeica, on the same brine field"),
+            dict(id="z3", name="Ocnița · Goruniș", lat=45.0930, lon=24.2565, r_m=300,
+                 place="Goruniș quarter of Ocnița, next to Lunca: the old Ocnița mine and its collapse lakes"),
+            dict(id="z4", name="Slătioarele", lat=45.0826, lon=24.2628, r_m=250,
+                 place="Village of Slătioarele, Coșota"),
         ],
         stations=["VLC1", "VLC2", "HORE"],   # DRAFT (04/05): open stations inside the window
         story="TODO(01): one sentence, written by the Lead",
@@ -106,6 +113,12 @@ TOL_FLOOR = 2.0                 # (05) mm/yr: station and NISAR agree below this
 
 
 # --------------------------------------------------------------------------------------------------------- helpers
+def zone_label(z: dict) -> str:
+    """A zone's display name: its place name, or 'Zone N' while it has none."""
+    name = str(z.get("name") or "")
+    return name if name and not name.startswith("TODO") else f"Zone {z['id'].lstrip('z')}"
+
+
 def todo(role: str, what: str) -> NotImplementedError:
     """Build the error a stub raises: `raise C.todo("02", "stream the window")`."""
     return NotImplementedError(f"TODO({role} · {ROLES[role]}): {what}")

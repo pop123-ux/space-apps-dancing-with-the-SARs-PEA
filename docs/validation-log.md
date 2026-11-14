@@ -182,6 +182,36 @@ Check 8 scales NISAR by the ratio of the up components and assumes no east-west 
 - **Conclusion:** do not flip 094D's phase sign. The +23.5 mm/yr comes from using a far reference, not from a sign error. Keep 094D off the page.
 - **Fix in `validate.py`:** check 1 now also prints the height-matched zone values. The pass/fail rule is unchanged, because T3 was predeclared.
 
+### 4 · Why the Change map was empty inside the town, and the fix (about 22:30)
+
+| | Before (`stack.py` on main) | After (partial series) |
+| --- | --- | --- |
+| Town cells (80 m) with a value on 21 Oct 2026 | **31 %** (1,279 of 4,105) | **76 %** (3,137) |
+| Town cells with a rate | 31 % | **83 %** |
+| July to October dates | 31 % | 80 to 93 % |
+| Stable-ground scatter of the rate (MAD) | 30.8 mm/yr | 39.5 mm/yr |
+
+- **Cause:** 129A is a single chain (13 pairs for 15 dates). `invert` needed every date connected, so one pair under coherence 0.35 dropped the whole pixel. The town is not less coherent than its surroundings: median mean coherence 0.56 inside, 0.54 outside.
+- **Fix in `stack.py`:**
+  - A pixel keeps every date its valid pairs connect to its group's first date. The dates after a break are NaN.
+  - A rate needs at least 6 dates over at least 0.3 years (`MIN_RATE_DATES`, `MIN_RATE_SPAN_YR`).
+  - Each date's change uses exactly the same pairs as before, so the Change map gains coverage without extra noise.
+- **Zone histories are unchanged:** `export.nisar_series` still uses only pixels with every date.
+- **Screenshots:** [before](figures/ui-review-14nov/04_change_town_before.jpg) and [after, local preview](figures/ui-review-14nov/05_change_town_after_preview.jpg).
+- **The preview is not committed.** It was made from this machine's copy of the 129A pairs. Rebuild the products from the team pipeline: `stack.py`, `calibrate.py`, `export.py`, `validate.py`, `export.py`.
+
+### 5 · Zone names (about 22:30)
+
+| Zone | Name on the page | Where the name comes from |
+| --- | --- | --- |
+| z1 | Lacul Țeica | Centre 10 m from the OSM salt lake "Lacul Țeica": the 2001 collapse over Câmpul II de sonde (`INFO.md`, `ocnele-mari-geography.md`) |
+| z2 | Țeica east | 190 m east of the same lake, inside its 250 m circle |
+| z3 | Ocnița · Goruniș | Goruniș quarter of Ocnița, 420 m; Lunca 750 m |
+| z4 | Slătioarele | Village of Slătioarele (Coșota), 230 m |
+
+- **Not verified:** which extraction field (Câmpul I, III or IV) lies under z2, z3 and z4. The names say where each zone is, not which field it is.
+- **Still to confirm:** the zone circles come from the advisor kit, and permission to publish them is still open.
+
 ## Red team at hours 12 / 24 / 40 (with the advisor)
 
 | Hour | Finding | Owner | Verdict (fix / cut / explain) |
