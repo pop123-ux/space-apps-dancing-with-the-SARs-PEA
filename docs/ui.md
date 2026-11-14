@@ -77,6 +77,21 @@ NISAR has no acquisitions over the town from 18 Jan to 23 Jun 2026 (NASA CMR; ca
 - **Zone charts:** NISAR's zone chart adds the Sentinel-1 January to October line through the gap months, in Sentinel-1's colour, with a note: it is Sentinel-1's own line of sight and reference, so its shape, not its offset from the NISAR line, carries information. The two are never spliced into one line: the geometry (left- vs right-looking) and the reference differ (O-19).
 - **Caveats carried over:** the January to October fit cannot be rerun from the repository (job IDs only), has no weather-model scenario, and has no zone series on 007D or for Zone 3.
 
+## Exploration pass: Motion, Coverage, Compare and the Zone 4 flow (15 Nov 2026)
+
+A first-time visitor can open `#preset=zone4` (or press **Investigate Zone 4**) and answer: what was measured, over what dates and relative to what; how the result changes with processing; what the satellites can and cannot compare.
+
+- **Navigation:** Motion (Change, Rate), Coverage, Compare. Internal view keys are unchanged, so old links with `view=coverage`, `view=zones` and `view=agreement` still open (verified).
+- **Context strip** under the toolbar: satellite, track, the acquisition and its real baseline date (Change) or the fit window and "Annualized line-of-sight rate (mm/yr)" (Rate), the processing run, the reference area and "Negative means motion away from the satellite along its line of sight."
+- **Zones:** chips for Zones 1 to 4 (Zones 1 and 2 overlap at the opening zoom; the chips keep both selectable), a dashed footprint on the map, selection kept across views, satellites and tracks, and in the link (`zone=z4`). **Copy view link** and **Reset to site** sit beside them.
+- **Chart and map are linked:** clicking an acquisition on a zone chart moves the map to that date; moving the timeline marks the matching point (dotted line, larger point).
+- **Compare processing runs** (Sentinel-1 zone panel): the baseline and one alternative on shared axes, observed points and each run's fitted line, plus a table of every run with fitted change, acquisition count, usable pixels, window and reference. Runs without a series say why (the weather model has no January to October series because those interferograms are not in the repository). A lead line, "Fitted direction changes with processing", appears when stored runs disagree in sign.
+- **Regression check (artifacts, 15 Nov 2026):** Zone 4, Sentinel-1 029A, January to October: baseline −4.07 mm, 26 px; elevation correction (fitted to the data) +4.48 mm, 26 px; stricter coherence +1.21 mm, 2 px (flagged "only 2 px"). Same values as the reviewed build; source `sentinel1/analysis_jan_oct/summary.json` via `sensitivity.json`. These are January to October window fits, distinct from the summer zone-minus-outer-ring comparison under Compare.
+- **Coverage:** the map shows every pixel with a connected series on the active track and window as a grey dot; the zone panel gives one support row per satellite and track or the reason for none, with buttons to another track or window that has data (Zone 3: none on 029A in either window, 55 px on 007D July to October, 12 px on NISAR 129A; 094D held).
+- **Compare:** for a selected zone, parallel line-of-sight observations (zone minus the 6.5 to 8 km ring) over the common window, each labelled with track, direction and look side; the verdict comes from `checks.json` (Zone 4: inconclusive, tolerance too wide); blockers listed (094D, O-19); EGMS under "Historical context".
+- **Status pill:** shows the check that matters for the selection (for example the zone's NISAR against Sentinel-1 check) and opens the About panel at that evidence.
+- **Legend:** larger; "near 0 (pale dot)" and "no dot = no data" keys. Phone: one-line context, numbered zone chips, one scrolling control row, drawer at most 36 % of the height.
+
 ## Implementation status (r06/page, 14 Nov 2026, 16:15)
 
 | Part | Status | Notes |
