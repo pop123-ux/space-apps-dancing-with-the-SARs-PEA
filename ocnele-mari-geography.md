@@ -1,5 +1,7 @@
 # Geography of the Ocnele Mari Region (Vâlcea County, Romania)
 
+**Owner:** 01 · Lead and story (Mario)
+
 *Research compiled on 14 November 2026 from open web sources. Statements are paraphrased from the sources listed at the end. Where sources disagree, the disagreement is shown rather than resolved (see "Discrepancies").*
 
 ---
