@@ -105,7 +105,7 @@ Tier 1 alone is a complete submission. Everything after it raises the ceiling wi
 
 ## The 48 hours
 
-Hour 0 is the event start, set by 01 in `STATUS.md`. The plan per role is in [build-spec.md](build-spec.md).
+Hour 0 is the kickoff, set by 01 in `STATUS.md`. **Hour by hour, per role: [schedule.md](schedule.md).** The steps behind each cell are in [build-spec.md](build-spec.md). The summary:
 
 | Role | 0 to 6 | 6 to 18 | 18 to 30 | 30 to 40 | 40 to 48 |
 | --- | --- | --- | --- | --- | --- |

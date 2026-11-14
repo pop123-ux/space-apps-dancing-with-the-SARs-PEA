@@ -59,7 +59,7 @@ Send one short message saying exactly what the person must do, then wait. Keep w
    - Never commit `data/work/`, `.h5`, `.nc`, `.npz`, `.zip`, `.env` or tokens.
    - Before every push, run `pytest -q` and `git ls-files | xargs du -k | sort -n | tail -3`, so nothing over 50 MB goes in.
    - Grep the diff for `EARTHDATA_TOKEN=`, `password` and `token=`.
-5. **AI disclosure.** Add a line to `docs/AI_USE.md` for anything substantive you produce. No generative image or video models.
+5. **AI disclosure.** Add a row to the log in `AI-DISCLOSURE.md` for anything substantive you produce. No generative image or video models.
 6. **Writing.** Plain sentences, no em-dashes, units on every number, and dates on anything that can change.
 7. **Leave the plan alone.** Don't edit `docs/overview.md`, `docs/build-spec.md` (apart from 01's change log), `prompts/`, `INFO.md` or another role's files.
 
@@ -67,10 +67,11 @@ Send one short message saying exactly what the person must do, then wait. Keep w
 
 1. `CLAUDE.md`.
 2. `STATUS.md`: hour 0, the gates, what is waiting on whom. If your role's row shows work in progress, you are resuming. Read `DECISIONS.md` and `git log -10`, then continue from the first unfinished step.
-3. `docs/build-spec.md`: the decisions, the file contracts, and **your role's section**.
-4. `docs/data.md` and `docs/rehearsal.md`.
-5. Your script's docstring: its inputs, outputs and the known traps.
-6. `prompts/early-tests.md`: the tests you own.
+3. `docs/schedule.md`: **your role's column**, hour by hour, and the gates.
+4. `docs/build-spec.md`: the decisions, the file contracts, and **your role's section**.
+5. `docs/data.md` and `docs/rehearsal.md`.
+6. Your script's docstring: its inputs, outputs and the known traps.
+7. `prompts/early-tests.md`: the tests you own.
 
 ## The clock
 

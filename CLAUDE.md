@@ -11,10 +11,11 @@ This is the team repo for NASA Space Apps 2026 (14 to 15 Nov), challenge "Dancin
 ## Read first
 
 1. `STATUS.md`: where the build is, and what is waiting on whom.
-2. `docs/build-spec.md`: the locked and proposed decisions, the file contracts, **your role's section**, done-criteria, unknowns, open decisions and the change log.
-3. `docs/overview.md`: what we build and why, the candidate claims and how each could fail, scope, schedule, risks.
-4. `docs/data.md` and `docs/rehearsal.md`: the data, its traps, and what the rehearsal found.
-5. `DECISIONS.md`: what was decided without the whole team, and why.
+2. `docs/schedule.md`: your role's column, hour by hour, with the gates and cut lines.
+3. `docs/build-spec.md`: the locked and proposed decisions, the file contracts, **your role's section**, done-criteria, unknowns, open decisions and the change log.
+4. `docs/overview.md`: what we build and why, the candidate claims and how each could fail, scope, schedule, risks.
+5. `docs/data.md` and `docs/rehearsal.md`: the data, its traps, and what the rehearsal found.
+6. `DECISIONS.md`: what was decided without the whole team, and why.
 
 `docs/synopsis.md` is the one-page version, and `prompts/build.md` is the prompt that drives a role's session.
 
@@ -31,7 +32,7 @@ This is the team repo for NASA Space Apps 2026 (14 to 15 Nov), challenge "Dancin
 | `validate.py`, `hyp3_order.py`, `docs/validation-log.md` | 05 · Validator (Paul) |
 | `export.py`, `mock_products.py`, `index.html` and the page's assets (not created yet), the Pages workflow when it exists | 06 · App developer (Darius) |
 | `common.py`, `run_all.py`, `tests/`, `requirements.txt`, `.github/` | shared: announce changes; 01 reviews |
-| `DECISIONS.md`, `CITATIONS.md`, `docs/AI_USE.md`, your row of `STATUS.md` | everyone appends; never rewrite others' lines |
+| `DECISIONS.md`, `CITATIONS.md`, the log in `AI-DISCLOSURE.md`, your row of `STATUS.md` | everyone appends; never rewrite others' lines |
 | `products/<site>/` | written by scripts only, never by hand |
 | `docs/` other than the above, `prompts/`, `INFO.md`, `LICENSE` | do not edit unasked; report problems instead |
 
@@ -65,7 +66,7 @@ This is the team repo for NASA Space Apps 2026 (14 to 15 Nov), challenge "Dancin
 - **Log as you go:**
   - a line in `DECISIONS.md` for any choice you make without asking;
   - a row in `CITATIONS.md` for any source;
-  - a line in `docs/AI_USE.md` for anything substantive you produce;
+  - a row in the log of `AI-DISCLOSURE.md` for anything substantive you produce;
   - your row in `STATUS.md` at each checkpoint.
 
 ## Conventions
