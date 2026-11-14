@@ -106,3 +106,9 @@ Whoever creates these adds the owner line from this table.
 | `notebooks/04/` | 04 · Geodesist (Matei) | Exploration only, outputs stripped, never imported |
 | `notebooks/05/` | 05 · Validator (Paul) | Exploration only, outputs stripped, never imported |
 | `notebooks/06/` | 06 · App developer (Darius) | Exploration only, outputs stripped, never imported |
+
+## Sentinel-1 handoff
+
+| File | Owner | What to do with it |
+| --- | --- | --- |
+| `sentinel1/` | 03 · InSAR analyst (Alexandru, Eric) | Sentinel-1 data manifest, fitted results, and team handoff |
