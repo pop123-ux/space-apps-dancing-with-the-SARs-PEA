@@ -44,6 +44,8 @@ import pathlib
 
 import common as C
 
+S1_PAIR = {"129A": "007D", "094D": "029A"}   # same table as validate.S1_PAIR (validate imports export)
+
 S1_DIR = C.ROOT / "sentinel1"
 SCENES = C.DATA / "scenes" / "ocnele_mari_gunw.csv"
 CHANGE_VMAX = 20.0      # mm, frames (same scale as mock_products.py, shared by both satellites)
@@ -519,8 +521,10 @@ def run(site_key: str) -> None:
         bounds=bounds, center=[site["lat"], site["lon"]], view=dict(site["view"], min_zoom=6, context="romania-blurred"),
         sensors=dict(nisar=nisar, s1=s1), views=list(C.VIEWS), common_window=list(C.COMMON_WINDOW),
         default=dict(sat="nisar", view="coverage", track="129A"),
-        compare=dict(ready=False, reason="Compare waits for both NISAR tracks to pass T3 and a shared window and "
-                                          "reference (O-19); NISAR 094D is under review."),
+        compare=dict(ready=False, reason="Side-by-side maps wait for NISAR's second track (094D), which is still "
+                                          "under review. The zone comparison is in Agreement"),
+        # which Sentinel-1 track sees east-west motion like each NISAR track (validate.S1_PAIR): Agreement and Compare
+        agreement=dict(pairs=dict(S1_PAIR), basis="east sensitivity (NISAR looks left, Sentinel-1 right)"),
         windows={k: v["label"] for k, v in windows.items()}, default_window=WINDOW,
         checks={k: sum(c.get("status") == k for c in checks) for k in ("pass", "warn", "fail", "info")},
         zone_notes=ZONE_NOTES, track_notes=TRACK_NOTES,

@@ -354,3 +354,21 @@ body.side-open.side-wide .layers-wrap { right: calc(var(--side-wide) + var(--gap
   background: var(--card); border-radius: 999px; padding: 0 9px; font-size: 12px; line-height: 18px; white-space: nowrap; }
 .tl .gap .gap-fill:hover { background: #F5F3FF; }
 .tl .gap.filled { background: rgba(124,58,237,.06); text-align: center; }
+
+/* ---- 14 Nov UI pass: long explanations fold behind a toggle; a loading chip; the forecast shortcut */
+details.more { margin-top: 6px; font-size: 14px; }
+details.more > summary { cursor: pointer; color: var(--muted); font-size: 13px; list-style: none; display: inline-flex; align-items: center; gap: 6px; }
+details.more > summary::-webkit-details-marker { display: none; }
+details.more > summary::before { content: '+'; display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: var(--soft); font-weight: 600; font-size: 12px; }
+details.more[open] > summary::before { content: '−'; }
+details.more > summary:hover { color: var(--ink, #1C1917); }
+details.more > div { margin-top: 6px; }
+details.more.check { margin: 0; flex: 1; min-width: 0; }
+details.more.check > summary { color: inherit; font-size: inherit; display: flex; justify-content: space-between; width: 100%; }
+details.more.check > summary::before { order: 2; flex: none; }
+details.more.h > summary { font-family: var(--serif); font-size: 20px; color: inherit; margin-top: 14px; }
+.checks li { align-items: flex-start; }
+.flag.quiet { font-size: 13px; padding: 6px 12px; opacity: .92; }
+.teaser { display: block; width: 100%; text-align: left; margin: 10px 0; padding: 10px 14px; border: 1px solid #DDD6FE; background: #F5F3FF; color: #4C1D95; border-radius: 12px; font: inherit; font-weight: 600; cursor: pointer; }
+.teaser:hover { background: #EDE9FE; }
+.teaser .sub { font-weight: 400; }

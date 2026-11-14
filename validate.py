@@ -198,7 +198,7 @@ def check_stations(site, add):
             agree_all.append(ok)
             decisive.append(tol <= TOL_DECISIVE)
             reasons.append(f"{t}: NISAR {v:+.1f} vs GNSS {g:+.1f} mm/yr (±{tol:.1f}, {n} px)")
-        agree = None if not agree_all else all(agree_all)
+        agree = None if not agree_all or not all(decisive) else all(agree_all)   # not decisive: the pin shows "?"
         dist = C.haversine_km(s["lat"], s["lon"], lat, lon)
         old = str(r["t_end"])[:4] < "2026"
         feats.append(dict(type="Feature", geometry=dict(type="Point", coordinates=[round(lon, 5), round(lat, 5)]),
