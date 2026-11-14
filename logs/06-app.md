@@ -70,3 +70,7 @@ These are proposals only. The owners decide.
 | `sentinel1/scripts/restore_grids.py` (03) | Settled: 03 added `sentinel1/analysis/summary.json -text` to `.gitattributes` (PR #10) | On Windows git checks the file out with CRLF, the SHA-256 no longer matches, and the script refuses; `export.py` works around it by reading the chunks in memory |
 | `.gitignore` (shared) | Add `.claude/` | Local Claude Code preview settings should not be committed |
 | `docs/overview.md` (01) | In "The page", say the measurements show as dots and the town boundary is drawn | Matches the build |
+
+## EGMS summary integration
+
+Agreement shows the reported historical medians while the 2026 radar comparison is pending. The values come from [R05's pinned validation log](https://github.com/pop123-ux/space-apps-dancing-with-the-SARs-PEA/blob/a5ad330a8361d7d75b78221ea1352cb292176272/docs/validation-log.md#egms). Cell-level overlays and the local time series still depend on reviewed R05 assets.
