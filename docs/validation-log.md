@@ -84,11 +84,27 @@ What this cannot tell us:
 
 **Red flag for the team (01, 03, 04): z3.** EGMS shows z3 as the fastest-sinking zone in 2020 to 2025 (median −18.9 mm/yr Up, 6 cells). If that continued, Sentinel-1 should see roughly −3 to −4 mm of line-of-sight change over the 90 days. It sees no connected series on 029A and about 0 mm (+0.2, no consistent sign) on 007D. Possible reasons: low coherence over the bowl, the motion stopped or slowed, or the zone circle sits off the moving cells. This is a finding to explain, not an error to tune away; it goes to the red team below.
 
+### z3 investigation (05, 14 Nov 2026)
+
+Done on the committed Sentinel-1 grids (`sentinel1/assets`, checksums verified) and `refs/egms_up.csv` / `egms_east.csv`, with `notebooks/05/z3_check.py`. Nothing in `sentinel1/` was changed.
+
+1. **The zone is in the right place.** 6 of the 31 EGMS cells sinking faster than −10 mm/yr lie inside the z3 circle, 11 within 1 km. The centre of the fast cells within 1.5 km is 214 m from the z3 centre, inside its 300 m radius.
+2. **What Sentinel-1 should see if 2020 to 2025 continued.** EGMS z3 cells move −18.9 mm/yr Up and +0.2 mm/yr east. Projected on each track's look vector (029A east −0.63, up 0.77; 007D east +0.64, up 0.76) that is −13.8 mm/yr on 029A and −16.4 mm/yr on 007D in line of sight, so about **−3.4 mm and −4.1 mm over the 90-day window**.
+3. **029A cannot see z3: coherence loss.** 0 of 177 pixels inside the circle have a series, 3 % in the 300 to 600 m ring, 21 % at 600 to 1,000 m. None of the 11 fast EGMS cells has a Sentinel-1 value. Not testable, as T10 says.
+4. **007D sees z3 but not the sinking.** 55 of 177 pixels (31 %) have a series. At the 10 fast EGMS cells it covers, Sentinel-1 reads +8.8 mm/yr (towards the satellite) where EGMS predicts −6.5 mm/yr. On stable EGMS cells 1.5 to 3 km away the two agree (+0.8 against −0.4 mm/yr, 113 cells). The zone median over 90 days is about 0 mm against an expected −4 mm.
+5. **But the expected signal is at the noise level.** −4 mm over 90 days is smaller than 007D's 95th-percentile misclosure (6.2 mm) and inside the spread of its sensitivity runs (−1.0 to +3.4 mm). So the honest reading is "**not detected**", not "contradicted". Sentinel-1's July to October window cannot tell whether z3 kept sinking or stopped.
+6. **Side finding on 029A (for 03).** Stable EGMS cells 1.5 to 3 km from z3 read −19.3 mm/yr on 029A where EGMS has them at about 0 (70 cells). Pixels around z3 read −33 to −42 mm/yr. A broad negative signal on the west side of town, from the reference band, the atmosphere or real motion, may inflate 029A's z1, z2 and z4 rates (−27 to −35 mm/yr) as well. 007D does not show it.
+
+**What would settle it:** the January to October extension (49 dates per track, already processed by 02/03). Over 9 months EGMS predicts about −10 to −12 mm on z3, well above the noise. The handoff says no descending salt-zone pixel spans all 49 dates under the current connectivity rule, so 03 would need to relax it or use the new group-aware solver.
+
+**Suggested wording for the page (01 decides):** "z3 sank about 19 mm a year from 2020 to 2025 (EGMS). Sentinel-1 cannot confirm 2026 here: the ascending track loses coherence over the bowl, and on the descending track the expected 4 mm over July to October is within the noise."
+
 ## Red team at hours 12 / 24 / 40 (with the advisor)
 
 | Hour | Finding | Owner | Verdict (fix / cut / explain) |
 |---|---|---|---|
-| Before hour 12 (T10) | z3 is the fastest-sinking zone in EGMS 2020 to 2025 (−18.9 mm/yr) but Sentinel-1 shows no usable 2026 signal there (029A no series; 007D about 0 mm) | 03 with 05 | Open: check coherence over z3 and the zone position, then explain on the page |
+| Before hour 12 (T10) | z3 is the fastest-sinking zone in EGMS 2020 to 2025 (−18.9 mm/yr) but Sentinel-1 shows no usable 2026 signal there (029A no series; 007D about 0 mm) | 03 with 05 | **Explain** (05 investigated, see "z3 investigation"): zone position is fine; 029A has no coherent pixels there; on 007D the expected 4 mm is within the noise. Ask 03 for the Jan to Oct extension on z3, and to look at 029A's negative bias around z3 |
+| Before hour 12 | `sentinel1/scripts/restore_grids.py` refuses to run on Windows: git turns `summary.json` into CRLF line endings, so its SHA-256 no longer matches `MANIFEST.json` (the file in git is unchanged) | 03 | Fix: hash the file with `\r\n` turned back into `\n`, or add `sentinel1/analysis/summary.json -text` to a `.gitattributes` |
 
 ## Frozen-build re-run (hours 40–48)
 
