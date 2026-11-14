@@ -28,6 +28,28 @@ All 22 are in [../data/scenes/ocnele_mari_gunw.csv](../data/scenes/ocnele_mari_g
 - **The summer 24-day pairs** (129A 17 Jul to 10 Aug, 094D 26 Jul to 19 Aug) bridge the 27 Jul to 10 Aug 2026 instrument data gap that NASA lists.
 - **No closure triplets.** The 24-day pairs replace missing 12-day pairs, so there is no 12 + 12 against 24-day triplet. GSLC exists for 11 dates on 094D and 15 on 129A, which allows extra pairs (decision O-07).
 
+## 04's first 129A pair, checked independently (14 Nov 2026, 21:00)
+
+The file Matei shared (Google Drive) is `NISAR_L2_PR_GUNW_023_129_A_024_024_2000_SH_20260623T032016_20260623T032051_20260705T032016_20260705T032051_P05023_N_F_J_001.h5`, 2,399,141,888 bytes. It is row 15 of [the scene list](../data/scenes/ocnele_mari_gunw.csv): a **Level 2** GUNW (the "PR" in the name means PROVISIONAL, not a level), track 129 ascending, frame 24, left-looking, HH, 23 June to 5 July 2026 (12 days), product 1.0.11, specification 1.5.0. Nothing was downloaded in full: [`notebooks/02/verify_nisar_pair.py`](../notebooks/02/verify_nisar_pair.py) read the metadata and the 50 × 50 km window through HTTP range requests (69 MB).
+
+| Item, window of 625 × 625 px at 80 m, EPSG:32635 | 04's log | This check |
+| --- | --- | --- |
+| Land in both subswaths (mask code under 100) | 99.1 % | 99.1 % (code 12: 97.9 %, code 11: 1.2 %) |
+| Anomaly flags (bits 8 to 23) | 0 % | 0 % |
+| Bit 24 (ionosphere interpolated) | 98.3 % (99 % in the per-pair table) | 98.35 % |
+| Connected components | one | one (384,853 px) |
+| Kept: valid, no anomaly, largest component, coherence ≥ 0.35 | 88 % | 88.46 % |
+| Ionosphere screen σ in kept pixels | 1.83 rad | 1.831 rad (filled everywhere) |
+| Look vector at the site, 500 m, target to sensor | e +0.624, n +0.206, u +0.754 | identical |
+| Incidence | 41.07° | 41.068° (= acos u) |
+| Wavelength | 0.24393 m | 0.24393 m |
+
+Verdict: **04's first-pair report reproduces.** Two small differences, neither of which changes a number:
+- 04's log calls the mask "contiguous". In this file `unwrappedInterferogram/mask` is stored in 512 × 512 gzip chunks like the other layers.
+- 04's window corner (x 261720, y 5021320) is the centre of the pixel one column west and one row north of this check's first pixel (edge 261760, 5021280). The window is the same size, shifted by one 80 m pixel.
+
+What this check cannot tell: the phase sign (T3 stays open; no field states the convention), and anything about the other 12 pairs or 04's tie (−5.80 mm/yr), which need the stack.
+
 ## Product notes and traps
 
 - **`mask` is a 32-bit bitfield** (product spec 1.4), but older pairs store a uint8 code.
