@@ -202,4 +202,4 @@ The [group-aware rerun and four-zone review](../sentinel1/docs/TEAM_HANDOFF.md#1
 
 ## Forecast and environmental controls
 
-See [the forecasting handoff](forecast.md) for the January endpoint, Paul’s inputs, and the checks required before publishing environmental or vertical scenarios.
+See [the forecasting handoff](forecast.md) for the January endpoint, Paul’s inputs, and the checks required before publishing environmental or vertical scenarios. Since 14 Nov 18:30 the forecast panel offers four model paths (persistence, Theil–Sen, Gaussian process, long-term trend from EGMS 2020–2025) and says that rainfall and soil moisture were tested and not adopted. The model selector must wrap or become a select when four buttons do not fit.

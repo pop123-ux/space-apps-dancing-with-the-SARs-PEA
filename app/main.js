@@ -765,7 +765,7 @@ function forecastPanel() {
   if (!obs || obs.dates.length !== f.training_dates.length ||
       !obs.dates.every((date, index) => date === f.training_dates[index] &&
         Number.isFinite(obs.mm[index]) && Math.abs(obs.mm[index] - f.observed_mm[index]) <= .011)) return '';
-  const labels = { persistence: 'Persistence', theil_sen: 'Theil–Sen trend', gaussian_process: 'Gaussian process' };
+  const labels = { persistence: 'Persistence', theil_sen: 'Theil–Sen trend', gaussian_process: 'Gaussian process', long_term: 'Long-term trend (EGMS 2020–2025)' };
   const model = Object.hasOwn(f.model_paths_mm || {}, S.forecastModel) ? S.forecastModel : f.model;
   const path = f.model_paths_mm?.[model] || f.forecast_mm;
   const modelChoices = Object.keys(f.model_paths_mm || {}).map(key => `<button type="button" data-forecast-model="${esc(key)}" aria-pressed="${key === model}">${esc(labels[key])}</button>`).join('');
@@ -778,7 +778,7 @@ function forecastPanel() {
   const retro = f.status === 'retrospective' || f.end_date <= new Date().toISOString().slice(0, 10);
   return block('zone-forecast', `Zone 4 · ${retro ? 'Retrospective forecast' : 'Experimental forecast'}`,
     `<span class="badge">${f.horizon_days} days · 029A LOS</span>`, lines, {
-      top: `<p class="reason">${esc(labels[model])} through ${esc(f.end_date)}, from radar data ending ${esc(f.last_observation)}. The dashed segment is a line-of-sight scenario. The long horizon has no comparable backtest.</p><div class="seg" role="group" aria-label="Forecast model">${modelChoices}</div><p class="reason">Endpoint ${fmt(path.at(-1), 2)} mm relative to the first acquisition. Moisture and rainfall controls await a fitted model.</p>${keys(lines)}`,
+      top: `<p class="reason">${esc(labels[model])} through ${esc(f.end_date)}, from radar data ending ${esc(f.last_observation)}. The dashed segment is a line-of-sight scenario. The long horizon has no comparable backtest.</p><div class="seg" role="group" aria-label="Forecast model">${modelChoices}</div><p class="reason">Endpoint ${fmt(path.at(-1), 2)} mm relative to the first acquisition. Rainfall and soil moisture were tested and did not improve the forecast, so there is no weather control yet (docs/forecast.md).</p>${keys(lines)}`,
       foot: `30-day backtest MAE from ${f.folds.length} overlapping historical cutoffs: ${scores}. ${esc(f.interval_reason)}`,
     });
 }

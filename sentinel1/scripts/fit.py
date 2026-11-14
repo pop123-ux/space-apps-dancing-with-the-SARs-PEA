@@ -42,7 +42,10 @@ def geometry():
 
 
 def read_product(p, bounds):
-    from osgeo import gdal
+    try:
+        from osgeo import gdal
+    except ImportError:   # no GDAL Python bindings: rasterio wheels bundle GDAL; same warp, checked against summary.json
+        return read_product_rasterio(p, bounds)
     gdal.UseExceptions()
     with zipfile.ZipFile(p) as z:
         names = z.namelist()
@@ -53,6 +56,26 @@ def read_product(p, bounds):
         raster = gdal.Warp('', src, format='MEM', dstSRS='EPSG:32635', outputBounds=bounds,
                            xRes=STEP, yRes=STEP, resampleAlg='near', outputType=gdal.GDT_Float32, dstNodata=np.nan)
         result[key] = raster.ReadAsArray()
+    return result
+
+
+def read_product_rasterio(p, bounds):
+    """The same nearest-neighbour warp onto the 40 m EPSG:32635 window, through rasterio's bundled GDAL."""
+    import rasterio
+    from rasterio.transform import from_origin
+    from rasterio.warp import reproject, Resampling
+    with zipfile.ZipFile(p) as z:
+        names = z.namelist()
+    shape = (round((bounds[3] - bounds[1]) / STEP), round((bounds[2] - bounds[0]) / STEP))
+    transform = from_origin(bounds[0], bounds[3], STEP, STEP)
+    result = {}
+    for key, suffix in SUFFIXES.items():
+        name = next(n for n in names if n.endswith('_' + suffix + '.tif'))
+        with rasterio.open(f'zip://{p.resolve()}!/{name}') as src:
+            out = np.full(shape, np.nan, np.float32)
+            reproject(rasterio.band(src, 1), out, dst_transform=transform, dst_crs='EPSG:32635',
+                      resampling=Resampling.nearest, src_nodata=src.nodata, dst_nodata=np.nan)
+        result[key] = out
     return result
 
 
