@@ -1,0 +1,27 @@
+# Data never enter git (raw NISAR / EGMS / Sentinel-1, intermediates). data/README.md is the only tracked file.
+data/*
+!data/README.md
+
+# Secrets
+.env
+.netrc
+*.token
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Big or local files that must not slip in from anywhere
+*.h5
+*.nc
+*.zip
+*.npz
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

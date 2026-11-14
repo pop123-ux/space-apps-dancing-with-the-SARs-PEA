@@ -1,0 +1,17 @@
+# Python >= 3.11. Install: pip install -r requirements.txt
+# The skeleton tools (checkpoint.py, run_all.py, mock_products.py, test_skeleton.py) need only the standard library.
+# The pipeline will need these (owners add pins when they know what they use):
+numpy
+scipy
+pandas
+h5py            # 02: read GUNW HDF5 over HTTP range requests
+requests        # 02/04: downloads
+asf_search      # 02/05: ASF search for NISAR GUNW and Sentinel-1
+pyproj          # everyone: UTM <-> lon/lat
+matplotlib      # 06: colour maps for the overlays
+pillow          # 06: PNG overlays and frames
+rasterio        # 02: DEM; 06: GeoTIFF export
+hyp3_sdk        # 05: Sentinel-1 interferograms on HyP3
+# optional, decided by the owner:
+# earthaccess   # 02: alternative to asf_search + token handling
+# mintpy        # 03: if decision O-05 picks MintPy over our own inversion
