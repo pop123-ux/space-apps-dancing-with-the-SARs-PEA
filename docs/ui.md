@@ -54,6 +54,14 @@ One title pill and one satellite menu at the top, one dock at the bottom, the ma
 └────────────────────────────┘
 ```
 
+## Layout v4: docked panels (14 Nov 2026, 21:45, team sketch)
+
+The team's sketch ([docs/figures/02_ui_sketch_v4.jpg](figures/02_ui_sketch_v4.jpg)): a **toolbar** with the logo across the top, the **map** in the middle (opening on Ocnele Mari, D-002), a **menu column** on the right that a click on the map opens ("click => deschide meniu": a zone, a station or a view's details, with its chart), and the **timeline** across the full width at the bottom.
+
+- Implemented in `app/style.css` (block "docked layout (v4)"), `index.html` (logo mark) and `app/main.js` (the map resizes to the space left of the menu column; it never sits under a panel).
+- Phone: the menu is a drawer above the timeline (at most 55 % of the height); the toolbar and its satellite menu stay above it. This fixes the audit's first high finding (the sheet covered the dock and the satellite menu). The legend's "away from / toward satellite" caps and the full status line now show on phones (audit finding 2, honest-comparison rule 5).
+- Checked with Playwright at 1440 × 900 and on an iPhone 13: zone click opens the column, the satellite menu stays clickable, no console errors.
+
 ## Implementation status (r06/page, 14 Nov 2026, 16:15)
 
 | Part | Status | Notes |

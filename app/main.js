@@ -993,6 +993,15 @@ async function main() {
   mapA.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
   mapA.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
   addMarkers(mapA);
+  // Docked layout (v4): the map shrinks to the space left of the menu column, then redraws at its new size.
+  const side = () => {
+    const sh = $('#sheet'); const open = !sh.hidden;
+    document.body.classList.toggle('side-open', open);
+    document.body.classList.toggle('side-wide', open && sh.classList.contains('wide'));
+    setTimeout(() => { mapA?.resize(); mapB?.resize(); }, 220);
+  };
+  new MutationObserver(side).observe($('#sheet'), { attributes: true, attributeFilter: ['hidden', 'class'] });
+  side();
   mapA.on('zoom', updateBlur);
   mapA.on('load', () => { updateBlur(); document.querySelector('#map .maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show'); });
   mapA.on('click', (e) => {
