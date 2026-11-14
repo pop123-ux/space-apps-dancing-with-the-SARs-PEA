@@ -1,4 +1,4 @@
-"""03 · InSAR analyst — ascending + descending calibrated rates → vertical and east–west.
+"""03 · InSAR analyst: ascending + descending calibrated rates → vertical and east–west.
 
 Owner: 03 · InSAR analyst (Alexandru & Eric). Status: STUB (interfaces only).
 

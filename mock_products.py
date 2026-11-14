@@ -1,15 +1,15 @@
-"""06 · App developer — write an INVENTED products/mock/ in the contract's shape, so the page can be built right away.
+"""06 · App developer: write an INVENTED products/mock/ in the contract's shape, so the page can be built right away.
 
 Owner: 06 · App developer (Darius). Status: WORKS. Standard library only (no numpy, no Pillow).
 
     python mock_products.py                        # → products/mock/ and an entry in products/index.json
-    python mock_products.py --out /tmp/products    # anywhere else (test_skeleton.py does this)
+    python mock_products.py --out /tmp/products    # anywhere else (tests/test_skeleton.py does this)
     python mock_products.py --size 400             # bigger overlays (default 200 px)
 
 Every value is made up: four small bowls at the draft salt zones, some smooth "atmosphere", and two station pins (one
 agreeing, one not). Every file says synthetic: true, so the page must show the "simulated, not data" banner. The dates are
 the real NISAR acquisition dates over Ocnele Mari (CMR, 14 Nov 2026), so the slider already has to cope with the real
-18 Jan → 23 Jun 2026 gap on 129A. When docs/contract.md changes, change this file too.
+18 Jan → 23 Jun 2026 gap on 129A. When the file contracts in docs/build-spec.md change, change this file too.
 """
 from __future__ import annotations
 
@@ -186,7 +186,7 @@ def build(root: pathlib.Path, n: int) -> None:
     C.save_json(out / "checks.json", checks)
     icon = {"pass": "✔", "warn": "!", "fail": "✘", "info": "·"}
     (out / "checks.md").write_text("# Checks · MOCK (invented)\n\n" + "\n".join(
-        f"- {icon[c['status']]} **{c['title']}** — {c['detail']}" for c in checks) + "\n", encoding="utf-8")
+        f"- {icon[c['status']]} **{c['title']}**: {c['detail']}" for c in checks) + "\n", encoding="utf-8")
     C.save_json(out / "calib.json", dict(model="MOCK", tracks=[
         dict(track=t, direction=g["direction"], method="offset", offset_mm_yr=round(rng.uniform(-9, -5), 2),
              slope_east_mm_yr_per_10km=0.0, slope_north_mm_yr_per_10km=0.0, n_tie_pixels=0,
@@ -202,7 +202,7 @@ def build(root: pathlib.Path, n: int) -> None:
         view=dict(site["view"], min_zoom=6, context="romania-blurred"),
         layers=layers, frames=frames,
         checks={k: sum(c["status"] == k for c in checks) for k in ("pass", "warn", "fail", "info")},
-        credits="MOCK: no data. Real credits come from export.py (docs/data-sources.md)."))
+        credits="MOCK: no data. Real credits come from export.py (CITATIONS.md)."))
 
     idx = root / "index.json"
     sites = C.load_json(idx) if idx.exists() else []

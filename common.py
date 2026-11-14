@@ -5,7 +5,7 @@ the PR. Nothing here talks to the network, and nothing heavy is imported at the 
 works on a bare Python before the environment is installed.
 
 Values marked DRAFT are starting points, most of them from the advisor's rehearsal kit (prior work, see
-docs/prior-work.md). The role named next to each value confirms or changes it.
+CITATIONS.md). The role named next to each value confirms or changes it.
 """
 from __future__ import annotations
 
@@ -90,7 +90,7 @@ def run_cli(main):
     try:
         return main()
     except NotImplementedError as e:
-        print(f"⏳ not implemented yet — {e}", file=sys.stderr)
+        print(f"⏳ not implemented yet: {e}", file=sys.stderr)
         sys.exit(STUB_EXIT)
 
 

@@ -1,10 +1,10 @@
-"""05 · Validator — the checks the team did not tune. Nobody else edits this file.
+"""05 · Validator: the checks the team did not tune. Nobody else edits this file.
 
 Owner: 05 · Validator (Paul). Status: STUB (interfaces only).
 
     python validate.py ocnele_mari
 
-Writes products/<site>/ (contract, see docs/contract.md):
+Writes products/<site>/ (file contracts in docs/build-spec.md):
     checks.json        [{id, status: pass|warn|fail|info, title, detail, value}]
     checks.md          the same, readable
     stations.geojson   per station: tracks {nisar, gnss, diff, tol}, agree (true|false|null), reason, nisar_up, gnss_up

@@ -1,10 +1,10 @@
-"""01 · Lead — is products/<site>/ complete and sane? Run it at hours 2, 12, 24 and 40, and before pushing products.
+"""01 · Lead: is products/<site>/ complete and sane? Run it at hours 2, 12, 24 and 40, and before pushing products.
 
-Owner: 01 · Lead & story (Mario). Status: WORKS (checks the DRAFT contract in docs/contract.md).
+Owner: 01 · Lead & story (Mario). Status: WORKS (checks the file contracts in docs/build-spec.md).
 
     python checkpoint.py ocnele_mari
     python checkpoint.py mock                         # the invented set from mock_products.py
-    python checkpoint.py mock --products /tmp/prod    # another products folder (test_skeleton.py uses this)
+    python checkpoint.py mock --products /tmp/prod    # another products folder (tests/test_skeleton.py uses this)
 
 Exit 1 if the contract is broken (the page would fail to load the site). Science WARN/FAIL lines from checks.json are
 listed, not fatal: read each aloud and give it an owner and a verdict (fix, cut or explain).
