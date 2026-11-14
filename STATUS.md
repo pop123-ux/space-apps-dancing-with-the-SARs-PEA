@@ -37,7 +37,7 @@ The full plan, hour by hour, is [docs/schedule.md](docs/schedule.md).
 | 01 Mario | Hour 0, the guide, the hour-2 review, the contract freeze | [build-spec.md § 01](docs/build-spec.md#01--lead-and-story-mario) |
 | 02 Alexandru and Eric | Token; T1 (venue network); T2 (`fetch.py --list` gives 22 pairs) | [§ 02](docs/build-spec.md#02--nisar-data-alexandru-and-eric) |
 | 03 Alexandru and Eric | O-05 (method); read 02's hand-off | [§ 03](docs/build-spec.md#03--insar-analyst-alexandru-and-eric) |
-| 04 Matei | `refs.py` and `calibrate.py` implemented and tested on synthetic inputs. Run `python refs.py ocnele_mari` on real inputs, then tie per track after 02 and 03 hand off. T8 and the EGMS stable-ground comparison are pending. | [§ 04](docs/build-spec.md#04--geodesist-matei) |
+| 04 Matei | 14 Nov, 15:20: station rates checked against Muntean Tables S1/S3 and NGL MIDAS; first real `refs.py ocnele_mari` run (VLC1, VLC2, HORE; Italian VLC2 dropped); EGMS swap hook passes a synthetic known-answer test. Next: tie per track after 02 and 03 hand off. T8 waits on the EGMS GNSS model CSV (O-06). Log: `logs/04-geodesist.md` | [§ 04](docs/build-spec.md#04--geodesist-matei) |
 | 05 Paul | EGMS 2020–2025 tile cut (`egms_cut.py`): z3 sinks −18.9 mm/yr, stable ground −0.5 mm/yr. Station screening and the 2026 third-witness search done: no open station within 70 km has 2026 data. Next: check 8 and T10 (`docs/validation-log.md`) | [§ 05](docs/build-spec.md#05--validator-paul) |
 | 06 Darius | Implement the [UI handoff](docs/ui.md#06-implementation-handoff--14-november-2026) with Claude Code. Verify the real-data and mock flows. | [§ 06](docs/build-spec.md#06--app-developer-darius) |
 
@@ -55,7 +55,7 @@ The tests are defined in [prompts/early-tests.md](prompts/early-tests.md). Each 
 | T5 Gap groups (synthetic) | 03 | | |
 | T6 Summer-only bias (synthetic) | 03 | | |
 | T7 Station hold-out | 05 | | |
-| T8 Model swap and EGMS | 04, 05 | | |
+| T8 Model swap and EGMS | 04, 05 | PARTIAL (14 Nov) | Swap code passes a synthetic test (0.78/0.79 mm/yr for a known 0.78/0.79); real EGMS model CSV and real tie still missing. `logs/04-geodesist.md` |
 | T9 Phones | 06 | | |
 | T10 Sentinel-1 holds up | 05, 03 | | |
 
