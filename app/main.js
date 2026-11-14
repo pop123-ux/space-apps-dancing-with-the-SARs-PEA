@@ -687,11 +687,12 @@ const keys = (lines) => `<div class="keys">${lines.map(l => `<span><i style="bor
 // direction of a zone's fitted change across every stored processing run, for one track
 function direction(point, sat, trk) {
   if (!scenarios() || sat !== 's1') return null;
-  const vals = Object.keys(scenarios()).map(sc => entry(point, sat, trk, sc)?.fitted_change_mm).filter(v => v !== null && v !== undefined);
+  const vals = Object.keys(scenarios()).map(sc => entry(point, sat, trk, sc)?.fitted_change_mm).filter(Number.isFinite);
   if (vals.length < 2) return null;
   const neg = vals.filter(v => v < 0).length, pos = vals.filter(v => v > 0).length;
   if (neg && pos) return { cls: 'warn', text: 'Direction changes with processing' };
-  return { cls: 'pass', text: `${neg ? 'Away from the satellite' : 'Toward the satellite'} in all ${vals.length} runs` };
+  if (neg + pos !== vals.length) return { cls: 'warn', text: 'Some processing runs have zero fitted change' };
+  return { cls: 'pass', text: `${neg ? 'Away from the satellite' : 'Toward the satellite'} in ${vals.length} available runs` };
 }
 function factRow(point, sat, trk) {
   const e = entry(point, sat, trk);
@@ -701,8 +702,20 @@ function factRow(point, sat, trk) {
   const change = e.fitted_change_mm !== undefined && e.fitted_change_mm !== null ? `<b>${fmt(e.fitted_change_mm, 1)} mm</b> fitted change` : `<b>${fmt(e.rate)} mm/yr</b>`;
   const limited = e.n_pixels !== undefined && e.n_pixels !== null && e.n_pixels < LIMITED_PX;
   const d = direction(point, sat, trk);
+  const caveat = flipCaveat(point, sat, trk);
   return `<div class="fact"><span>${head}</span><span>${change} · ${esc(e.n_pixels ?? 'n/a')} pixels</span>
-    <span class="tags">${limited ? `<span class="badge warn">Limited coverage · ${esc(e.n_pixels)} px</span>` : ''}${d ? `<span class="badge ${d.cls}">${esc(d.text)}</span>` : ''}${trackNote(point, sat, trk) ? `<span class="badge" title="${esc(trackNote(point, sat, trk).detail)}">${esc(trackNote(point, sat, trk).label)}</span>` : ''}</span></div>`;
+    <span class="tags">${limited ? `<span class="badge warn">Limited coverage · ${esc(e.n_pixels)} px</span>` : ''}${d ? `<span class="badge ${d.cls}">${esc(d.text)}</span>` : ''}${trackNote(point, sat, trk) ? `<span class="badge" title="${esc(trackNote(point, sat, trk).detail)}">${esc(trackNote(point, sat, trk).label)}</span>` : ''}</span>${caveat ? `<small class="sub">${esc(caveat)}</small>` : ''}</div>`;
+}
+// which stored runs flip the direction of the selected run, and by how much (from sensitivity.json; after Alexandru's
+// Zone 1 and Zone 2 note in PR #12, generalised so the numbers come from the products)
+function flipCaveat(point, sat, trk) {
+  if (!scenarios() || sat !== 's1') return null;
+  const base = entry(point, sat, trk)?.fitted_change_mm;
+  if (!Number.isFinite(base) || base === 0) return null;
+  const flips = Object.keys(scenarios()).filter(sc => sc !== S.scenario).map(sc => [sc, entry(point, sat, trk, sc)])
+    .filter(([, e]) => Number.isFinite(e?.fitted_change_mm) && Math.sign(e.fitted_change_mm) === -Math.sign(base));
+  if (!flips.length) return null;
+  return flips.map(([sc, e]) => `${scenarioLabel(sc)} flips the fitted direction from ${fmt(base, 2)} mm to ${fmt(e.fitted_change_mm, 2)} mm, with ${e.n_pixels} pixel${e.n_pixels === 1 ? '' : 's'}.`).join(' ');
 }
 // interpretation notes from the products (03's zone review), shown as written
 const zoneNote = (z) => S.man.zone_notes?.[z.id] || null;
