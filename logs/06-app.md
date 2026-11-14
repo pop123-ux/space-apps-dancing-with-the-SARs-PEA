@@ -6,6 +6,14 @@ This is the running log for role 06, newest entry first, so the team can follow 
 
 ---
 
+## Sat 14 Nov 2026, about 16:30 · Alexandru's EGMS panel kept, main merged again
+
+Alexandru pushed `695ad8a` straight to `r06/page` (16:26): the Agreement panel shows R05's reported EGMS 2020 to 2025 zone medians from `manifest.json` (`egms.summary`), with the pinned source. It merged cleanly with the zone-review labels. Because `manifest.json` is written by `export.py`, the exporter now carries forward an `egms` block that has a summary and a source instead of resetting it to pending; a re-export changes nothing but the build time. The table got the page's table style. Proposal for 05: own the EGMS summary as a file (for example `products/ocnele_mari/egms.json`, written by `validate.py`) so the exporter reads it instead of carrying it forward.
+
+`main` also moved (PR #11: 03's per-window grid packing and `.gitattributes`). Merged into `r06/page`; `restore_grids.py` and `export.py` still work, `pytest -q` 8 passed, `checkpoint.py` contract OK on both sites.
+
+---
+
 ## Sat 14 Nov 2026, about 16:27 · 03's zone review labels
 
 Added the labels 03 asked for in `docs/ui.md` ("Zone review and historical context"). `export.py` writes them into `manifest.json` as `zone_notes` (Zone 3: "Historically subsiding · 2026 trend inconclusive") and `track_notes` (Sentinel-1 029A on Zones 1, 2 and 4: "Local reference sensitivity"), each with its source; the page shows a short label in Zones and the full text in the zone card. No value changed: the re-export altered only `manifest.json`. EGMS numbers stay off the page until 05's products reach 06. Checked in the browser; `pytest -q` and `checkpoint.py` pass.
