@@ -40,8 +40,9 @@ UA = {"User-Agent": "dancing-on-salt/0.2 (NASA Space Apps 2026)"}
 FIELDS = ["station", "source", "lat", "lon", "ve", "vn", "vu", "se", "sn", "su", "t_start", "t_end"]
 MODEL_FIELDS = ["lon", "lat", "ve", "vn", "vu", "se", "sn", "su"]
 
-# Time span of the published rates (Muntean et al. 2026, Table S3: Tstart, Tspan in years). HORE is not in Table S3.
-PUBLISHED_SPAN = {"VLC2": ("2019-08-02", "2025.41")}
+# Time span of the published rates (Muntean et al. 2026: Tstart, and t_end = Tstart + Tspan in years). VLC2 from Table S3;
+# HORE from Table S1 (14NOV27, 10.50 yr), because HORE is not in Table S3. Checked on the supplement PDF, 14 Nov 2026.
+PUBLISHED_SPAN = {"VLC2": ("2019-08-02", "2025.41"), "HORE": ("2014-11-27", "2025.40")}
 
 # Synthetic site: a regional velocity (Eurasia-fixed, mm/yr) and one station that lies (a mast moving +6 mm/yr up).
 SYNTH_REGIONAL = dict(ve=0.3, vn=-0.4, vu=-0.2)
