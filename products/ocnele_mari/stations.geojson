@@ -1,5 +1,84 @@
 {
  "type": "FeatureCollection",
- "features": [],
- "pending": "validate.py (05) has not compared stations yet"
+ "features": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     23.98909,
+     45.14563
+    ]
+   },
+   "properties": {
+    "station": "HORE",
+    "source": "NGL MIDAS (EU-fixed)",
+    "dist_km": 24.5,
+    "tracks": {},
+    "agree": null,
+    "reason": "129A: no coherent pixel within 240 m",
+    "nisar_up": null,
+    "gnss_up": -1.355,
+    "t_end": "2020"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     24.36643,
+     45.1074
+    ]
+   },
+   "properties": {
+    "station": "VLC1",
+    "source": "NGL MIDAS (EU-fixed)",
+    "dist_km": 6.4,
+    "tracks": {
+     "nisar:129A": {
+      "nisar": 3.88,
+      "gnss": -0.63,
+      "diff": 4.52,
+      "tol": 2.7,
+      "n_px": 49
+     }
+    },
+    "agree": false,
+    "reason": "129A: NISAR +3.9 vs GNSS -0.6 mm/yr (±2.7, 49 px)",
+    "nisar_up": null,
+    "gnss_up": -0.746,
+    "t_end": "2018"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     24.3664,
+     45.1074
+    ]
+   },
+   "properties": {
+    "station": "VLC2",
+    "source": "Muntean et al. 2026",
+    "dist_km": 6.4,
+    "tracks": {
+     "nisar:129A": {
+      "nisar": 3.88,
+      "gnss": 0.29,
+      "diff": 3.6,
+      "tol": 2.7,
+      "n_px": 49
+     }
+    },
+    "agree": false,
+    "reason": "129A: NISAR +3.9 vs GNSS +0.3 mm/yr (±2.7, 49 px)",
+    "nisar_up": null,
+    "gnss_up": 0.86,
+    "t_end": "2025"
+   }
+  }
+ ]
 }

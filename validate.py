@@ -1,14 +1,19 @@
 # Owner: 05 · Validator (Paul)
 """05 · Validator: the checks the team did not tune. Nobody else edits this file.
 
-Status: STUB (interfaces only).
+Status: WORKING DRAFT, PROPOSED FOR 05 (14 Nov 2026). Written by the 02/03 session at Alexandru's request, as a pull
+request for 05 to review, change and merge: the validator stays 05's. Thresholds are the advisor-kit ones below,
+unchanged.
 
     python validate.py ocnele_mari
 
+Reads (never writes) data/work/<site>/<track>/{meta.json, geom.npz, ts.npz, cal.npz} (02, 03, 04),
+data/work/<site>/refs/stations.csv (04), products/<site>/{calib.json, series.json, manifest.json} (04, 06).
 Writes products/<site>/ (file contracts in docs/build-spec.md):
     checks.json        [{id, status: pass|warn|fail|info, title, detail, value}]
     checks.md          the same, readable
-    stations.geojson   per station: tracks {nisar, gnss, diff, tol}, agree (true|false|null), reason, nisar_up, gnss_up
+    stations.geojson   per station: tracks {"nisar:<track>": {nisar, gnss, diff, tol}}, agree (true|false|null), reason,
+                       nisar_up, gnss_up, source, dist_km, t_end
 
 The checks (DRAFT thresholds from the advisor kit; 05 owns them):
 1 sign      salt zones sink on every track: median LOS rate in the zones < −2 mm/yr, else the phase sign is wrong.
@@ -23,31 +28,255 @@ The checks (DRAFT thresholds from the advisor kit; 05 owns them):
 7 truth     synthetic site only: up bias < 1 mm/yr, zones within 15 %.
 8 s1        NISAR against Sentinel-1 (D-004), per zone over the common window (C.COMMON_WINDOW), as zone minus outer
             reference band until O-19 decides: agree within the combined errors, disagree, or not testable (too few pixels).
+
+Choices made in this draft (05 to confirm):
+- Check 1 runs on every fitted track, exported or not (094D is held off the page because of this check).
+- Check 2 compares only tracks on the page; σ_NISAR is the robust scatter of the pixels around the station divided by
+  √n (a lower bound), σ_GNSS the published LOS-projected error.
+- Check 8 reports warn, not pass, when its tolerance is wider than S1_TOL_DECISIVE (20 mm/yr): a check that cannot
+  fail is not evidence.
+- Check 2's σ_NISAR (scatter / √n) treats neighbouring pixels as independent; they are not, so the tolerance is too
+  tight and a fail there may be the tolerance, not the station or the radar.
+- Check 8 needs one shared quantity; O-19 is open, so it scales NISAR into Sentinel-1's line of sight assuming vertical
+  motion only, and says so. It reports, it does not tune.
 """
 from __future__ import annotations
 
 import argparse
+import csv
+import math
 
 import common as C
 
 STATUSES = ("pass", "warn", "fail", "info")
+SIGN_MAX = -2.0          # mm/yr, check 1
+TIE_MAX = 6.0            # mm/yr, check 3
+EGMS_MAX = 1.5           # mm/yr, check 6
+STATION_R_PX = 3         # pixels around a station (7 × 7 at 80 m)
+S1_MIN_PX = 10           # pixels a zone needs on each satellite, check 8
+S1_TOL_DECISIVE = 20.0   # mm/yr: a wider tolerance cannot fail, so check 8 reports warn instead of pass (draft choice)
+ZONES = ("z1", "z2", "z3", "z4")
 
 
-def pick(meta: dict, arr, lon: float, lat: float, r_px: int = 2) -> float:
-    """Median of arr within r_px pixels of a point, NaN outside the window."""
-    raise C.todo("05", "sample a grid at a point")
+# ------------------------------------------------------------------------------------------------ helpers
+def fitted_tracks(site):
+    return [t for t in C.tracks(site) if (C.WORK / site / t / "ts.npz").exists()]
 
 
-def check_sign(site, add):      raise C.todo("05", "check 1: salt zones sink on every track")
-def check_stations(site, add):  raise C.todo("05", "check 2: held-out stations per LOS → stations.geojson")
-def check_tie(site, add):       raise C.todo("05", "check 3: tie scatter from calib.json")
-def check_closure(site, add):   raise C.todo("05", "check 4: 12- vs 24-day closure")
-def check_gaps(site, add):      raise C.todo("05", "check 5: chain gaps")
-def check_egms(site, add):      raise C.todo("05", "check 6: EGMS Ortho stable ground; bowl then vs now")
-def check_truth(site, add):     raise C.todo("05", "check 7: synthetic truth recovered (demo only)")
-def check_sentinel1(site, add): raise C.todo("05", "check 8: NISAR against Sentinel-1 per zone, common window")
+def load(site, track):
+    import numpy as np
+    d = C.WORK / site / track
+    meta = C.load_json(d / "meta.json")
+    ts = dict(np.load(d / "ts.npz"))
+    geom = dict(np.load(d / "geom.npz"))
+    cal = dict(np.load(d / "cal.npz")) if (d / "cal.npz").exists() else None
+    return meta, ts, geom, cal
 
 
+def zone_masks(site, meta):
+    import export
+    return export.nisar_zone_masks(C.SITES[site], meta)
+
+
+def pick(meta: dict, arr, lon: float, lat: float, r_px: int = 2):
+    """Median of arr within r_px pixels of a point, NaN outside the window. → (median, robust σ, n)."""
+    import numpy as np
+    x, y = C.to_xy(meta["epsg"], lon, lat)
+    j = int(round((x - meta["x0"]) / meta["dx"]))
+    i = int(round((y - meta["y0"]) / meta["dy"]))
+    if not (0 <= i < meta["ny"] and 0 <= j < meta["nx"]):
+        return math.nan, math.nan, 0
+    a = arr[max(i - r_px, 0):i + r_px + 1, max(j - r_px, 0):j + r_px + 1]
+    v = a[np.isfinite(a)]
+    if not v.size:
+        return math.nan, math.nan, 0
+    med = float(np.median(v))
+    return med, float(1.4826 * np.median(np.abs(v - med))), int(v.size)
+
+
+def on_page(site):
+    try:
+        return sorted(C.load_json(C.PRODUCTS / site / "manifest.json")["sensors"]["nisar"].get("frames", {}))
+    except (FileNotFoundError, KeyError):
+        return []
+
+
+# ------------------------------------------------------------------------------------------------ the checks
+def check_sign(site, add):
+    import numpy as np
+    for t in fitted_tracks(site):
+        meta, ts, _, _ = load(site, t)
+        m = zone_masks(site, meta)
+        v = np.concatenate([ts["vel"][m[z] & np.isfinite(ts["vel"])] for z in ZONES])
+        r = float(np.median(v))
+        add(f"sign-{t}", "pass" if r < SIGN_MAX else "fail", f"Salt zones sink on NISAR {t}",
+            f"Median line-of-sight rate over the zone pixels: {r:+.1f} mm/yr from {v.size} pixels "
+            f"(needs < {SIGN_MAX:+.0f}; phase sign {int(ts['phase_sign']):+d}). "
+            + ("" if r < SIGN_MAX else "Not a global sign error: see notebooks/03/t3_094d_checks.json; the track is held off the page."),
+            round(r, 2))
+
+
+def read_stations(site):
+    rows = list(csv.DictReader((C.WORK / site / "refs" / "stations.csv").open(encoding="utf-8")))
+    keep = {}
+    for r in rows:                                  # one entry per station: a full ENU source, newest first
+        if any(math.isnan(float(r[k])) for k in ("ve", "vn", "vu")):
+            continue
+        name = r["station"]
+        if name not in keep or str(r["t_end"]) > str(keep[name]["t_end"]):
+            keep[name] = r
+    return list(keep.values())
+
+
+def check_stations(site, add):
+    import numpy as np
+    tracks = [t for t in on_page(site) if t in fitted_tracks(site)]
+    feats = []
+    s = C.SITES[site]
+    for r in read_stations(site):
+        lat, lon = float(r["lat"]), float(r["lon"])
+        ve, vn, vu, se, sn, su = (float(r[k]) for k in ("ve", "vn", "vu", "se", "sn", "su"))
+        per, agree_all, reasons = {}, [], []
+        for t in tracks:
+            meta, ts, geom, cal = load(site, t)
+            if cal is None:
+                continue
+            v, sig, n = pick(meta, cal["vel_cal"], lon, lat, STATION_R_PX)
+            e, nn, u = (pick(meta, geom[k], lon, lat, 0)[0] for k in ("los_e", "los_n", "los_u"))
+            if not n or not np.isfinite(e):
+                reasons.append(f"{t}: no coherent pixel within {STATION_R_PX * 80} m")
+                continue
+            g = C.enu_to_los(e, nn, u, ve, vn, vu)
+            sg = math.sqrt((e * se) ** 2 + (nn * sn) ** 2 + (u * su) ** 2)
+            sn_ = sig / math.sqrt(n)
+            tol = max(C.TOL_FLOOR, 2 * math.sqrt(sn_ ** 2 + sg ** 2))
+            ok = abs(v - g) <= tol
+            per[f"nisar:{t}"] = dict(nisar=round(v, 2), gnss=round(g, 2), diff=round(v - g, 2), tol=round(tol, 1), n_px=n)
+            agree_all.append(ok)
+            reasons.append(f"{t}: NISAR {v:+.1f} vs GNSS {g:+.1f} mm/yr (±{tol:.1f}, {n} px)")
+        agree = None if not agree_all else all(agree_all)
+        dist = C.haversine_km(s["lat"], s["lon"], lat, lon)
+        old = str(r["t_end"])[:4] < "2026"
+        feats.append(dict(type="Feature", geometry=dict(type="Point", coordinates=[round(lon, 5), round(lat, 5)]),
+                          properties=dict(station=r["station"], source=r["source"], dist_km=round(dist, 1),
+                                          tracks=per, agree=agree, reason="; ".join(reasons) or "No NISAR track on the page",
+                                          nisar_up=None, gnss_up=vu, t_end=str(r["t_end"])[:4] if old else None)))
+        st = "info" if agree is None else ("pass" if agree else "fail")
+        add(f"station-{r['station']}", st, f"Held-out station {r['station']} against NISAR",
+            ("; ".join(reasons) or "No NISAR track on the page") + (f". The GNSS series ends in {str(r['t_end'])[:4]}: "
+                                                                     "it assumes steady motion since." if old else "")
+            + f" Source: {r['source']}.", None if not per else round(max(abs(p['diff']) for p in per.values()), 2))
+    C.save_json(C.PRODUCTS / site / "stations.geojson", dict(type="FeatureCollection", features=feats))
+
+
+def check_tie(site, add):
+    calib = C.load_json(C.PRODUCTS / site / "calib.json")
+    for e in calib.get("tracks", []):
+        mad = e["residual_mad_mm_yr"]
+        add(f"tie-{e['track']}", "pass" if mad < TIE_MAX else "warn", f"Tie scatter on NISAR {e['track']}",
+            f"Robust scatter of NISAR minus {calib['model']} on {e['n_tie_pixels']} stable pixels: {mad:.1f} mm/yr per "
+            f"pixel (target < {TIE_MAX:.0f}); {e['method']} correction {e['offset_mm_yr']:+.2f} mm/yr; model swap "
+            f"against {e.get('swap_model')}: {e['swap_delta_mm_yr']:.2f} mm/yr (T8 < 1). Per-pixel rates are noise-"
+            "dominated: read zones and areas, not single dots.", mad)
+        add(f"swap-{e['track']}", "pass" if e["swap_delta_mm_yr"] < 1 else "warn", f"Model swap on NISAR {e['track']}",
+            f"Changing the GNSS model to {e.get('swap_model')} moves the tied rates by {e['swap_delta_mm_yr']:.2f} mm/yr "
+            "(needs < 1, T8).", e["swap_delta_mm_yr"])
+
+
+def check_closure(site, add):
+    for t in fitted_tracks(site):
+        _, ts, _, _ = load(site, t)
+        n = int(ts["n_triplets"])
+        add(f"closure-{t}", "info", f"Closure on NISAR {t}",
+            f"{n} triplets of two 12-day pairs and the 24-day pair over the same dates: the short-pair bias cannot be "
+            "tested on this stack (the 24-day pairs replace missing 12-day pairs).", n)
+
+
+def check_gaps(site, add):
+    man = C.load_json(C.PRODUCTS / site / "manifest.json")
+    frames = man["sensors"]["nisar"].get("frames", {})
+    for t in fitted_tracks(site):
+        _, ts, _, _ = load(site, t)
+        gaps = [list(map(str, g)) for g in ts["gap_ranges"]]
+        shown = frames.get(t, {}).get("gaps")
+        if not gaps:
+            add(f"gaps-{t}", "pass", f"No gaps on NISAR {t}", "Every date is connected to the others by pairs.", 0)
+        elif shown is None:
+            add(f"gaps-{t}", "info", f"Gaps on NISAR {t}", f"{gaps}; the track is not on the page.", len(gaps))
+        else:
+            ok = all(g in shown for g in gaps)
+            add(f"gaps-{t}", "pass" if ok else "fail", f"Gaps shown on NISAR {t}",
+                f"No pair spans {', '.join(f'{a} to {b}' for a, b in gaps)}; each acquisition group is referenced on its own "
+                + ("and the page marks the gap." if ok else "but the page does not mark it."), len(gaps))
+
+
+def check_egms(site, add):
+    p = C.WORK / site / "refs" / "egms_up.csv"
+    if not p.exists():
+        e = C.load_json(C.PRODUCTS / site / "manifest.json").get("egms") or {}
+        add("egms", "info", "EGMS stable ground",
+            "The EGMS Ortho Up cut (refs/egms_up.csv, 05's egms_cut.py) is not on this machine, so NISAR minus EGMS was "
+            f"not recomputed here. 05's reported result: {e.get('summary', 'not available')}.", None)
+        return
+    raise C.todo("05", "check 6 with refs/egms_up.csv on disk: NISAR up minus EGMS up on stable ground")
+
+
+def check_truth(site, add):
+    raise C.todo("05", "check 7: synthetic truth recovered (demo only; fetch.py --synthetic is still a stub)")
+
+
+def check_sentinel1(site, add):
+    import numpy as np
+    series = C.load_json(C.PRODUCTS / site / "series.json")
+    w0, w1 = C.COMMON_WINDOW
+    pairs = {"129A": "029A", "094D": "007D"}
+    ftc = C.load_json(C.PRODUCTS / site / "forecast.json") if (C.PRODUCTS / site / "forecast.json").exists() else {}
+    u_s1 = (ftc.get("long_term") or {}).get("look_u")
+    for t in on_page(site):
+        s1t = pairs[t]
+        meta, ts, geom, cal = load(site, t)
+        masks = zone_masks(site, meta)
+        ctl = next(p for p in series if p["id"] == "outer_control")
+        for z in ZONES:
+            p = next(q for q in series if q["id"] == z)
+            a, b = p["series"].get(f"nisar:{t}"), p["series"].get(f"s1:{s1t}")
+            ca, cb = ctl["series"].get(f"nisar:{t}"), ctl["series"].get(f"s1:{s1t}")
+            num = z[1:]
+            if not (a and b and ca and cb) or min(a["n_pixels"], b["n_pixels"]) < S1_MIN_PX or u_s1 is None:
+                why = "a satellite has no series here" if not (a and b) else f"fewer than {S1_MIN_PX} pixels" if (a and b) else ""
+                add(f"agree-z{num}-{t}", "info", f"Zone {num}: NISAR {t} against Sentinel-1 {s1t}",
+                    f"Not testable: {why or 'no shared geometry'}.", None)
+                continue
+
+            def rate(e, c):
+                d = [(x, y - c["mm"][c["dates"].index(x)]) for x, y in zip(e["dates"], e["mm"])
+                     if w0 <= x <= w1 and x in c["dates"] and y is not None and c["mm"][c["dates"].index(x)] is not None]
+                tt = C.years([x for x, _ in d]); yy = np.array([y for _, y in d])
+                A = np.c_[tt, np.ones_like(tt)]
+                cf, *_ = np.linalg.lstsq(A, yy, rcond=None)
+                res = yy - A @ cf
+                sig = math.sqrt((res ** 2).sum() / max(len(yy) - 2, 1) * np.linalg.inv(A.T @ A)[0, 0])
+                return float(cf[0]), sig, len(yy)
+            rn, sn, nn = rate(a, ca)
+            rs, ss, ns = rate(b, cb)
+            u_n = float(np.nanmean(geom["los_u"][masks[z]]))
+            k = u_s1 / u_n
+            diff = rn * k - rs
+            tol = 2 * math.sqrt((sn * k) ** 2 + ss ** 2)
+            status = "fail" if abs(diff) > tol else ("pass" if tol <= S1_TOL_DECISIVE else "warn")
+            same = (rn < 0) == (rs < 0)
+            add(f"agree-z{num}-{t}", status, f"Zone {num}: NISAR {t} against Sentinel-1 {s1t}",
+                f"Zone minus outer comparison area, {w0} to {w1}: NISAR {rn * k:+.1f} (scaled ×{k:.2f}, vertical motion "
+                f"assumed; O-19 open) against Sentinel-1 {rs:+.1f} mm/yr; difference {diff:+.1f}, tolerance ±{tol:.1f} "
+                f"(2σ, dates assumed independent: a lower bound); {nn} and {ns} dates, {a['n_pixels']} and {b['n_pixels']} px. "
+                + (f"The tolerance is wider than {S1_TOL_DECISIVE:.0f} mm/yr, so agreeing is not evidence; "
+                   if status == "warn" else "")
+                + ("both satellites show the zone moving away from the satellite relative to its surroundings."
+                   if same and rn < 0 else "the two satellites disagree in direction." if not same else "both show it moving toward the satellite."),
+                round(diff, 2))
+
+
+# ------------------------------------------------------------------------------------------------ run
 def run(site: str) -> list[dict]:
     checks: list[dict] = []
 
@@ -59,8 +288,20 @@ def run(site: str) -> list[dict]:
         check(site, add)
     if C.SITES[site].get("synthetic"):
         check_truth(site, add)
+    checks.insert(0, dict(id="validator-draft", status="info", title="Validator draft, pending 05's review",
+                          detail="These checks were written by the 02/03 session at the team's request and wait for "
+                                 "the validator (05) to review them. Thresholds are the advisor kit's, unchanged.",
+                          value=None))
     C.save_json(C.PRODUCTS / site / "checks.json", checks)
-    raise C.todo("05", f"write products/{site}/checks.md and print one line per check")
+    icon = {"pass": "✔", "warn": "!", "fail": "✘", "info": "·"}
+    md = ["# Checks", "", f"Site: {site}. Written by `validate.py`; thresholds in its docstring.", ""]
+    md += [f"- {icon[c['status']]} **{c['title']}** ({c['status']}): {c['detail']}" for c in checks]
+    (C.PRODUCTS / site / "checks.md").write_text("\n".join(md) + "\n", encoding="utf-8")
+    for c in checks:
+        print(f"{icon[c['status']]} {c['id']}: {c['title']}" + (f" · {c['value']}" if c["value"] is not None else ""))
+    n = {k: sum(c["status"] == k for c in checks) for k in STATUSES}
+    print(f"{site}: {n['pass']} pass · {n['warn']} warn · {n['fail']} fail · {n['info']} info")
+    return checks
 
 
 def main() -> None:

@@ -4,7 +4,7 @@
  "story": "TODO(01): one sentence, written by the Lead",
  "synthetic": false,
  "note": "Sentinel-1 measurements (Jul to Oct 2026) and NISAR measurements (129A).",
- "built": "2026-11-14T17:00:31+00:00",
+ "built": "2026-11-14T17:20:09+00:00",
  "bounds": [
   [
    45.016685,
@@ -296,10 +296,10 @@
  },
  "default_window": "jul_oct",
  "checks": {
-  "pass": 0,
-  "warn": 0,
-  "fail": 0,
-  "info": 1
+  "pass": 5,
+  "warn": 5,
+  "fail": 3,
+  "info": 6
  },
  "zone_notes": {
   "z3": {

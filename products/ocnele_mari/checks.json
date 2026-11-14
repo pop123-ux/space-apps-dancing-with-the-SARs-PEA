@@ -1,9 +1,135 @@
 [
  {
-  "id": "validation-pending",
+  "id": "validator-draft",
   "status": "info",
-  "title": "Validation not run yet",
-  "detail": "validate.py (05) has not written checks for this build",
+  "title": "Validator draft, pending 05's review",
+  "detail": "These checks were written by the 02/03 session at the team's request and wait for the validator (05) to review them. Thresholds are the advisor kit's, unchanged.",
   "value": null
+ },
+ {
+  "id": "sign-094D",
+  "status": "fail",
+  "title": "Salt zones sink on NISAR 094D",
+  "detail": "Median line-of-sight rate over the zone pixels: +23.5 mm/yr from 79 pixels (needs < -2; phase sign -1). Not a global sign error: see notebooks/03/t3_094d_checks.json; the track is held off the page.",
+  "value": 23.51
+ },
+ {
+  "id": "sign-129A",
+  "status": "pass",
+  "title": "Salt zones sink on NISAR 129A",
+  "detail": "Median line-of-sight rate over the zone pixels: -10.1 mm/yr from 85 pixels (needs < -2; phase sign -1). ",
+  "value": -10.11
+ },
+ {
+  "id": "station-HORE",
+  "status": "info",
+  "title": "Held-out station HORE against NISAR",
+  "detail": "129A: no coherent pixel within 240 m. The GNSS series ends in 2020: it assumes steady motion since. Source: NGL MIDAS (EU-fixed).",
+  "value": null
+ },
+ {
+  "id": "station-VLC1",
+  "status": "fail",
+  "title": "Held-out station VLC1 against NISAR",
+  "detail": "129A: NISAR +3.9 vs GNSS -0.6 mm/yr (±2.7, 49 px). The GNSS series ends in 2018: it assumes steady motion since. Source: NGL MIDAS (EU-fixed).",
+  "value": 4.52
+ },
+ {
+  "id": "station-VLC2",
+  "status": "fail",
+  "title": "Held-out station VLC2 against NISAR",
+  "detail": "129A: NISAR +3.9 vs GNSS +0.3 mm/yr (±2.7, 49 px). The GNSS series ends in 2025: it assumes steady motion since. Source: Muntean et al. 2026.",
+  "value": 3.6
+ },
+ {
+  "id": "tie-094D",
+  "status": "warn",
+  "title": "Tie scatter on NISAR 094D",
+  "detail": "Robust scatter of NISAR minus euvem on 157186 stable pixels: 47.6 mm/yr per pixel (target < 6); offset correction -15.15 mm/yr; model swap against egms: 0.70 mm/yr (T8 < 1). Per-pixel rates are noise-dominated: read zones and areas, not single dots.",
+  "value": 47.62
+ },
+ {
+  "id": "swap-094D",
+  "status": "pass",
+  "title": "Model swap on NISAR 094D",
+  "detail": "Changing the GNSS model to egms moves the tied rates by 0.70 mm/yr (needs < 1, T8).",
+  "value": 0.704
+ },
+ {
+  "id": "tie-129A",
+  "status": "warn",
+  "title": "Tie scatter on NISAR 129A",
+  "detail": "Robust scatter of NISAR minus euvem on 66648 stable pixels: 26.3 mm/yr per pixel (target < 6); plane correction -7.78 mm/yr; model swap against egms: 0.74 mm/yr (T8 < 1). Per-pixel rates are noise-dominated: read zones and areas, not single dots.",
+  "value": 26.32
+ },
+ {
+  "id": "swap-129A",
+  "status": "pass",
+  "title": "Model swap on NISAR 129A",
+  "detail": "Changing the GNSS model to egms moves the tied rates by 0.74 mm/yr (needs < 1, T8).",
+  "value": 0.74
+ },
+ {
+  "id": "closure-094D",
+  "status": "info",
+  "title": "Closure on NISAR 094D",
+  "detail": "0 triplets of two 12-day pairs and the 24-day pair over the same dates: the short-pair bias cannot be tested on this stack (the 24-day pairs replace missing 12-day pairs).",
+  "value": 0
+ },
+ {
+  "id": "closure-129A",
+  "status": "info",
+  "title": "Closure on NISAR 129A",
+  "detail": "0 triplets of two 12-day pairs and the 24-day pair over the same dates: the short-pair bias cannot be tested on this stack (the 24-day pairs replace missing 12-day pairs).",
+  "value": 0
+ },
+ {
+  "id": "gaps-094D",
+  "status": "pass",
+  "title": "No gaps on NISAR 094D",
+  "detail": "Every date is connected to the others by pairs.",
+  "value": 0
+ },
+ {
+  "id": "gaps-129A",
+  "status": "pass",
+  "title": "Gaps shown on NISAR 129A",
+  "detail": "No pair spans 2026-01-18 to 2026-06-23; each acquisition group is referenced on its own and the page marks the gap.",
+  "value": 1
+ },
+ {
+  "id": "egms",
+  "status": "info",
+  "title": "EGMS stable ground",
+  "detail": "The EGMS Ortho Up cut (refs/egms_up.csv, 05's egms_cut.py) is not on this machine, so NISAR minus EGMS was not recomputed here. 05's reported result: [{'id': 'z1', 'cells': 2, 'up_mm_yr': -3.9, 'east_mm_yr': -4.1}, {'id': 'z2', 'cells': 5, 'up_mm_yr': -2.5, 'east_mm_yr': -3.3}, {'id': 'z3', 'cells': 6, 'up_mm_yr': -18.9, 'east_mm_yr': 0.2}, {'id': 'z4', 'cells': 10, 'up_mm_yr': -3.1, 'east_mm_yr': 4.9}, {'id': 'stable', 'cells': 27972, 'up_mm_yr': -0.5, 'east_mm_yr': -0.1}].",
+  "value": null
+ },
+ {
+  "id": "agree-z1-129A",
+  "status": "warn",
+  "title": "Zone 1: NISAR 129A against Sentinel-1 029A",
+  "detail": "Zone minus outer comparison area, 2026-07-07 to 2026-10-04: NISAR -30.8 (scaled ×1.02, vertical motion assumed; O-19 open) against Sentinel-1 -49.6 mm/yr; difference +18.8, tolerance ±58.1 (2σ, dates assumed independent: a lower bound); 6 and 15 dates, 32 and 21 px. The tolerance is wider than 20 mm/yr, so agreeing is not evidence; both satellites show the zone moving away from the satellite relative to its surroundings.",
+  "value": 18.81
+ },
+ {
+  "id": "agree-z2-129A",
+  "status": "warn",
+  "title": "Zone 2: NISAR 129A against Sentinel-1 029A",
+  "detail": "Zone minus outer comparison area, 2026-07-07 to 2026-10-04: NISAR -44.3 (scaled ×1.02, vertical motion assumed; O-19 open) against Sentinel-1 -41.7 mm/yr; difference -2.7, tolerance ±72.1 (2σ, dates assumed independent: a lower bound); 6 and 15 dates, 21 and 43 px. The tolerance is wider than 20 mm/yr, so agreeing is not evidence; both satellites show the zone moving away from the satellite relative to its surroundings.",
+  "value": -2.65
+ },
+ {
+  "id": "agree-z3-129A",
+  "status": "info",
+  "title": "Zone 3: NISAR 129A against Sentinel-1 029A",
+  "detail": "Not testable: a satellite has no series here.",
+  "value": null
+ },
+ {
+  "id": "agree-z4-129A",
+  "status": "warn",
+  "title": "Zone 4: NISAR 129A against Sentinel-1 029A",
+  "detail": "Zone minus outer comparison area, 2026-07-07 to 2026-10-04: NISAR -16.4 (scaled ×1.02, vertical motion assumed; O-19 open) against Sentinel-1 -37.8 mm/yr; difference +21.4, tolerance ±82.8 (2σ, dates assumed independent: a lower bound); 6 and 15 dates, 20 and 34 px. The tolerance is wider than 20 mm/yr, so agreeing is not evidence; both satellites show the zone moving away from the satellite relative to its surroundings.",
+  "value": 21.43
  }
 ]
