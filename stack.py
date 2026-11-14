@@ -20,7 +20,8 @@ Method:
 2. Mask coherence under C.MIN_COH. Remove the elevation-correlated troposphere per pair: a robust slope against the DEM
    on stable ground (outside every zone + C.EXCLUDE_KM). Then reference each pair to the median of that stable ground.
 3. Small-baseline inversion per pixel: dates no pair connects form separate groups; each group's first date is 0.
-   A pixel needs C.MIN_VALID_PAIRS of the pairs and a connected network inside each group, or it is NaN.
+   A pixel needs C.MIN_VALID_PAIRS of the pairs. Dates its valid pairs connect to their group's first date get a
+   value; dates cut off by a low-coherence pair are NaN (partial series, not a dropped pixel).
 4. Rate = straight line THROUGH THE DATES with one offset per group (never fitted to the pairs).
 5. No annual term under C.ANNUAL_TERM_MIN_YEARS. σ assumes independent dates: a lower bound.
 """
@@ -31,6 +32,7 @@ import argparse
 import common as C
 
 PHASE_SIGN = -1   # DRAFT: LOS mm (towards satellite) = PHASE_SIGN · phase · λ/4π. Tested by T3 (validate check 1).
+MIN_RATE_DATES, MIN_RATE_SPAN_YR = 6, 0.3   # a partial series needs this many dates over this span for a rate
 
 
 def _iso(d: str) -> str:
@@ -51,7 +53,10 @@ def load_pairs(site: str, track: str):
         pairs.append(tuple(f.stem.split("_")))
         phase.append(z["phase"]); coh.append(z["coh"])
         qa.append({k: z[k].item() for k in ("iono_used", "iono_std", "valid_share", "main_share", "iono_interp")})
-    dem = np.load(d / "dem.npz")["dem"] if (d / "dem.npz").exists() else None
+    dem = None
+    if (d / "dem.npz").exists():                     # fetch.py writes "dem"; older stand-ins wrote "height"
+        z = np.load(d / "dem.npz")
+        dem = z["dem"] if "dem" in z.files else z["height"]
     return meta, pairs, dict(phase=np.stack(phase), coh=np.stack(coh), qa=qa), dem
 
 
@@ -135,17 +140,36 @@ def invert(pairs, dates, mm, groups):
     pattern = np.packbits(ok, axis=0)
     keys, inv = np.unique(pattern, axis=1, return_inverse=True)
     inv = inv.ravel()
+    gid = {i: g for i, g in enumerate(groups)}
     for u in range(keys.shape[1]):
         cols = np.where((inv == u) & enough)[0]
         if not cols.size:
             continue
         rows = ok[:, cols[0]]
-        A = Gf[rows]
-        if np.linalg.matrix_rank(A) < len(free):        # some date not reached inside its group
-            continue
-        sol = np.linalg.lstsq(A, flat[rows][:, cols], rcond=None)[0]
-        c = np.zeros((D, cols.size), "f4")
-        c[free] = sol
+        # Dates this pixel's valid pairs connect to their group's first date. A pair under C.MIN_COH breaks a chain
+        # (129A is a single chain of 13 pairs), so instead of dropping the whole pixel, keep the dates still reached
+        # and leave the rest NaN. Before this, one broken pair out of 13 removed about 70 % of the town.
+        reach = set(firsts)
+        grew = True
+        while grew:
+            grew = False
+            for k, (a, b) in enumerate(pairs):
+                if rows[k] and (idx[a] in reach) != (idx[b] in reach):
+                    reach |= {idx[a], idx[b]}
+                    grew = True
+        lonely = {f for f in firsts if not any(i in reach for i in range(D) if gid[i] == gid[f] and i != f)}
+        reach -= lonely                                  # a group's first date alone carries no displacement
+        use_free = [i for i in free if i in reach]
+        c = np.full((D, cols.size), np.nan, "f4")
+        for f in firsts:
+            if f in reach:
+                c[f] = 0.0
+        if use_free:
+            prow = rows & np.array([idx[a] in reach and idx[b] in reach for a, b in pairs])
+            A = G[prow][:, use_free]
+            if np.linalg.matrix_rank(A) < len(use_free):
+                continue
+            c[use_free] = np.linalg.lstsq(A, flat[prow][:, cols], rcond=None)[0]
         cum[:, cols] = c
     return cum.reshape(D, ny, nx)
 
@@ -166,6 +190,8 @@ def fit_rate(dates, cum, groups):
     for u in range(keys.shape[1]):
         cols = np.where(inv == u)[0]
         rows = ok[:, cols[0]]
+        if rows.sum() < MIN_RATE_DATES or np.ptp(t[rows]) < MIN_RATE_SPAN_YR:
+            continue                                 # partial series too short for a rate (the dates still show)
         Au = A[rows][:, np.abs(A[rows]).sum(0) > 0]
         if rows.sum() <= Au.shape[1] or np.linalg.matrix_rank(Au) < Au.shape[1]:
             continue

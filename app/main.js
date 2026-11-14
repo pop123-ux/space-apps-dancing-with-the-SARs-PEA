@@ -952,7 +952,7 @@ function stationSheet(id) {
 function zoneSheet(id) {
   const z = S.series.find(p => p.id === id); if (!z) return null;
   const sats = sideSats().filter(measured);
-  let html = `<h2>${esc(zoneName(z))}</h2><div class="kicker">Salt zone · ${esc(z.lat)}° N, ${esc(z.lon)}° E${win() && S.sat === 's1' ? ` · ${esc(win().label)}` : ''}</div>`;
+  let html = `<h2>${esc(zoneName(z))}</h2><div class="kicker">${z.place ? `${esc(z.place)} · ` : 'Salt zone · '}${esc(z.lat)}° N, ${esc(z.lon)}° E${win() && S.sat === 's1' ? ` · ${esc(win().label)}` : ''}</div>`;
   if (!sats.length) return html + `<div class="verdict na">${esc(pendingText(S.sat))}</div>`;
   const facts = S.sat === 'compare' ? sats.map(s => factRow(z, s, S.track[s])).join('') : tracksOf(S.sat).map(t => factRow(z, S.sat, t)).join('');
   html += `${notesBox(z, S.sat === 'compare' ? sats : [S.sat], true)}<div class="facts">${facts}</div>${choicesPanel()}`;
