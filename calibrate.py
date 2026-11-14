@@ -22,7 +22,8 @@ The tie (build spec, "Tie and checks"):
 - One offset, or a plane if it cuts the scatter (standard deviation of the inlier residuals) by more than 10 %;
   3σ outliers removed twice in each fit.
 - offset_mm_yr is the fitted correction at the window centre; slopes are mm/yr per 10 km towards east and north.
-- The correction is subtracted: vel_cal = vel − correction, cum_cal = cum − correction · (t − t_first).
+- The correction is subtracted: vel_cal = vel − correction, cum_cal = cum − correction · (t − t_first of the date's
+  group). ts.npz `group` (one per date) marks acquisition groups that no pair connects; each is referenced on its own.
 - The model is a 0.1° grid: it fixes the frame-wide level and slopes only. It says nothing about a 2 km salt bowl.
 - A plane hints at residual ionosphere: compare runs with and without the ionosphere layer.
 - Model swap (O-06): swap_delta_mm_yr is the median |vel_cal(model) − vel_cal(second model)| on the tie pixels.
@@ -174,7 +175,9 @@ def run(site: str, track: str, model: str, plot: bool = False) -> dict:
     fit, corr, mlos, tie, why = tie_track(site, track, model, meta, geom, ts, stations)
     vel_cal = ts["vel"] - corr
     t = C.years([str(d)[:10] if "-" in str(d) else f"{str(d)[:4]}-{str(d)[4:6]}-{str(d)[6:8]}" for d in ts["dates"]])
-    cum_cal = ts["cum"] - corr[None] * (t - t[0])[:, None, None]
+    grp = np.asarray(ts["group"]) if "group" in ts else np.zeros(len(t), int)
+    t_first = np.array([t[grp == g].min() for g in grp])   # each acquisition group starts at its own zero
+    cum_cal = ts["cum"] - corr[None] * (t - t_first)[:, None, None]
 
     alt = second_model(site, model)
     fit2, corr2, _, _, _ = tie_track(site, track, alt, meta, geom, ts, stations)
@@ -187,13 +190,18 @@ def run(site: str, track: str, model: str, plot: bool = False) -> dict:
     if plot:
         plot_tie(d / "tie.png", f"{track} · {model}", ts["vel"] - mlos, tie, fit)
     c = fit["coef"]
-    entry = dict(track=track, direction=meta.get("direction", ""), method=fit["method"],
+    entry = dict(sensor="nisar", track=track, direction=meta.get("direction", ""), method=fit["method"],
                  offset_mm_yr=round(float(c[0]), 2), slope_east_mm_yr_per_10km=round(float(c[1]), 3),
                  slope_north_mm_yr_per_10km=round(float(c[2]), 3), n_tie_pixels=int(tie.sum()),
                  residual_std_mm_yr=round(fit["std"], 2), residual_mad_mm_yr=round(fit["mad"], 2),
                  model_los_mean_mm_yr=round(float(np.mean(mlos[tie])), 2),
                  swap_delta_mm_yr=round(swap, 3), swap_model=alt,
-                 swap_offset_mm_yr=round(float(fit2["coef"][0]), 2))
+                 swap_offset_mm_yr=round(float(fit2["coef"][0]), 2),
+                 frame="Eurasia-fixed (EuVeM2022: horizontals ETRF2000, up IGS14)" if model == "euvem" else model,
+                 dates=[str(x) for x in ts["dates"]],
+                 gaps=[list(map(str, g)) for g in ts["gap_ranges"]] if "gap_ranges" in ts else [],
+                 ts_made_by=str(ts["made_by"]) if "made_by" in ts else "stack.py",
+                 phase_sign=int(ts["phase_sign"]) if "phase_sign" in ts else None)
     print(f"{track}: {fit['method']} {c[0]:+.2f} mm/yr (east {c[1]:+.2f}, north {c[2]:+.2f} per 10 km) · "
           f"{entry['n_tie_pixels']} tie pixels · scatter {fit['std']:.1f} (MAD {fit['mad']:.1f}) mm/yr · "
           f"plane/offset scatter {fit['std_plane']:.1f}/{fit['std_offset']:.1f} · swap vs {alt}: {swap:.2f} mm/yr · "
@@ -228,12 +236,18 @@ def main() -> None:
     ap.add_argument("site", choices=C.SITES)
     ap.add_argument("--model", default="euvem", choices=MODELS, help="velocity model for the tie")
     ap.add_argument("--plot", action="store_true", help="write <track>/tie.png")
+    ap.add_argument("--track", help="tie only this track; other tracks' entries in calib.json are kept")
     a = ap.parse_args()
-    trs = C.tracks(a.site)
+    trs = [a.track] if a.track else C.tracks(a.site)
     if not trs:
         raise C.todo("02", f"no tracks under data/work/{a.site}/: run fetch.py first")
     entries = [run(a.site, tr, a.model, a.plot) for tr in trs]
-    out = dict(model=a.model, tracks=entries)
+    p = C.PRODUCTS / a.site / "calib.json"
+    if a.track and p.exists():   # keep the other tracks' ties if they used the same model
+        old = C.load_json(p)
+        if old.get("model") == a.model:
+            entries = [e for e in old.get("tracks", []) if e.get("track") not in trs] + entries
+    out = dict(model=a.model, tracks=sorted(entries, key=lambda e: e["track"]))
     if C.SITES[a.site].get("synthetic"):
         out.update(synthetic=True, note="Simulated, not data")
     C.save_json(C.PRODUCTS / a.site / "calib.json", out)
