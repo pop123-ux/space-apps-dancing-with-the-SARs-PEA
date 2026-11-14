@@ -262,7 +262,7 @@ def check_stations(site, add):
             decisive.append(tol <= TOL_DECISIVE)
             reasons.append(f"Sentinel-1 {trk}: {v:+.1f} vs GNSS {g:+.1f} mm/yr relative to the terrain reference "
                            f"(±{tol:.1f}, {n} px within {int((2 * rpx + 1) * 20)} m)")
-        agree = None if not agree_all else all(agree_all)
+        agree = None if not agree_all or not all(decisive) else all(agree_all)   # not decisive: the pin shows "?"
         dist = C.haversine_km(s["lat"], s["lon"], lat, lon)
         old = str(r["t_end"])[:4] < "2026"
         st = "info" if agree is None else ("warn" if not all(decisive) else "pass" if agree else "fail")

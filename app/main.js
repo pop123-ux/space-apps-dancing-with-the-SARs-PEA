@@ -90,6 +90,12 @@ const control = () => S.series.find(p => p.kind === 'control');
 const cleanLabel = (s) => String(s || '').replace(/\s*·\s*MOCK\b.*$/, '');
 const zoneName = (p) => cleanLabel(p.label || p.id).replace(/^Salt zone\s*z?/i, 'Zone ');
 const zoneShort = (p) => (p.id.match(/\d+/) || [p.id])[0];
+// products written before the zones had names say "Zone 4"; show the place name, and drop the team's internal codes
+const named = (s) => String(s ?? '').replace(/\bZone ([1-9])\b/g, (m, n) => { const z = zones().find(q => zoneShort(q) === n); return z ? zoneName(z) : m; })
+  .replace(/\bR05 /g, '').replace(/\s*\((?:O-\d+|T\d+)[^)]*\)/g, '').replace(/;?\s*O-\d+ open/g, '');
+const more = (summary, html, cls = '') => html ? `<details class="more ${cls}"><summary>${summary}</summary><div>${html}</div></details>` : '';
+// the Sentinel-1 track that sees east-west motion like a NISAR track does (NISAR looks left, Sentinel-1 right)
+const pairOf = (nisarTrack) => S.man.compare?.pairs?.[nisarTrack] || { '129A': '007D', '094D': '029A' }[nisarTrack] || null;
 const scenarios = () => S.sens?.scenarios || null;
 const scenarioLabel = (k) => scenarios()?.[k] || k;
 function viewAllowed(v, sat = S.sat) {
@@ -265,7 +271,10 @@ function setPoints(m, sat, L) {
   if (!file || !key) { m.setLayoutProperty('pts', 'visibility', 'none'); m._ptsWant = null; return false; }
   const want = { file, key, vmax: L.meta.vmax, label: `${sensors()[sat].label} ${S.track[sat]}`, date: L.date, units: L.meta.units };
   m._ptsWant = want;
+  const busy = $('#busy'); const slow = setTimeout(() => { if (m._ptsWant === want && busy) busy.hidden = false; }, 250);
+  const done = () => { clearTimeout(slow); if (m._ptsWant === want && busy) busy.hidden = true; };
   loadPoints(file).then(gj => {
+    done();
     if (m._ptsWant !== want) return;            // the user moved on while the file loaded
     if (m._pts !== file) { m.getSource('pts').setData(gj); m._pts = file; S.spacing = gj.meta.spacing; renderLegend(); }
     const cov = S.view === 'coverage';   // Coverage: where a connected series exists, whatever its value
@@ -273,7 +282,7 @@ function setPoints(m, sat, L) {
     m.setPaintProperty('pts', 'circle-stroke-color', S.basemap === 'satellite' ? '#0C0A09' : '#1C1917');
     m.setFilter('pts', ['has', cov ? 'r' : key]);
     m.setLayoutProperty('pts', 'visibility', 'visible');
-  }).catch(() => { m.setLayoutProperty('pts', 'visibility', 'none'); });
+  }).catch(() => { done(); m.setLayoutProperty('pts', 'visibility', 'none'); });
   return true;
 }
 function drawSide(m, sat) {
@@ -649,10 +658,9 @@ function renderStatus() {
     if (!measured(s)) what = `catalog coverage only, ${datesOf(s, trk).length} dates · displacement fit pending`;
     else if (S.exp) what = 'up and east (experimental), whole window';
     else if (S.view === 'rate') what = `rate: fitted annualized slope${win() ? `, ${win().label}` : ''}`;
-    else { const L = layerFor(s); what = L?.date ? `${L.date} · change since ${L.first}` : `no acquisition on ${S.date}`; }
+    else { const L = layerFor(s); what = L?.date ? `${human(L.date)} · change since ${human(L.first)}` : `no acquisition on ${human(S.date)}`; }
     parts.push(`<span class="${SATS[s].cls}" aria-hidden="true">${SATS[s].mark}</span> <b>${esc(sn.label)} ${esc(trk)} ${ARROW[dir] || ''}</b> · ${esc(what)} · ${esc(sn.status)}`);
   }
-  if (sideSats().some(measured)) parts.push('positive = toward the satellite');
   $('#status').innerHTML = parts.join(' &nbsp;·&nbsp; ');
 }
 function setDate(d) { S.date = d; S.dateUser = true; changed(false); }
@@ -716,10 +724,9 @@ function renderLegend() {
   $('#legend-neg').textContent = S.exp ? 'sinking' : 'away from satellite';
   $('#legend-pos').textContent = S.exp ? 'rising' : 'toward satellite';
   const notes = [];
-  if (m.saturates) notes.push(`Beyond ${fmt(m.vmin)} or ${fmt(m.vmax)} shown at full colour`);
-  if (S.sens && S.scenario !== (win()?.maps_scenario || 'baseline')) notes.push(`Baseline map: the ${scenarioLabel(S.scenario).toLowerCase()} run has no map`);
-  else if (S.sens) notes.push('Baseline map');
-  notes.push(pointFile(sideSats().find(measured) || S.sat) && !S.exp ? `One dot every ${S.spacing || 80} m · no dot = no data` : 'Transparent = no data');
+  if (S.sens && S.scenario !== (win()?.maps_scenario || 'baseline')) notes.push(`Map shows the baseline run`);
+  notes.push(pointFile(sideSats().find(measured) || S.sat) && !S.exp ? `1 dot = ${S.spacing || 80} m · no dot = no data` : 'Transparent = no data');
+  $('#legend-note').title = m.saturates ? `Values beyond ${fmt(m.vmin)} or ${fmt(m.vmax)} are drawn at full colour` : '';
   $('#legend-note').textContent = notes.join(' · ');
 }
 function renderFlags() {
@@ -859,7 +866,7 @@ function block(id, title, right, lines, extra = {}) {
   blockData[id] = { title, lines };
   return `<div class="block"><h3><span>${title}</span>${right || ''}</h3>${extra.top || ''}
     ${lines.length ? chart({ lines, from, to, gaps: lines.flatMap(l => l.dash ? [] : l.gaps), window: extra.window, on: extra.on === undefined ? S.date : extra.on, fits: extra.fits || [] }) : ''}
-    <div class="foot"><span>${extra.foot || ''}</span>${lines.length ? `<span class="tbtns"><button type="button" class="linkbtn" data-tview="${esc(id)}">Open table</button><button type="button" class="linkbtn" data-tcsv="${esc(id)}">Export CSV</button></span>` : ''}</div></div>`;
+    <div class="foot"><span>${extra.foot || ''}</span>${lines.length ? `<span class="tbtns"><button type="button" class="linkbtn" data-tview="${esc(id)}">Open table</button><button type="button" class="linkbtn" data-tcsv="${esc(id)}">Export CSV</button></span>` : ''}</div>${extra.after || ''}</div>`;
 }
 const keys = (lines) => `<div class="keys">${lines.map(l => `<span><i style="border-color:${l.color};${l.dash ? 'border-top-style:dashed' : ''}"></i>${esc(l.label)}</span>`).join('')}</div>`;
 
@@ -883,7 +890,7 @@ function factRow(point, sat, trk) {
   const d = direction(point, sat, trk);
   const caveat = flipCaveat(point, sat, trk);
   return `<div class="fact"><span>${head}</span><span>${change} · ${esc(e.n_pixels ?? 'n/a')} pixels</span>
-    <span class="tags">${limited ? `<span class="badge warn">Limited coverage · ${esc(e.n_pixels)} px</span>` : ''}${d ? `<span class="badge ${d.cls}">${esc(d.text)}</span>` : ''}${trackNote(point, sat, trk) ? `<span class="badge" title="${esc(trackNote(point, sat, trk).detail)}">${esc(trackNote(point, sat, trk).label)}</span>` : ''}</span>${caveat ? `<small class="sub">${esc(caveat)}</small>` : ''}</div>`;
+    <span class="tags">${limited ? `<span class="badge warn">Limited coverage · ${esc(e.n_pixels)} px</span>` : ''}${d ? `<span class="badge ${d.cls}">${esc(d.text)}</span>` : ''}${trackNote(point, sat, trk) ? `<span class="badge" title="${esc(trackNote(point, sat, trk).detail)}">${esc(trackNote(point, sat, trk).label)}</span>` : ''}</span>${more('Which run changes it?', caveat ? esc(caveat) : '')}</div>`;
 }
 // the products say how to label a zone with no series in the selected window (sensitivity.json, per window)
 const EMPTY_ZONE_FALLBACK = { jan_oct: 'Insufficient continuous coverage' };   // docs/ui.md, if a products set omits the label
@@ -929,6 +936,7 @@ function choicesPanel() {
 }
 function wireChoices(root) {
   root.querySelector('details.choices')?.addEventListener('toggle', (e) => { S.choicesOpen = e.currentTarget.open; });
+  root.querySelector('[data-forecast]')?.addEventListener('click', goForecast);
   root.querySelectorAll('[data-window]').forEach(b => b.onclick = () => { S.window = b.dataset.window; S.date = null; changed(); });
   root.querySelectorAll('input[name="scenario"]').forEach(r => r.onchange = () => { S.scenario = r.value; changed(false); });
 }
@@ -966,16 +974,30 @@ function forecastPanel() {
   const base = Object.entries(f.metrics).filter(([k2]) => k2 !== model && BASE[k2]).map(([k2, v]) => `${BASE[k2]} ${Number(v.mae_mm).toFixed(2)} mm`).join(', ');
   const nc = f.nisar_check;
   const ncText = nc ? `<p class="reason"><b>Check against NISAR</b> (129A, ${esc(nc.dates[0])} to ${esc(nc.dates[1])}, after the forecast started): NISAR ${fmt(nc.nisar_change_mm, 1)} mm, Chronos-2 ${fmt(nc.chronos2_change_mm, 1)} mm. NISAR's own date-to-date scatter here is about ${Number(nc.nisar_step_scatter_mm).toFixed(1)} mm, so this is consistent within noise, not a validation. Scaled into Sentinel-1's line of sight assuming vertical motion only.</p>` : '';
+  const btShort = [c.janoct_30d && `${Number(c.janoct_30d.mae_mm).toFixed(1)} mm at 30 days`, c.janoct_88d && `${Number(c.janoct_88d.mae_mm).toFixed(1)} mm at 88 days`].filter(Boolean).join(', ');
   const retro = f.status === 'retrospective' || f.end_date <= new Date().toISOString().slice(0, 10);
   return block('zone-forecast', `${esc(supported.label || f.zone)} · ${retro ? 'Retrospective forecast' : 'Forecast'} · Chronos-2`,
     `<span class="badge">${f.horizon_days} days · ${esc(f.track)} LOS</span>`, lines, {
-      top: `<p class="reason">Chronos-2, a pretrained time-series model (amazon/chronos-2) used zero-shot, continues the radar series from ${esc(f.last_observation)} to ${esc(f.end_date)}. It extrapolates the shape of this one series; it knows nothing about salt, weather or the mine.</p>
+      top: `<p class="reason">A pretrained time-series model (Chronos-2) extends this radar series to ${esc(human(f.end_date))}. It sees only the series: nothing about salt, weather or the mine.</p>
         <div class="fc-slider"><label for="fc-range">Forecast date</label>
           <input id="fc-range" type="range" min="0" max="${steps.length - 1}" step="1" value="${k}" aria-valuetext="${esc(steps[k])}">
           <output id="fc-out" for="fc-range" aria-live="polite">${fcReadout(steps[k], val[k], lo[k], hi[k], iv.level, f.training_dates[0])}</output></div>
-        ${ncText}${keys(lines.slice(0, 3).map((l, i) => i === 2 ? { ...l, label: `${Math.round(iv.level * 100)} % range (backtested)` } : l))}`,
-      foot: `Backtest error (mean absolute, January to October 2026 series): ${bt}. Over the four summer cutoffs Chronos-2 scored ${Number(f.metrics.chronos2.mae_mm).toFixed(2)} mm against simple baselines (${base}). ${esc(f.interval_reason)}`,
+        ${keys(lines.slice(0, 3).map((l, i) => i === 2 ? { ...l, label: `${Math.round(iv.level * 100)} % range (backtested)` } : l))}`,
+      foot: btShort ? `Typical past error: ${btShort}` : '',
+      after: more('How good is this forecast?', `${ncText}<p class="reason">Backtest error (mean absolute, January to October 2026 series): ${bt}. Over the four summer cutoffs Chronos-2 scored ${Number(f.metrics.chronos2.mae_mm).toFixed(2)} mm against simple baselines (${base}). ${esc(f.interval_reason)}</p>`),
     });
+}
+// the forecast exists for one zone, track, window and run: from anywhere else, offer the way there
+function forecastTeaser() {
+  const f = S.forecast;
+  if (!f || S.man.synthetic || !f.model_paths_mm?.chronos2 || !measured(f.sensor)) return '';
+  const z = zones().find(q => q.id === f.zone);
+  return `<button type="button" class="teaser" data-forecast="1">See the forecast to ${esc(human(f.end_date))} <span class="sub">· ${esc(z ? zoneName(z) : f.zone)}, ${esc(sensors()[f.sensor].label)} ${esc(f.track)}</span></button>`;
+}
+function goForecast() {
+  const f = S.forecast; if (!f) return;
+  stopPlay(); S.sat = f.sensor; S.track[f.sensor] = f.track; S.window = f.window; S.scenario = f.scenario; S.view = 'zones';
+  S.note = null; S.selected = null; S.date = null; changed();
 }
 function fcReadout(d, v, lo, hi, level, ref) {
   return `<b>${esc(d)}</b> · ${fmt(v, 1)} mm <span class="sub">(${Math.round(level * 100)} % range ${fmt(lo, 1)} to ${fmt(hi, 1)} mm) relative to ${esc(ref)}</span>`;
@@ -1000,8 +1022,9 @@ function zonesSheet() {
       foot: missing ? `${sats.filter(s => !entry(z, s, S.track[s])).map(s => S.track[s]).join(' and ')}: ${emptyZoneLabel(sat || 's1')}` : `Chart: ${sats.map(s => `${sensors()[s].label} ${S.track[s]}`).join(' and ')}` });
   });
   const ex = zs.length ? linesFor(zs.find(z => linesFor(z).length) || zs[0]) : [];
-  return `<h2>Where did the ground move?</h2><p class="lead">Median line-of-sight change in each salt zone, in mm since the first date${win() ? `, ${esc(win().label)}` : ''}. Negative means away from the satellite, which is what sinking ground looks like. It is relative to nearby terrain, not an absolute or vertical value.</p>
-    ${choicesPanel()}${forecastPanel()}${ex.length ? keys(ex) : ''}${blocks.join('') || '<p class="sub">No zone series in this products set.</p>'}`;
+  const fc = forecastPanel();
+  return `<h2>Where did the ground move?</h2><p class="lead">Change in each salt zone along the radar's line of sight${win() && S.sat === 's1' ? `, ${esc(win().label)}` : ''}. Negative = away from the satellite, which is what sinking looks like. Relative to nearby terrain.</p>
+    ${choicesPanel()}${fc || forecastTeaser()}${ex.length ? keys(ex) : ''}${blocks.join('') || '<p class="sub">No zone series in this products set.</p>'}`;
 }
 function checkForZone(z) {
   const num = (z.id.match(/\d+/) || [])[0];
@@ -1010,15 +1033,14 @@ function checkForZone(z) {
 function egmsPanel() {
   const e = S.man.egms; if (!e) return '';
   if (e.summary?.length) {
-    const names = { z1: 'Zone 1', z2: 'Zone 2', z3: 'Zone 3', z4: 'Zone 4', stable: 'R05 stable-ground sample' };
+    const names = { ...Object.fromEntries(zones().map(z => [z.id, zoneName(z)])), stable: 'Stable ground nearby' };
     const rate = value => Number.isFinite(value) ? value.toFixed(1) : '—';
     const rows = e.summary.map(row => `<tr><th scope="row">${esc(names[row.id] || row.id)}</th><td>${esc(row.cells)}</td><td>${rate(row.up_mm_yr)}</td><td>${rate(row.east_mm_yr)}</td></tr>`).join('');
-    return `<div class="block egms"><h3><span>${esc(e.label)}</span><span class="badge">Reported zone medians</span></h3>
-      <p class="reason">${esc(e.detail)}</p>
-      <table><caption>Historical median rates in mm/yr. Positive means up or east.</caption>
+    return `<div class="block egms"><h3><span>Before 2026: ${esc(e.label)}</span><span class="badge">Sentinel-1 history</span></h3>
+      <table><caption>Median rates in mm/yr, December 2020 to November 2025. Positive = up or east.</caption>
       <thead><tr><th scope="col">Area</th><th scope="col">Cells</th><th scope="col">Up</th><th scope="col">East–West</th></tr></thead>
       <tbody>${rows}</tbody></table>
-      <p class="reason"><a href="${esc(e.source)}">R05 extraction and provenance</a></p></div>`;
+      ${more('About this table', `<p class="reason">${esc(named(e.detail))}</p><p class="reason"><a href="${esc(e.source)}">Source and method</a></p>`)}</div>`;
   }
   return `<div class="block egms"><h3><span>${esc(e.label)}</span><span class="badge">${esc(e.status === 'pending' ? 'Pending verification' : e.status)}</span></h3>
     <div class="seg" role="group" aria-label="EGMS component"><button type="button" disabled aria-pressed="true">Up</button><button type="button" disabled aria-pressed="false">East–West</button></div>
@@ -1026,15 +1048,19 @@ function egmsPanel() {
 }
 function agreementSheet() {
   const w = S.man.common_window;
-  const head = `<h2>Do the two radars agree?</h2><p class="lead">NISAR next to Sentinel-1 over the months both cover${w ? ` (${human(w[0], false)} to ${human(w[1])})` : ''}, each in its own line of sight. The verdict comes from the validator's checks, never from this page.</p>`;
-  if (!(measured('nisar') && measured('s1'))) {
-    const why = !measured('nisar') ? 'NISAR displacement fit pending' : !measured('s1') ? 'Sentinel-1 measurements pending' : (S.man.compare.reason || 'not ready');
-    return `${head}<div class="verdict na">Not testable yet · ${esc(why)}. O-19 (the shared quantity and geometry) is also open.</div>
-      <p class="reason">NISAR and Sentinel-1 look from different sides, so their line-of-sight values are different quantities until 03 and 04 settle O-19.</p>${egmsPanel()}`;
+  const head = `<h2>Do the two radars agree?</h2><p class="lead">NISAR next to Sentinel-1 over the months both cover${w ? ` (${human(w[0], false)} to ${human(w[1])})` : ''}. The verdicts come from the automatic checks.</p>`;
+  const nt = tracksOf('nisar').find(t => t === S.track.nisar && frames('nisar')[t]) || Object.keys(frames('nisar'))[0];
+  const st = nt && pairOf(nt);
+  // Sentinel-1 in the window both radars cover (the default window), baseline run, whatever window the map shows
+  const s1Var = S.sens?.windows?.[S.sens.default_window || S.man.default_window || 'jul_oct']?.variants?.[st]?.baseline;
+  if (!(measured('nisar') && measured('s1')) || !st || !s1Var) {
+    const why = !measured('nisar') ? 'NISAR measurements are still being processed' : 'Sentinel-1 measurements are still being processed';
+    return `${head}<div class="verdict na">Not testable yet · ${esc(why)}</div>${egmsPanel()}`;
   }
-  const ctl = control(); const trk = S.track;
+  const ctl = control(); const trk = { nisar: nt, s1: st };
+  const at = (p, s) => s === 's1' ? (s1Var[p.id] ?? null) : entry(p, s, nt);
   const minus = (z, s) => {
-    const a = entry(z, s, trk[s]), b = ctl && entry(ctl, s, trk[s]);
+    const a = at(z, s), b = ctl && at(ctl, s);
     if (!a || !b) return null;
     const mm = a.dates.map((d, i) => { const j = b.dates.indexOf(d); return j < 0 || a.mm[i] === null || b.mm[j] === null ? null : Math.round((a.mm[i] - b.mm[j]) * 10) / 10; });
     return { label: `${sensors()[s].label} ${trk[s]}`, color: SATS[s].color, shape: SATS[s].shape, dates: a.dates, mm, gaps: gapsOf(s, trk[s]), dash: false };
@@ -1045,11 +1071,11 @@ function agreementSheet() {
     const c = checkForZone(z);
     const word = c ? (c.status === 'pass' ? 'Agree' : c.status === 'fail' ? 'Disagree' : c.status === 'warn' ? 'Warning' : 'Info') : 'Not tested yet';
     const badge = `<span class="badge ${c ? esc(c.status) : ''}">${c ? STATUS_ICON[c.status] + ' ' : ''}${word}</span>`;
-    const foot = (c ? `${esc(cleanLabel(c.title))}${c.detail ? ': ' + esc(c.detail) : ''}` : 'The validator has not reported on this zone') + (lines.length < 2 ? ' · one satellite has no data here: not testable' : '');
-    return block(`a-${z.id}`, esc(zoneName(z)), badge, lines, { range, window: w, foot });
+    const foot = lines.length < 2 ? 'One satellite has no series here' : (c ? '' : 'No automatic check for this zone yet');
+    return block(`a-${z.id}`, esc(zoneName(z)), badge, lines, { range, window: w, foot,
+      after: c ? more('What the check found', `<p class="reason">${esc(named(c.detail || c.title))}</p>`) : '' });
   });
-  const block_ = S.man.compare?.ready === false ? `<div class="verdict warn"><span>!</span> ${esc(S.man.compare.reason)}</div>` : '';
-  return `${head}${block_}<p class="sub small">Shown as the zone minus the outer comparison area, a proposed contrast until O-19 decides. Select a zone (chips above the map) for its parallel observations.</p>
+  return `${head}<p class="sub small">Each line is the zone minus the terrain 6.5 to 8 km away. NISAR ${esc(nt)} is paired with Sentinel-1 ${esc(st)} because both see east-west motion the same way. A wide tolerance means agreeing proves little yet.</p>
     ${keys(['nisar', 's1'].map(s => ({ label: `${sensors()[s].label} ${trk[s]}`, color: SATS[s].color })))}${blocks.join('')}<h3 class="sub-h">Historical context</h3>${egmsPanel()}`;
 }
 // every exported date of a track across Sentinel-1's windows (Jan to Oct and Jul to Oct), for the coverage overview
@@ -1281,14 +1307,14 @@ function renderAbout() {
     <p class="lead">${isPlaceholder(S.man.story) ? esc(S.man.note || '') : esc(S.man.story)}</p>
     ${S.man.synthetic ? '<div class="verdict na">Simulated, not data. Every number on this site is invented.</div>' : ''}
     <h3>What this map can and cannot tell you</h3>
-    <p>It shows ground motion measured by radar satellites, along each satellite's line of sight and relative to nearby terrain, over the months they observed. It is not a hazard forecast, an evacuation guide or a building safety assessment. For official notices, follow the Vâlcea emergency inspectorate (ISU Vâlcea) and the Ocnele Mari town hall.</p>
+    <p>Ground motion measured by two radar satellites, along each one's line of sight and relative to nearby terrain. <b>It is not a hazard forecast, an evacuation guide or a building safety assessment.</b> For official notices, follow ISU Vâlcea and the Ocnele Mari town hall.</p>
     <h3 id="checks-h">Checks · ${n.pass ?? 0} pass, ${n.warn ?? 0} warn, ${n.fail ?? 0} fail, ${n.info ?? 0} info</h3>
-    <ul class="checks">${S.checks.map(c => `<li id="chk-${esc(c.id)}" class="${esc(c.status)}"><span class="ic" title="${esc(c.status)}">${STATUS_ICON[c.status] || '·'}</span><div><div>${esc(c.title)}</div><div class="detail">${esc(c.detail)}${c.value !== null && c.value !== undefined ? ` · value ${esc(c.value)}` : ''}</div></div></li>`).join('') || '<li>No checks yet.</li>'}</ul>
-    ${S.updates ? `<h3>Data freshness</h3><p class="sub">${esc(S.updates.summary)} Checked ${esc(S.updates.checked)} (update.py).</p>` : ''}
+    <ul class="checks">${S.checks.map(c => `<li id="chk-${esc(c.id)}" class="${esc(c.status)}"><span class="ic" title="${esc(c.status)}">${STATUS_ICON[c.status] || '·'}</span><details class="more check"><summary>${esc(named(c.title))}</summary><div class="detail">${esc(named(c.detail))}</div></details></li>`).join('') || '<li>No checks yet.</li>'}</ul>
+    ${S.updates ? `<h3>Data freshness</h3><p class="sub">${esc(S.updates.summary)} Checked ${esc(S.updates.checked)}.</p>` : ''}
     <h3>The two radars</h3>
     ${sn.map(x => `<p><b>${esc(x.label)}</b> · ${esc(x.agency)} · ${esc(x.band)}, ${esc(x.wavelength_cm)} cm · ${esc(x.status)}${x.look ? ` · looks ${esc(x.look)}` : ''}<br><span class="sub">${esc(x.product || '')}${x.product ? '. ' : ''}Reference: ${esc(x.reference)}</span>${x.pending ? `<br><span class="sub">${esc(x.pending)}</span>` : ''}</p>`).join('')}
-    ${Object.keys(m).length ? `<h3>Methods</h3>${['s1', 'sign', 'rate', 'zones'].filter(k => m[k]).map(k => `<p class="sub">${esc(m[k])}</p>`).join('')}
-      ${m.links ? `<p>${m.links.map(l => `<a href="${esc(l.href)}" target="_blank" rel="noopener">${esc(l.label)}</a>`).join(' · ')}</p>` : ''}` : ''}
+    ${Object.keys(m).length ? more('Methods', `${['s1', 'sign', 'rate', 'zones'].filter(k => m[k]).map(k => `<p class="sub">${esc(m[k])}</p>`).join('')}
+      ${m.links ? `<p>${m.links.map(l => `<a href="${esc(l.href)}" target="_blank" rel="noopener">${esc(l.label)}</a>`).join(' · ')}</p>` : ''}`, 'h') : ''}
     <h3>Credits</h3>
     <p class="sub">${esc(S.man.credits)}</p>
     ${sn.map(x => `<p class="sub">${esc(x.credit)}</p>`).join('')}
