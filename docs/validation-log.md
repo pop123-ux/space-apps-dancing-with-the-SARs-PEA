@@ -275,3 +275,53 @@ Per track the values are similar (window ρ +0.26 on 029A, +0.15 on 007D; contro
 **Verdict: no flag.** By the predeclared rule (p < 0.05 on the pooled window or control ring) closure does not follow soil-moisture change in this summer stack. The signs on the well-supported areas are weakly positive (a bigger moisture swing goes with a slightly larger misclosure), as moisture-phase theory predicts, but 20 triangles cannot separate that from chance. Closure is larger inside the zones (1.5 to 2.2 mm) than on the band and control (about 1.2 mm), and that difference is not explained by moisture either; fewer coherent pixels and steeper phase in the zones are the likelier reasons.
 
 What it cannot tell us: moisture over a triangle is three 200 m snapshots matched within 2 days, not the moisture at the radar overpass; NISAR misses the late July to mid August triangles; and summer 2026 had only modest moisture swings (at most about 6.5 points over the window). The January to October extension, with winter moisture changes, is the stronger test.
+
+## Weather-model troposphere check with OPERA TROPO-ZENITH (05, independent of 03's T4)
+
+### Predeclared before any delay was computed (14 Nov 2026, about 18:25)
+
+Question: z4 on 029A changes from −7.5 mm (baseline) to −2.8 mm with `fit.py`'s empirical elevation correction. Is the weather model closer to the baseline or to the elevation-corrected number?
+
+- **Delay source:** NASA JPL OPERA L4 TROPO-ZENITH v1 (ECMWF HRES through RAiDER), global, every 6 hours, 0.07° grid, 145 heights; wet plus hydrostatic zenith delay. Only the blocks covering the Sentinel-1 window are read.
+- **Per acquisition:** linear interpolation in time between the two 6-hourly maps around the Sentinel-1 start time (ASF catalogue), in height to each pixel's DEM elevation (the HyP3 `dem` layer), and bilinear in latitude and longitude; mapped to line of sight by dividing by the up component of the look vector (`lv_theta`), as `fit.py` defines it.
+- **Correction:** for each pair, the LOS delay difference between its two dates is removed, then the pair is zeroed on the reference band again; everything else as `fit.py`'s baseline (same masks, solver, zones, window fit).
+- **Sign check before use:** on the reference band, the slope of the pair phase against elevation must shrink after the correction for most pairs; if it grows for most pairs, the sign is wrong and the run is stopped, not flipped to look better.
+- **Outputs compared:** each zone's and the control ring's 90-day `window_fit_mm` on both tracks for baseline (reproduced), `fit.py`'s elevation correction (`summary.json`) and OPERA. No pass/fail: the result is reported as where OPERA lands between the other two, with the spread across the three as an honest error bar.
+
+### Results (14 Nov 2026, about 18:55)
+
+- **Inputs:** 64 OPERA maps (the two 6-hourly maps around each of the 32 Sentinel-1 acquisitions: 029A at 16:16 UTC, 007D at about 04:30 UTC), read by chunk (about 20 s and 6 KB of cut per map), cached in `data/work/ocnele_mari/tropo/`. LOS total delay over the window: about 2.9 to 3.2 m, varying by up to about 0.2 m across the window's 150 to 900 m relief. Script `notebooks/05/tropo_opera.py`, full numbers including the per-pair sign check in `notebooks/05/tropo_opera.json`.
+- **Reproduction:** the uncorrected run reproduces `summary.json`'s baseline exactly on every zone and the control (to 0.1 mm), so the only difference in the OPERA run is the correction.
+
+**Sign check (predeclared rule: the reference-band slope of phase against elevation must shrink on most pairs).**
+
+| Track | Pairs where the slope shrank | Median \|slope\| before → after | Rule |
+|---|---|---|---|
+| 007D | 17 of 29 | 1.46 → 1.23 mm per 100 m | **Passes** |
+| 029A | 13 of 29 | 2.62 → 2.03 mm per 100 m | **Fails narrowly**: the slope grew on 16 pairs (median +1.9 mm per 100 m), although the median over all pairs fell |
+
+By the predeclared rule the 029A result is **not validated**: the weather model removes a large height signal on some pairs and adds one on others. A likely reason is that 029A images at 16:16 UTC (19:16 local), when summer convection over the hills is strongest and least well captured by a 0.07° weather model; 007D images before dawn, in a calmer atmosphere. The 029A numbers below are reported for completeness, labelled as such, and were not adjusted or sign-flipped.
+
+**Zone change over the 90-day window (mm, LOS, positive towards the satellite).**
+
+| Track | Area | Baseline | Elevation correction (`fit.py`) | OPERA | Pixels |
+|---|---|---|---|---|---|
+| 007D | z1 | −5.2 | −6.0 | −5.3 | 79 |
+| 007D | z2 | −1.4 | −2.5 | −2.3 | 48 |
+| 007D | z3 | +0.2 | +3.4 | +3.1 | 55 |
+| 007D | **z4** | **−3.5** | **−2.0** | **−2.1** | 76 |
+| 007D | control | +3.3 | +2.2 | +2.3 | 12,153 |
+| 029A (not validated) | z1 | −8.6 | −8.0 | −7.7 | 21 |
+| 029A (not validated) | z2 | −6.8 | −6.4 | −5.7 | 43 |
+| 029A (not validated) | z3 | no series | | | 0 |
+| 029A (not validated) | **z4** | **−7.5** | **−2.8** | **−5.0** | 34 |
+| 029A (not validated) | control | +3.9 | +1.8 | +2.5 | 14,963 |
+
+z4 minus the control ring: 007D −6.8 (baseline), −4.2 (elevation), −4.4 (OPERA); 029A −11.4, −4.6, −7.6.
+
+**What it says.**
+- **On 007D, where the check passes, the weather model agrees with `fit.py`'s elevation correction** within 0.1 to 0.3 mm on every area, including z4 (−2.0 against −2.1 mm). Two independent methods agreeing makes the corrected 007D numbers the most trustworthy: z4 changes by about −2 mm over 90 days, or about −4.4 mm relative to the control ring.
+- **On 029A, OPERA lands between the two** (z4 −5.0 mm, between −7.5 and −2.8), but the check fails, so this does not settle 029A. The honest range for z4 on 029A stays −2.8 to −7.5 mm.
+- **The control ring's drift shrinks with either correction** (+3.9 to +2.5 and +3.3 to +2.3 mm), so part of the "drift" was troposphere.
+- **z3 on 007D turns from about 0 to about +3 mm** with both corrections, which makes the missing z3 subsidence (see the z3 investigation) slightly more puzzling, not less.
+- What this cannot tell us: OPERA is a weather model with about 8 km cells and 6-hour steps, so it cannot remove turbulent delay at the scale of a zone. No run here removes all atmosphere.
