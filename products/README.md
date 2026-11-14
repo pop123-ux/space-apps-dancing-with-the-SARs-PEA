@@ -30,14 +30,21 @@ Rebuilt in about 10 s by `python export.py ocnele_mari` (needs `numpy`, `pyproj`
 
 Values beyond a layer's scale are drawn at full colour and the legend says so. A pixel with no data has no dot and is transparent in the PNGs.
 
-## Zone 4 retrospective predictor
+## Zone 4 displacement predictor
 
-`ocnele_mari/forecast.json` is an optional sidecar for the Zones view, tied to Sentinel-1 029A, July–October baseline and Zone 4. The UI checks that the exported observation dates and values match the active series. The dashed forecast stops 30 days after the final acquisition, on 4 November 2026 for this build. The interval is unavailable because the four overlapping backtest windows are insufficient to calibrate it.
+`ocnele_mari/forecast.json` is an optional sidecar for the Zones view, tied to Sentinel-1 029A, July–October baseline and Zone 4. The UI checks that the exported observation dates and values match the active series. The dashed scenario ends 1 January 2027, 88 days after the 5 October observation cutoff. The three model paths can be selected in Zones. The backtest horizon is 30 days and its scores do not validate the January endpoint. The interval is unavailable because the four overlapping backtest windows are insufficient to calibrate it.
 
 Rebuild on CPU using NumPy, SciPy, pyproj and GDAL:
 
 ```sh
-python sentinel1/scripts/forecast.py RAW_HYP3_ZIP_DIRECTORY products/ocnele_mari/forecast.json --as-of 2026-11-14
+python sentinel1/scripts/forecast.py RAW_HYP3_ZIP_DIRECTORY products/ocnele_mari/forecast.json --as-of 2026-11-14 --end-date 2027-01-01
 ```
 
 The script reconstructs training observations from pairs ending at each cutoff and scores against changes reconstructed from pairs wholly within the later evaluation window. Each fold scores on pixels supported on both sides. It ranks persistence, Theil–Sen and a Matérn Gaussian process by 30-day MAE. The same four overlapping windows rank the models and report their errors. Treat the ranking as exploratory. See [Hill et al.](https://doi.org/10.1029/2020JB020176) and [rolling-origin evaluation](https://otexts.com/fpp3/tscv.html).
+
+### Environmental scenario inputs
+
+- Align Paul's surface and root-zone moisture to the radar dates, recording product, footprint, missingness, and latency. If the product is SMAP L4, its 9 km cells provide regional covariates. Rainfall totals and moisture are related, so test one at a time before combining them.
+- Use past rainfall windows (7 and 30 days) and lagged moisture anomalies as candidates. Compare a regularized regression with the existing baselines on held-out time blocks. For future weather use forecasts available at each cutoff or explicitly supplied dry/typical/wet scenarios. Keep future realized weather out of training and evaluation inputs.
+- Screen atmosphere, coherence and land cover as observation-quality features. Wet soil can change the radar phase, and atmospheric water vapor can introduce delay. Groundwater, brine pressure and extraction history are physical candidates if local dated records become available.
+- Before a moisture or rain slider changes an estimate, require out-of-sample improvement and constrain the input to observed ranges. Label it a conditional scenario. Enable a vertical scenario after a validated vertical target is available from multi-geometry decomposition or independent ground measurements. A single NISAR granule is a pair-level test input.

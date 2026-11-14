@@ -766,16 +766,19 @@ function forecastPanel() {
       !obs.dates.every((date, index) => date === f.training_dates[index] &&
         Number.isFinite(obs.mm[index]) && Math.abs(obs.mm[index] - f.observed_mm[index]) <= .011)) return '';
   const labels = { persistence: 'Persistence', theil_sen: 'Theil–Sen trend', gaussian_process: 'Gaussian process' };
+  const model = Object.hasOwn(f.model_paths_mm || {}, S.forecastModel) ? S.forecastModel : f.model;
+  const path = f.model_paths_mm?.[model] || f.forecast_mm;
+  const modelChoices = Object.keys(f.model_paths_mm || {}).map(key => `<button type="button" data-forecast-model="${esc(key)}" aria-pressed="${key === model}">${esc(labels[key])}</button>`).join('');
   const lines = [
     { label: 'Radar estimate', color: SATS.s1.color, shape: SATS.s1.shape, dates: f.training_dates, mm: f.observed_mm, gaps: [] },
     { label: 'Model extrapolation', color: '#7C3AED', dates: [f.last_observation, ...f.dates],
-      mm: [f.observed_mm.at(-1), ...f.forecast_mm], dash: true, gaps: [] },
+      mm: [f.observed_mm.at(-1), ...path], dash: true, gaps: [] },
   ];
   const scores = Object.entries(f.metrics).map(([k, v]) => `${esc(labels[k])} ${fmt(v.mae_mm, 2)} mm`).join(' · ');
   const retro = f.status === 'retrospective' || f.end_date <= new Date().toISOString().slice(0, 10);
   return block('zone-forecast', `Zone 4 · ${retro ? 'Retrospective forecast' : 'Experimental forecast'}`,
-    '<span class="badge">30 days · 029A LOS</span>', lines, {
-      top: `<p class="reason">${esc(labels[f.model])} through ${esc(f.end_date)}. Displacement in mm relative to the first radar date. The dashed segment is a model estimate.</p>${keys(lines)}`,
+    `<span class="badge">${f.horizon_days} days · 029A LOS</span>`, lines, {
+      top: `<p class="reason">${esc(labels[model])} through ${esc(f.end_date)}, from radar data ending ${esc(f.last_observation)}. The dashed segment is a line-of-sight scenario. The long horizon has no comparable backtest.</p><div class="seg" role="group" aria-label="Forecast model">${modelChoices}</div><p class="reason">Endpoint ${fmt(path.at(-1), 2)} mm relative to the first acquisition. Moisture and rainfall controls await a fitted model.</p>${keys(lines)}`,
       foot: `30-day backtest MAE from ${f.folds.length} overlapping historical cutoffs: ${scores}. ${esc(f.interval_reason)}`,
     });
 }
@@ -920,6 +923,11 @@ function renderSheet() {
   sh.querySelectorAll('[data-table]').forEach(b => b.onclick = () => { const id = b.dataset.table; S.tables.has(id) ? S.tables.delete(id) : S.tables.add(id); renderSheet(); });
   sh.querySelectorAll('[data-go]').forEach(b => b.onclick = () => goSentinel());
   wireChoices(sh);
+  sh.querySelectorAll('[data-forecast-model]').forEach(b => b.onclick = () => {
+    S.forecastModel = b.dataset.forecastModel;
+    renderSheet();
+    sh.querySelector('[data-forecast-model][aria-pressed="true"]')?.focus();
+  });
 }
 function select(sel) {
   S.selected = sel; closeMenus(); renderSheet(); $('#sheet').scrollTop = 0;

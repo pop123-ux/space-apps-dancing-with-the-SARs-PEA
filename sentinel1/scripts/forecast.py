@@ -1,5 +1,5 @@
 # Owner: 03 · InSAR analyst (Alexandru, Eric)
-"""Backtest and export a 30-day Zone 4 LOS forecast from the summer 029A HyP3 archive."""
+"""Backtest and export a Zone 4 LOS forecast from the summer 029A HyP3 archive."""
 import argparse
 from datetime import date, timedelta
 import json
@@ -77,7 +77,7 @@ def invert(pairs, dates):
                  np.zeros(len(dates), dtype=int))
 
 
-def build(raw, as_of):
+def build(raw, as_of, end_date=None):
     pairs = observations(raw)
     dates = sorted({d for a,b,*_ in pairs for d in (a,b)})
     folds = []
@@ -114,18 +114,21 @@ def build(raw, as_of):
     last = dates[-1]
     t = np.array([(d-last).days for d in dates])
     hist = np.median(final[:,keep],axis=1)
-    ahead = np.arange(6,HORIZON+1,6)
+    end = end_date or last + timedelta(days=HORIZON)
+    horizon = (end - last).days
+    if horizon <= 0:
+        raise ValueError('Forecast end date must follow the last acquisition')
+    ahead = np.array([*range(6, horizon, 6), horizon])
     pred = forecasts(t,hist,ahead)
-    # Retrospective demonstration. The few overlapping folds cannot calibrate an interval.
-    end = last + timedelta(days=HORIZON)
     return dict(zone='z4', track='029A', sensor='s1', window='jul_oct', scenario='baseline',
                 last_observation=last.isoformat(), end_date=end.isoformat(), as_of=as_of.isoformat(),
                 status='retrospective' if end<=as_of else 'experimental',
-                horizon_days=HORIZON, connected_pixels=int(keep.sum()), model=candidate,
+                horizon_days=horizon, backtest_horizon_days=HORIZON, connected_pixels=int(keep.sum()), model=candidate,
                 training_dates=[d.isoformat() for d in dates], observed_mm=hist.tolist(),
                 dates=[(last+timedelta(days=int(h))).isoformat() for h in ahead],
-                forecast_mm=(hist[-1]+pred[candidate]).tolist(), interval=None,
-                interval_reason='Too few overlapping backtest windows to calibrate a reliable prediction interval.',
+                forecast_mm=(hist[-1]+pred[candidate]).tolist(),
+                model_paths_mm={key:(hist[-1]+value).tolist() for key,value in pred.items()}, interval=None,
+                interval_reason='The backtests give too little evidence to calibrate a prediction interval.',
                 selection_metric='Mean absolute error at 30 days relative to the cutoff',
                 metrics=metrics, folds=folds)
 
@@ -135,5 +138,6 @@ if __name__=='__main__':
     parser.add_argument('raw',type=Path)
     parser.add_argument('output',type=Path)
     parser.add_argument('--as-of',type=date.fromisoformat,required=True)
+    parser.add_argument('--end-date',type=date.fromisoformat)
     args=parser.parse_args()
-    args.output.write_text(json.dumps(build(args.raw,args.as_of),indent=2,allow_nan=False)+'\n')
+    args.output.write_text(json.dumps(build(args.raw,args.as_of,args.end_date),indent=2,allow_nan=False)+'\n')
