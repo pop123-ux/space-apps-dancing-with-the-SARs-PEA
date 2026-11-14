@@ -63,6 +63,7 @@ Every file in this repository has an owner role, 01 to 06, or is shared. The own
 | `export.py` | 06 · App developer (Darius) | Write products/<site>/ for the page |
 | `mock_products.py` | 06 · App developer (Darius) | Invented products/mock/ to build the page on; keep it in line with the file contracts |
 | `products/README.md` | 06 · App developer (Darius) | What the page reads |
+| `docs/ui.md` | 06 · App developer (Darius) | The page's design: satellite switch, views, comparison rules (D-004) |
 
 ## Shared (announce changes; 01 reviews)
 

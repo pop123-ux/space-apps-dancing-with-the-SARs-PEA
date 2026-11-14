@@ -49,7 +49,18 @@ All 22 are in [../data/scenes/ocnele_mari_gunw.csv](../data/scenes/ocnele_mari_g
 | NGL daily series (tenv3, IGS20) | Daily positions; URL pattern verified 14 Nov (STOL) | Some stations | Screening, plots | 05 |
 | Muntean et al. 2026 | Published rates at ROMPOS stations VLC2 (7 km) and HORE (24 km); verticals still to be read from Table S3 | As a rate, to 2025 | Held-out check close to the town | 04 |
 | EGMS Ortho L3 Up (100 m) | Vertical rate, 2019 to 2023 and 2020 to 2024 tiles | No, it ends in 2024 | Stable ground; the bowl's history | 05 |
-| Sentinel-1 via HyP3 | C-band interferograms for the same months | Yes | Second radar | 05 |
+| Sentinel-1 via HyP3 | C-band burst interferograms, July to October 2026, fitted (`sentinel1/`) | Yes | The second radar (D-004) | 02, 03 |
 | Copernicus GLO-30 DEM | Elevation | n/a | Troposphere slope | 02 |
+
+## Sentinel-1, the second radar (D-004)
+
+Checked Sat 14 Nov 2026 on NASA CMR and in `sentinel1/`.
+
+- **Coverage.** Sentinel-1A, 1C and 1D image the town on two tracks: **029A** (ascending) and **007D** (descending). There are acquisitions every month from Nov 2025 to Nov 2026, including the January to June 2026 months that NISAR missed.
+- **What we fitted.** 58 HyP3 `INSAR_ISCE_BURST` pairs (VV, 10x2 looks, water mask), 29 per track, all succeeded. That gives 16 dates per track: 029A from 7 Jul to 5 Oct 2026, 007D from 6 Jul to 4 Oct 2026. The fit is in `sentinel1/analysis/`, and the method and caveats are in `sentinel1/analysis/README.md` and `sentinel1/docs/TEAM_HANDOFF.md`.
+- **Grid and sign.** 40 m in EPSG:32635, row 0 north. Line-of-sight positive towards the satellite, the same as our convention.
+- **Reference.** Relative to surrounding terrain (a 3 to 6.5 km band around the town), not tied to GNSS. The outer band (6.5 to 8 km) drifts. This is why Compare and Agreement use zone minus outer band (O-19).
+- **The common window** with NISAR is 7 Jul to 4 Oct 2026. NISAR 094D and 129A both cover it.
+- **Geometry.** Sentinel-1 looks right, NISAR looks left, and their incidence angles differ. The same ground motion therefore reads differently in each line of sight, which is why the page never subtracts one LOS from the other directly.
 
 **Not available to us:** ROMPOS raw data and daily solutions are closed. Nothing derived from them enters the repository.

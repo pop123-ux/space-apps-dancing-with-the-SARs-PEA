@@ -18,6 +18,7 @@ Start here:
 - **[docs/synopsis.md](docs/synopsis.md):** the one-page version, to explain the project to the team.
 - **[STATUS.md](STATUS.md):** where the build is right now, what waits on whom, and each role's next step.
 - **[docs/schedule.md](docs/schedule.md):** who does what, hour by hour: one column per role, with the gates and cut lines.
+- **[docs/ui.md](docs/ui.md):** the page's design: the satellite switch (NISAR, Sentinel-1, Compare), the five views, and the honest comparison rules (D-004).
 - **[OWNERS.md](OWNERS.md):** every file and its owner role (01 to 06, or shared), grouped by role. Each file also says its owner in its first lines.
 - **[docs/overview.md](docs/overview.md):** why it matters, the page, the candidate claims and how each could fail, the 7 slides, scope in tiers, the 48 hours, risks and fallbacks.
 - **[docs/build-spec.md](docs/build-spec.md):**
@@ -43,6 +44,7 @@ Two decisions are locked:
 - **D-001:** Ocnele Mari is the only site.
 - **D-002:** the map opens on the town, with Romania blurred when you zoom out.
 - **D-003:** the submission is a 7-slide PowerPoint, with no video.
+- **D-004:** two radars, one switch. We fit both NISAR and Sentinel-1, and the page switches between them and shows the same trend several ways (`docs/ui.md`). Sentinel-1 is already fitted in `sentinel1/`.
 
 Everything else is proposed until the hour-2 review.
 
