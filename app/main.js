@@ -482,16 +482,18 @@ function monthLabels(R) {
   }
   return out.join('');
 }
-function dotsFor(s, t, R, lane, shown, hollow = false) {
-  return datesOf(s, t).map(d => `<span class="dot ${SATS[s].shape === 'tri' ? 'tri' : ''} ${lane}${hollow ? ' hollow' : ''}${d === shown ? ' on' : ''}" style="left:${R.x(d)}%;--c:${SATS[s].color}" title="${esc(sensors()[s].label)} ${d}"></span>`).join('');
+function dotsFor(s, t, R, lane, shown, hollow = false, dates = null) {
+  return (dates || datesOf(s, t)).map(d => `<span class="dot ${SATS[s].shape === 'tri' ? 'tri' : ''} ${lane}${hollow ? ' hollow' : ''}${d === shown ? ' on' : ''}" style="left:${R.x(d)}%;--c:${SATS[s].color}" title="${esc(sensors()[s].label)} ${d}"></span>`).join('');
 }
 // Sentinel-1's window that covers NISAR's acquisition gap (sensitivity.json windows.<k>.fills_gap), if exported.
 const gapFill = () => Object.entries(S.sens?.windows || {}).find(([, w]) => w.fills_gap?.sensor === 'nisar') || null;
 function gapsFor(s, t, R) {
-  const fill = s === 'nisar' && S.sat === 'nisar' ? gapFill() : null;
+  const fill = s === 'nisar' ? gapFill() : null;
   return gapsOf(s, t).map(([a, b]) => {
+    // a gap Sentinel-1 covers is not shown as missing data: it offers the Sentinel-1 view of those months instead
     const covers = fill && fill[1].fills_gap.gap[0] <= b && fill[1].fills_gap.gap[1] >= a;
-    return `<div class="gap${covers ? ' filled' : ''}" style="left:${R.x(a)}%;width:${R.x(b) - R.x(a)}%" title="No ${esc(sensors()[s].label)} data from ${a} to ${b}${covers ? '. Sentinel-1 covers these months.' : ''}"><span><span class="long">No ${esc(sensors()[s].label)} data · ${human(a, false)} to ${human(b)}</span><span class="short">No data</span></span>${covers ? `<button type="button" class="gap-fill" data-fill="${esc(a)}|${esc(b)}">Sentinel-1 covers this →</button>` : ''}</div>`;
+    const label = covers ? '' : `<span><span class="long">No ${esc(sensors()[s].label)} data · ${human(a, false)} to ${human(b)}</span><span class="short">No data</span></span>`;
+    return `<div class="gap${covers ? ' filled' : ''}" style="left:${R.x(a)}%;width:${R.x(b) - R.x(a)}%" title="${covers ? `${esc(sensors()[s].label)} did not image the town from ${a} to ${b}; Sentinel-1 covers these months` : `No ${esc(sensors()[s].label)} data from ${a} to ${b}`}">${label}${covers ? `<button type="button" class="gap-fill" data-fill="${esc(a)}|${esc(b)}">Sentinel-1 covers this →</button>` : ''}</div>`;
   }).join('');
 }
 // Show the gap months with Sentinel-1: same direction of flight, its January to October window, a date mid-gap.
@@ -903,6 +905,11 @@ function agreementSheet() {
   return `${head}<p class="sub small">Shown as the zone minus the outer comparison area, a proposed contrast until O-19 decides.</p>
     ${keys(['nisar', 's1'].map(s => ({ label: `${sensors()[s].label} ${trk[s]}`, color: SATS[s].color })))}${blocks.join('')}${egmsPanel()}`;
 }
+// every exported date of a track across Sentinel-1's windows (Jan to Oct and Jul to Oct), for the coverage overview
+function allDates(s, t) {
+  if (s !== 's1' || !S.sens?.windows) return datesOf(s, t);
+  return [...new Set(Object.values(S.sens.windows).flatMap(w => w.frames?.[t]?.dates || []))].sort();
+}
 function coverageSheet() {
   const R = axisRange(); const w = S.man.common_window;
   const band = w ? `<div class="window" style="left:${R.x(w[0])}%;width:${R.x(w[1]) - R.x(w[0])}%;top:0;height:100%"></div>` : '';
@@ -911,8 +918,8 @@ function coverageSheet() {
     const pairs = covOf(s)[t]?.pairs;
     const nPairs = Array.isArray(pairs) ? pairs.length : pairs;
     const state = measured(s) ? '' : '<small class="pending">displacement fit pending</small>';
-    rows.push(`<div class="cov-row"><div class="cov-label"><span class="${SATS[s].cls}" aria-hidden="true">${SATS[s].mark}</span> ${esc(sensors()[s].label)} ${esc(t)} ${ARROW[dirOf(s, t)] || ''}<small>${datesOf(s, t).length} dates${nPairs ? ` · ${nPairs} pairs` : ''}</small>${state}</div>
-      <div class="tl cov-tl">${band}<div class="axis"></div>${gapsFor(s, t, R)}${dotsFor(s, t, R, '', null, !measured(s))}</div></div>`);
+    rows.push(`<div class="cov-row"><div class="cov-label"><span class="${SATS[s].cls}" aria-hidden="true">${SATS[s].mark}</span> ${esc(sensors()[s].label)} ${esc(t)} ${ARROW[dirOf(s, t)] || ''}<small>${allDates(s, t).length} dates${nPairs && allDates(s, t).length === datesOf(s, t).length ? ` · ${nPairs} pairs` : ''}</small>${state}</div>
+      <div class="tl cov-tl">${band}<div class="axis"></div>${gapsFor(s, t, R)}${dotsFor(s, t, R, '', null, !measured(s), allDates(s, t))}</div></div>`);
   }
   // usable zone pixels per measured track: a separate indicator from the acquisition ticks
   const px = [];
@@ -986,6 +993,7 @@ function renderSheet() {
   $('#sheet-body').innerHTML = html; sh.hidden = false; sh.scrollTop = top;
   sh.querySelectorAll('[data-table]').forEach(b => b.onclick = () => { const id = b.dataset.table; S.tables.has(id) ? S.tables.delete(id) : S.tables.add(id); renderSheet(); });
   sh.querySelectorAll('[data-go]').forEach(b => b.onclick = () => goSentinel());
+  sh.querySelectorAll('[data-fill]').forEach(b => b.onclick = () => { const [a, c] = b.dataset.fill.split('|'); fillGap(a, c); });
   wireChoices(sh);
   const fr = sh.querySelector('#fc-range');
   if (fr) fr.oninput = () => {
