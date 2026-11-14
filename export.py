@@ -278,6 +278,19 @@ def write_pending(out: pathlib.Path) -> list[str]:
     return made
 
 
+def egms_block(out: pathlib.Path) -> dict:
+    """The EGMS history block. A reported summary already in manifest.json (added by 03 from 05's pinned validation
+    log, 14 Nov 2026) is carried forward unchanged; otherwise the block says "pending". 05 should own this as a file."""
+    try:
+        old = C.load_json(out / "manifest.json").get("egms") or {}
+    except (FileNotFoundError, ValueError):
+        old = {}
+    if old.get("status") not in (None, "pending") and old.get("summary") and old.get("source"):
+        return old
+    return dict(status="pending", label="EGMS Ortho · 2020 to 2025 · 100 m",
+                detail="The E54N25 extracts (05) are not verified yet. EGMS history gives context; it cannot verify a 2026 rate.")
+
+
 def run(site_key: str) -> None:
     if C.SITES[site_key].get("synthetic"):
         raise C.todo("06", "export the synthetic demo site once fetch/stack/calibrate --synthetic exist")
@@ -323,8 +336,7 @@ def run(site_key: str) -> None:
         windows={WINDOW: windows[WINDOW]["label"]}, default_window=WINDOW,
         checks={k: sum(c.get("status") == k for c in checks) for k in ("pass", "warn", "fail", "info")},
         zone_notes=ZONE_NOTES, track_notes=TRACK_NOTES,
-        egms=dict(status="pending", label="EGMS Ortho · 2020 to 2025 · 100 m",
-                  detail="The E54N25 extracts (05) are not verified yet. EGMS history gives context; it cannot verify a 2026 rate."),
+        egms=egms_block(out),
         methods=dict(
             s1="Sentinel-1 IW2 VV bursts 029_060407_IW2 and 007_013694_IW2, processed by ASF HyP3 (10×2 looks, water mask) "
                "and inverted on a 40 m grid with coherence-squared weights. Each pair is zeroed on a terrain reference band "

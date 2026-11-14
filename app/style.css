@@ -292,3 +292,8 @@ dialog p { margin: 6px 0; }
 .zone-note { display: flex; flex-direction: column; gap: 2px; border-left: 3px solid var(--warn); background: #FFFBEB; border-radius: 10px; padding: 8px 12px; margin: 4px 0 10px; font-size: 14px; }
 .zone-note.quiet { border-left-color: var(--muted); background: var(--soft); }
 .zone-note small { color: var(--muted); font-size: 12px; }
+.egms table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+.egms caption { text-align: left; color: var(--muted); font-size: 12px; margin-bottom: 4px; }
+.egms th, .egms td { border-bottom: 1px solid var(--line); padding: 4px 6px; text-align: right; font-weight: 400; }
+.egms thead th { color: var(--muted); }
+.egms th[scope="row"], .egms thead th:first-child { text-align: left; }
