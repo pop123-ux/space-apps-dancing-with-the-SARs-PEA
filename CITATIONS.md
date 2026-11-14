@@ -19,7 +19,7 @@ These are the data, software, documents and prior work this project uses, with w
 | EGMS GNSS model | Second tie (O-06) | [EGMS](https://egms.land.copernicus.eu/); CSV link still to be found | 04 |
 | NGL MIDAS velocities, Eurasia-fixed | Held-out stations | `https://geodesy.unr.edu/velocities/midas.EU.txt` (from the advisor kit; re-verify) | 04 |
 | NGL daily series, tenv3, IGS20 | Station screening | `https://geodesy.unr.edu/gps_timeseries/IGS20/tenv3/IGS20/<STATION>.tenv3`. Verified 14 Nov 2026 with STOL (HTTP 200); the old IGS14 path returns 404 | 05 |
-| Published station rates, Muntean et al. 2026, Supplement Tables S1 and S3 | VLC2 and HORE | The paper's supplement (*Solid Earth* 17, 747–762). Do not redistribute the table (O-13) | 04 |
+| Published station rates, Muntean et al. 2026, Supplement Tables S1 and S3 | VLC2 and HORE | [The paper's supplement](https://se.copernicus.org/articles/17/747/2026/se-17-747-2026-supplement.pdf) (*Solid Earth* 17, 747–762; [article](https://se.copernicus.org/articles/17/747/2026/)), read 14 Nov 2026: Table S3 has VLC2 and no HORE. Do not redistribute the table (O-13) | 04 |
 | EGMS Ortho L3 Up, 100 m, 2020 to 2024 | Stable-ground check; the bowl's history | [EGMS](https://egms.land.copernicus.eu/), free login; cut to `data/work/<site>/refs/egms_up.csv` | 05 |
 | Copernicus GLO-30 DEM | Troposphere slope | `https://copernicus-dem-30m.s3.amazonaws.com/Copernicus_DSM_COG_10_N45_00_E024_00_DEM/…`; [AWS Registry of Open Data](https://registry.opendata.aws/copernicus-dem/) | 02 |
 | Basemap | Map context | To be decided (O-09) | 06 |

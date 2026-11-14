@@ -59,11 +59,14 @@ SITES["demo"] = dict(SITES["ocnele_mari"], name="Ocnele Mari · synthetic demo",
                      story="Invented ground motion with a known answer. Simulated, not data.")
 
 # Published station rates: Muntean et al. 2026, Solid Earth 17, 747–762, supplement Tables S1/S3, Eurasia-fixed.
-# station: (lat, lon, ve, vn, vu, se, sn, su) in mm/yr; NaN = not read yet. Owner 04 fills the vertical from Table S3.
+# station: (lat, lon, ve, vn, vu, se, sn, su) in mm/yr; NaN = not published. Owner 04 fills the vertical from Table S3.
 # Cite the paper; do not copy the table into the repository (open question Q4 on quoting it in the app).
+# 04, 14 Nov 2026: VLC2 vu 0.86 ± 0.61 mm/yr from Table S3 (Tstart 2 Aug 2019, span 5.82 yr; the PDF row runs its
+# fields together, the split is confirmed by su = 0.61 already read). HORE is not in Table S3: its vertical stays NaN
+# here and comes from NGL MIDAS instead.
 _nan = float("nan")
 PUBLISHED = {
-    "VLC2": (45.1074, 24.3664, 0.15, 0.14, _nan, 0.21, 0.19, 0.61),
+    "VLC2": (45.1074, 24.3664, 0.15, 0.14, 0.86, 0.21, 0.19, 0.61),
     "HORE": (45.1456, 23.9891, -0.50, 0.41, _nan, 0.09, 0.11, _nan),
 }
 

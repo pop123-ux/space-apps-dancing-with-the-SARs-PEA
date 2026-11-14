@@ -29,7 +29,7 @@ Updated Sat 14 Nov 2026, 13:30 Europe/Bucharest. `EVENT_TZ=Europe/Bucharest` is 
 | 01 Mario | Hour 0, the guide, the hour-2 review, the contract freeze | [build-spec.md § 01](docs/build-spec.md#01--lead-and-story-mario) |
 | 02 Alexandru and Eric | Token; T1 (venue network); T2 (`fetch.py --list` gives 22 pairs) | [§ 02](docs/build-spec.md#02--nisar-data-alexandru-and-eric) |
 | 03 Alexandru and Eric | O-05 (method); read 02's hand-off | [§ 03](docs/build-spec.md#03--insar-analyst-alexandru-and-eric) |
-| 04 Matei | `refs.py`; Table S3 verticals for VLC2 and HORE | [§ 04](docs/build-spec.md#04--geodesist-matei) |
+| 04 Matei | Branch `r04/refs`, 13:20: `refs.py` and `calibrate.py` written and tested on the synthetic site (offset and plane recovered to 0.02 mm/yr). VLC2 up 0.86 ± 0.61 mm/yr from Table S3; HORE is not in Table S3. Next: run `python refs.py ocnele_mari` on a laptop with internet; tie once 02 and 03 hand off | [§ 04](docs/build-spec.md#04--geodesist-matei) |
 | 05 Paul | HyP3 order; EGMS Up tile; station screening | [§ 05](docs/build-spec.md#05--validator-paul) |
 | 06 Darius | `python mock_products.py`; the page on `products/mock/`; Pages; O-09 | [§ 06](docs/build-spec.md#06--app-developer-darius) |
 
