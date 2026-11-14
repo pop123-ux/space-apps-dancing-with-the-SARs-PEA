@@ -12,3 +12,5 @@
 | `index.json` | Sites for the picker | `export.py`, `mock_products.py` |
 
 Check a folder with `python checkpoint.py <site>`. Anything with `synthetic: true` shows "Simulated, not data" on the page.
+
+For the current real-data integration snapshot, follow the [06 implementation handoff](../docs/ui.md#06-implementation-handoff--14-november-2026). Its exported products include Sentinel-1 measurement overlays and series for both fitted windows, NISAR catalog coverage and pending states for NISAR displacement and EGMS history. Use the supplied exporter to reproduce the snapshot.

@@ -35,3 +35,7 @@ Start with 02, 03, 04 and 05 in parallel. Role 06 can build against the current 
 - Historical EGMS: the 2019–2023 Up extract is available inside the private rehearsal material. Its previously calculated baseline had medians of −5.0 mm/yr in the zones (18 points) and −0.9 mm/yr nearby (5,174 points). Use this as background and retrieve a fresh official extract for a published comparison.
 - Private starter-kit material: the planning PDF, original ZIP with rehearsal radar data and scripts, and derived NISAR overlap map remain a team reference. The NISAR observations did not enter the Sentinel‑1 fit.
 - No independent same-period confirmation has been fitted.
+
+## January–October extension and frontend
+
+A further 132 HyP3 jobs succeeded. The combined fit has 95 pairs and 49 acquisition dates per track. In the extended ascending Zone 4, the fitted change is −4.07 mm at baseline and +4.48 mm with elevation correction. No descending salt-zone pixel spans all 49 dates under the fit’s connectivity rule. The shorter-window results above describe July–October. The [06 implementation handoff](../../docs/ui.md#06-implementation-handoff--14-november-2026) links the verified overlays, time series, job receipts and checksums. It records the pending NISAR displacement and EGMS historical extract.

@@ -16,6 +16,7 @@ Updated Sat 14 Nov 2026, 14:30 Europe/Bucharest. Event: NASA Space Apps Cluj-Nap
   - 129A has 13 pairs: 4 BETA and 9 PROVISIONAL, from 7 Nov 2025 to 21 Oct 2026, with nothing between 18 Jan and 23 Jun 2026.
   - 094D has 9 pairs, all PROVISIONAL, from 20 Jun to 18 Oct 2026.
 - **Sentinel-1 fitted** (02/03, Sat 14 Nov 13:37, `sentinel1/`). 58 HyP3 burst pairs, all succeeded. Tracks 029A (7 Jul to 5 Oct 2026) and 007D (6 Jul to 4 Oct), 16 dates each. 40 m grids, zone histories and sensitivity runs; see `sentinel1/docs/TEAM_HANDOFF.md`.
+- **Sentinel-1 extension and UI handoff.** All 132 added HyP3 jobs succeeded. The combined January–October fit uses 190 pairs and 49 dates per track. Extended Zone 4 ascending changes sign under alternate processing, and no full-window descending salt-zone series is supported. See [the 06 implementation handoff](docs/ui.md#06-implementation-handoff--14-november-2026) for the verified data and pending NISAR/EGMS states.
 - **Mock products, both radars (D-004).** `python mock_products.py` writes `products/mock/`: NISAR and Sentinel-1, 8 layers, 57 frames, 7 series points including the outer reference band, 2 stations, all invented. It runs in about 5 s, and `checkpoint.py mock` reports "contract OK".
 
 ## Waiting on a person
@@ -38,7 +39,7 @@ The full plan, hour by hour, is [docs/schedule.md](docs/schedule.md).
 | 03 Alexandru and Eric | O-05 (method); read 02's hand-off | [§ 03](docs/build-spec.md#03--insar-analyst-alexandru-and-eric) |
 | 04 Matei | `refs.py` and `calibrate.py` implemented and tested on synthetic inputs. Run `python refs.py ocnele_mari` on real inputs, then tie per track after 02 and 03 hand off. T8 and the EGMS stable-ground comparison are pending. | [§ 04](docs/build-spec.md#04--geodesist-matei) |
 | 05 Paul | EGMS 2020–2025 tile cut (`egms_cut.py`): z3 sinks −18.9 mm/yr, stable ground −0.5 mm/yr. Station screening and the 2026 third-witness search done: no open station within 70 km has 2026 data. Next: check 8 and T10 (`docs/validation-log.md`) | [§ 05](docs/build-spec.md#05--validator-paul) |
-| 06 Darius | `python mock_products.py`; the page on `products/mock/`; Pages; O-09 | [§ 06](docs/build-spec.md#06--app-developer-darius) |
+| 06 Darius | Implement the [UI handoff](docs/ui.md#06-implementation-handoff--14-november-2026) with Claude Code. Verify the real-data and mock flows. | [§ 06](docs/build-spec.md#06--app-developer-darius) |
 
 ## Early tests
 
