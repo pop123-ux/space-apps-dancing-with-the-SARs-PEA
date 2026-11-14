@@ -1,0 +1,275 @@
+{
+ "029A z1": {
+  "n": 10,
+  "rho": 0.08,
+  "p": 0.828,
+  "closure_abs_median_mm": 1.82,
+  "moisture_range_pct": [
+   0.4,
+   9.2
+  ],
+  "moisture_source": [
+   "z1"
+  ]
+ },
+ "007D z1": {
+  "n": 10,
+  "rho": -0.09,
+  "p": 0.815,
+  "closure_abs_median_mm": 2.03,
+  "moisture_range_pct": [
+   0.4,
+   9.2
+  ],
+  "moisture_source": [
+   "z1"
+  ]
+ },
+ "both z1": {
+  "n": 20,
+  "rho": 0.04,
+  "p": 0.859,
+  "closure_abs_median_mm": 2.01,
+  "moisture_range_pct": [
+   0.4,
+   9.2
+  ],
+  "moisture_source": [
+   "z1"
+  ]
+ },
+ "029A z2": {
+  "n": 10,
+  "rho": 0.09,
+  "p": 0.802,
+  "closure_abs_median_mm": 1.35,
+  "moisture_range_pct": [
+   0.4,
+   8.9
+  ],
+  "moisture_source": [
+   "z2"
+  ]
+ },
+ "007D z2": {
+  "n": 10,
+  "rho": -0.4,
+  "p": 0.257,
+  "closure_abs_median_mm": 2.09,
+  "moisture_range_pct": [
+   0.4,
+   8.9
+  ],
+  "moisture_source": [
+   "z2"
+  ]
+ },
+ "both z2": {
+  "n": 20,
+  "rho": -0.14,
+  "p": 0.553,
+  "closure_abs_median_mm": 1.54,
+  "moisture_range_pct": [
+   0.4,
+   8.9
+  ],
+  "moisture_source": [
+   "z2"
+  ]
+ },
+ "029A z3": {
+  "n": 7,
+  "rho": 0.41,
+  "p": 0.355,
+  "closure_abs_median_mm": 2.19,
+  "moisture_range_pct": [
+   1.8,
+   3.4
+  ],
+  "moisture_source": [
+   "window"
+  ]
+ },
+ "007D z3": {
+  "n": 10,
+  "rho": -0.07,
+  "p": 0.854,
+  "closure_abs_median_mm": 2.26,
+  "moisture_range_pct": [
+   1.5,
+   6.5
+  ],
+  "moisture_source": [
+   "window"
+  ]
+ },
+ "both z3": {
+  "n": 17,
+  "rho": 0.1,
+  "p": 0.691,
+  "closure_abs_median_mm": 2.21,
+  "moisture_range_pct": [
+   1.5,
+   6.5
+  ],
+  "moisture_source": [
+   "window"
+  ]
+ },
+ "029A z4": {
+  "n": 9,
+  "rho": 0.08,
+  "p": 0.831,
+  "closure_abs_median_mm": 1.92,
+  "moisture_range_pct": [
+   1.8,
+   6.5
+  ],
+  "moisture_source": [
+   "window"
+  ]
+ },
+ "007D z4": {
+  "n": 10,
+  "rho": 0.18,
+  "p": 0.614,
+  "closure_abs_median_mm": 1.57,
+  "moisture_range_pct": [
+   1.5,
+   6.5
+  ],
+  "moisture_source": [
+   "window"
+  ]
+ },
+ "both z4": {
+  "n": 19,
+  "rho": 0.19,
+  "p": 0.436,
+  "closure_abs_median_mm": 1.69,
+  "moisture_range_pct": [
+   1.5,
+   6.5
+  ],
+  "moisture_source": [
+   "window"
+  ]
+ },
+ "029A ref_band": {
+  "n": 10,
+  "rho": 0.22,
+  "p": 0.532,
+  "closure_abs_median_mm": 1.35,
+  "moisture_range_pct": [
+   1.7,
+   6.3
+  ],
+  "moisture_source": [
+   "ref_band"
+  ]
+ },
+ "007D ref_band": {
+  "n": 10,
+  "rho": 0.04,
+  "p": 0.907,
+  "closure_abs_median_mm": 1.13,
+  "moisture_range_pct": [
+   1.7,
+   6.3
+  ],
+  "moisture_source": [
+   "ref_band"
+  ]
+ },
+ "both ref_band": {
+  "n": 20,
+  "rho": 0.13,
+  "p": 0.584,
+  "closure_abs_median_mm": 1.16,
+  "moisture_range_pct": [
+   1.7,
+   6.3
+  ],
+  "moisture_source": [
+   "ref_band"
+  ]
+ },
+ "029A control": {
+  "n": 10,
+  "rho": 0.37,
+  "p": 0.291,
+  "closure_abs_median_mm": 1.37,
+  "moisture_range_pct": [
+   1.0,
+   5.9
+  ],
+  "moisture_source": [
+   "control"
+  ]
+ },
+ "007D control": {
+  "n": 10,
+  "rho": 0.15,
+  "p": 0.675,
+  "closure_abs_median_mm": 1.12,
+  "moisture_range_pct": [
+   1.0,
+   5.9
+  ],
+  "moisture_source": [
+   "control"
+  ]
+ },
+ "both control": {
+  "n": 20,
+  "rho": 0.26,
+  "p": 0.27,
+  "closure_abs_median_mm": 1.17,
+  "moisture_range_pct": [
+   1.0,
+   5.9
+  ],
+  "moisture_source": [
+   "control"
+  ]
+ },
+ "029A window": {
+  "n": 10,
+  "rho": 0.26,
+  "p": 0.466,
+  "closure_abs_median_mm": 1.41,
+  "moisture_range_pct": [
+   1.5,
+   6.5
+  ],
+  "moisture_source": [
+   "window"
+  ]
+ },
+ "007D window": {
+  "n": 10,
+  "rho": 0.15,
+  "p": 0.675,
+  "closure_abs_median_mm": 1.21,
+  "moisture_range_pct": [
+   1.5,
+   6.5
+  ],
+  "moisture_source": [
+   "window"
+  ]
+ },
+ "both window": {
+  "n": 20,
+  "rho": 0.19,
+  "p": 0.424,
+  "closure_abs_median_mm": 1.24,
+  "moisture_range_pct": [
+   1.5,
+   6.5
+  ],
+  "moisture_source": [
+   "window"
+  ]
+ }
+}

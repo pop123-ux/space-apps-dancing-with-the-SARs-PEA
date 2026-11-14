@@ -245,3 +245,33 @@ One exogenous input is tested against the forecast baselines on `r06/page` (`sen
 - With 4 overlapping cutoffs and no prediction interval, none of these MAE differences is significant.
 
 **Verdict.** Neither soil moisture nor rain explains the Zone 4 summer signal on the evidence available, and rain does not improve the 30-day forecast. The honest limits: Zone 4 has no recommended moisture retrievals, the summer series has 14 to 16 dates, and the backtest has 4 overlapping cutoffs.
+
+## Closure against soil-moisture change (05, idea 2)
+
+### Predeclared before any closure was computed (14 Nov 2026, about 17:55)
+
+- **Closure:** for every triangle of dates i < j < k with all three pairs among the 58 HyP3 products, d_ij + d_jk − d_ik per pixel (mm, LOS), with `fit.py`'s baseline masks (coherence ≥ 0.35, connected component, water, main component of the reference band, each pair zeroed on the 3 to 6.5 km band). Script: `notebooks/05/closure_moisture.py`, reading the ZIPs from `sentinel1/scripts/download.py`.
+- **Moisture input:** the range (largest minus smallest) of NISAR SME2 recommended moisture across the triangle's three dates, matched within 2 days; the area's own value where it has at least 3 pixels on all three dates, else the whole 16.4 km window.
+- **Test:** Spearman ρ between the median |closure| of an area and that moisture range, per track and both pooled, for each zone, the reference band, the control ring and the whole window. Flag: p < 0.05 on the pooled whole window or control ring (the areas with real moisture support). Zone results are reported but, with 1 to 8 moisture pixels, not used for the flag.
+
+### Results (14 Nov 2026, about 18:00)
+
+- **Inputs:** the 58 HyP3 ZIPs from `sentinel1/scripts/download.py` (all 58 SHA-256 checksums verified), read with rasterio onto `fit.py`'s 40 m grid. 14 triangles per track, as in `summary.json`. The per-triangle median |closure| over the window (1.7 mm on 029A, 1.3 mm on 007D) matches the order of `summary.json`'s pixel median (1.6 and 1.3 mm), so the computation reproduces the fit's quality numbers.
+- **Matching:** 10 of 14 triangles per track have moisture on all three dates. The 4 missing ones per track (late July to mid August) fall in NISAR's 26 Jul to 10 Aug gap. Moisture ranges across a triangle: 1.0 to 6.5 percentage points (window, band, control), up to 9.2 in z1 and z2.
+- Outputs: `notebooks/05/closure_moisture.csv` (one row per triangle and area: pixels, median |closure| and signed median in mm, moisture range and its source) and `closure_moisture.json`; figure `docs/figures/05_closure_vs_moisture.png`.
+
+| Area | Moisture from | n (both tracks) | Spearman ρ | p | median \|closure\| |
+|---|---|---|---|---|---|
+| Whole window | window | 20 | +0.19 | 0.42 | 1.24 mm |
+| Control ring | control | 20 | +0.26 | 0.27 | 1.17 mm |
+| Reference band | band | 20 | +0.13 | 0.58 | 1.16 mm |
+| z1 | z1 | 20 | +0.04 | 0.86 | 2.01 mm |
+| z2 | z2 | 20 | −0.14 | 0.55 | 1.54 mm |
+| z3 | window (no zone support) | 17 | +0.10 | 0.69 | 2.21 mm |
+| z4 | window (no zone support) | 19 | +0.19 | 0.44 | 1.69 mm |
+
+Per track the values are similar (window ρ +0.26 on 029A, +0.15 on 007D; control +0.37 and +0.15; all p > 0.25); the full list is in the JSON.
+
+**Verdict: no flag.** By the predeclared rule (p < 0.05 on the pooled window or control ring) closure does not follow soil-moisture change in this summer stack. The signs on the well-supported areas are weakly positive (a bigger moisture swing goes with a slightly larger misclosure), as moisture-phase theory predicts, but 20 triangles cannot separate that from chance. Closure is larger inside the zones (1.5 to 2.2 mm) than on the band and control (about 1.2 mm), and that difference is not explained by moisture either; fewer coherent pixels and steeper phase in the zones are the likelier reasons.
+
+What it cannot tell us: moisture over a triangle is three 200 m snapshots matched within 2 days, not the moisture at the radar overpass; NISAR misses the late July to mid August triangles; and summer 2026 had only modest moisture swings (at most about 6.5 points over the window). The January to October extension, with winter moisture changes, is the stronger test.
