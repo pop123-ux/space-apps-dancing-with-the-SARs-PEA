@@ -1,4 +1,4 @@
-"""04 · Geodesist — tie each track to the GNSS velocity model, the way EGMS calibrates its own product.
+"""04 · Geodesist: tie each track to the GNSS velocity model, the way EGMS calibrates its own product.
 
 Owner: 04 · Geodesist (Matei). Status: STUB (interfaces only).
 
@@ -7,7 +7,7 @@ Owner: 04 · Geodesist (Matei). Status: STUB (interfaces only).
 
 Reads per track: meta.json, geom.npz (fetch.py), ts.npz (stack.py); refs/ (refs.py).
 Writes per track data/work/<site>/<track>/cal.npz (vel_cal, cum_cal, model_los, tie mask) and
-products/<site>/calib.json (contract, see docs/contract.md):
+products/<site>/calib.json (file contracts in docs/build-spec.md):
     {"model": "...", "tracks": [{track, direction, method: offset|plane, offset_mm_yr, slope_east_mm_yr_per_10km,
      slope_north_mm_yr_per_10km, n_tie_pixels, residual_std_mm_yr, residual_mad_mm_yr, model_los_mean_mm_yr,
      swap_delta_mm_yr}]}

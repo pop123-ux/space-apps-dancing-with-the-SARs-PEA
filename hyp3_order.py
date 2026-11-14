@@ -1,4 +1,4 @@
-"""05 · Validator — order Sentinel-1 interferograms on ASF HyP3 for the same months as NISAR (the second radar).
+"""05 · Validator: order Sentinel-1 interferograms on ASF HyP3 for the same months as NISAR (the second radar).
 
 Owner: 05 · Validator (Paul). Status: STUB (interfaces only). **Order at hour 0–1: HyP3 queues for hours.**
 
@@ -6,13 +6,13 @@ Owner: 05 · Validator (Paul). Status: STUB (interfaces only). **Order at hour 0
     python hyp3_order.py ocnele_mari --submit    # submit INSAR_GAMMA jobs (Earthdata login)
     python hyp3_order.py ocnele_mari --status    # job status; download finished products into data/work/<site>/s1/
 
-DRAFT windows (match NISAR, see BUILD.md §3): 2025-11-01 → 2026-01-31 and 2026-06-15 → 2026-10-31; both Sentinel-1
+DRAFT windows (match NISAR, see docs/data.md): 2025-11-01 → 2026-01-31 and 2026-06-15 → 2026-10-31; both Sentinel-1
 geometries over the town. Short pairs (6/12 days) plus some longer ones, so the C-band short-pair bias can be checked
 (in our 2024–2026 stack 8-day pairs read 20–40 % above 16-day pairs). Mind the HyP3 monthly credit limit per account.
 
 Writes data/work/<site>/s1/ (never committed): jobs.json (what was ordered, by whom, when), then the products.
 validate.py check 8 reads the bowl rate from them. Prior work: the salt-events study's hyp3_plan.py has the pattern
-(declare it in docs/prior-work.md if reused).
+(declare it in CITATIONS.md, Prior work, if reused).
 """
 from __future__ import annotations
 

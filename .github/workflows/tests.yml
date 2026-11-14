@@ -1,0 +1,21 @@
+# Runs the smoke test on every push and pull request. The page's Pages deploy is added by 06 when the page exists.
+name: tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Smoke test (standard library and pytest only)
+        run: |
+          python3 --version
+          python3 -m pip install --quiet pytest
+          python3 -m pytest -q

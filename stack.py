@@ -1,4 +1,4 @@
-"""03 · InSAR analyst — pairs → displacement time series and rate ± σ, per track.
+"""03 · InSAR analyst: pairs → displacement time series and rate ± σ, per track.
 
 Owner: 03 · InSAR analyst (Alexandru & Eric). Status: STUB (interfaces only).
 
@@ -14,7 +14,7 @@ Writes data/work/<site>/<track>/ts.npz. This is the DRAFT hand-off to 04, 05 and
 Method is OPEN (decision O-05): MintPy (prep_nisar + smallbaselineApp, as the deck proposes) or our own small-baseline
 inversion (as the advisor's rehearsal did). Either way the hand-off above is what downstream reads.
 
-Starting points (advisor rehearsal + our own earlier studies; see docs/science-notes.md):
+Starting points (advisor rehearsal + our own earlier studies; see docs/rehearsal.md and docs/data.md):
 1. mm = PHASE_SIGN · phase · λ/4π. The sign is checked (validate.py check 1), not assumed.
 2. Remove the elevation-correlated troposphere per pair (slope against the DEM on stable ground). Without it 094D showed
    −8.6 mm/yr per 100 m. Then reference each pair to stable ground (outside the zones + C.EXCLUDE_KM).

@@ -1,0 +1,57 @@
+# Status
+
+Updated Sat 14 Nov 2026, 13:30 Europe/Bucharest. `EVENT_TZ=Europe/Bucharest` is assumed; 01 confirms it.
+
+**Hour 0:** `____` (01 fills this in, O-04). **Submission deadline:** `____` (01, from the 13 Nov guide).
+
+**Phase:** skeleton on `main`. The hour-2 review has not happened yet.
+
+## Done, with evidence
+
+- **Skeleton on `main`.** The plan, rules, stubs and tools are in [pop123-ux/space-apps-dancing-with-the-SARs-PEA#1](https://github.com/pop123-ux/space-apps-dancing-with-the-SARs-PEA/pull/1), and the documents are restructured in this commit's PR.
+- **Smoke test.** `pytest -q` passes: every script answers `--help`, the mock products pass `checkpoint.py`, and nothing under `data/work/` is tracked.
+- **NISAR inventory.** NASA CMR on 14 Nov 2026, 10:40 UTC: 22 GUNW pairs over the town, written to `data/scenes/ocnele_mari_gunw.csv`.
+  - 129A has 13 pairs: 4 BETA and 9 PROVISIONAL, from 7 Nov 2025 to 21 Oct 2026, with nothing between 18 Jan and 23 Jun 2026.
+  - 094D has 9 pairs, all PROVISIONAL, from 20 Jun to 18 Oct 2026.
+- **Mock products.** `python mock_products.py` writes `products/mock/` (4 layers, 25 frames, 6 series points, 2 stations, all invented) in about 2 s, and `checkpoint.py mock` reports "contract OK".
+
+## Waiting on a person
+
+- **01:** hour 0 and `EVENT_TZ` (O-04); read the 13 Nov guide aloud (O-02); O-03 (adopt or rebuild); the hour-2 review of the proposed decisions in `docs/build-spec.md`.
+- **05:** order Sentinel-1 on HyP3 now. It queues for hours.
+- **Everyone:** an Earthdata login, and `prompts/setup.md` run on their laptop.
+- **Repo owner:** set the Drive copy of the rehearsal kit back to Restricted, if it isn't already.
+
+## Next, per role
+
+| Role | Next step | Section |
+| --- | --- | --- |
+| 01 Mario | Hour 0, the guide, the hour-2 review, the contract freeze | [build-spec.md § 01](docs/build-spec.md#01--lead-and-story-mario) |
+| 02 Alexandru and Eric | Token; T1 (venue network); T2 (`fetch.py --list` gives 22 pairs) | [§ 02](docs/build-spec.md#02--nisar-data-alexandru-and-eric) |
+| 03 Alexandru and Eric | O-05 (method); read 02's hand-off | [§ 03](docs/build-spec.md#03--insar-analyst-alexandru-and-eric) |
+| 04 Matei | `refs.py`; Table S3 verticals for VLC2 and HORE | [§ 04](docs/build-spec.md#04--geodesist-matei) |
+| 05 Paul | HyP3 order; EGMS Up tile; station screening | [§ 05](docs/build-spec.md#05--validator-paul) |
+| 06 Darius | `python mock_products.py`; the page on `products/mock/`; Pages; O-09 | [§ 06](docs/build-spec.md#06--app-developer-darius) |
+
+## Early tests
+
+The tests are defined in [prompts/early-tests.md](prompts/early-tests.md). Each owner writes the result here: PASS, PASS WITH NOTE, FAIL, PARTIAL or BLOCKED, with the evidence.
+
+| Test | Owner | Result | Evidence |
+| --- | --- | --- | --- |
+| T0 Environment | everyone | | |
+| T1 Venue network | 02 | | |
+| T2 Search and mask | 02 | | |
+| T3 Phase sign | 03, 05 | | |
+| T4 Troposphere | 03 | | |
+| T5 Gap groups (synthetic) | 03 | | |
+| T6 Summer-only bias (synthetic) | 03 | | |
+| T7 Station hold-out | 05 | | |
+| T8 Model swap and EGMS | 04, 05 | | |
+| T9 Phones | 06 | | |
+| T10 HyP3 queue | 05 | | |
+
+## Notes
+
+- Our copy of the deck says −250 mm/yr on slides 1, 5 and 6. The rehearsal corrects it to about −25 mm/yr. Never quote −250.
+- The Space Apps resources page was unreachable from the setup machine on 14 Nov. 01 lists what we use in `CITATIONS.md`.

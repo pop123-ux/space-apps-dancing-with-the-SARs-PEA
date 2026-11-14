@@ -1,4 +1,4 @@
-"""04 · Geodesist — the open references: a velocity model and station rates, all Eurasia-fixed (mm/yr).
+"""04 · Geodesist: the open references: a velocity model and station rates, all Eurasia-fixed (mm/yr).
 
 Owner: 04 · Geodesist (Matei). Status: STUB (interfaces only).
 
@@ -21,7 +21,7 @@ import argparse
 
 import common as C
 
-# DRAFT sources (verify they still answer; see docs/data-sources.md)
+# DRAFT sources (verify they still answer; see CITATIONS.md)
 EUVEM_ROMANIA = "https://www.lantmateriet.se/geodesi_data/EuVeM2022/country_results/EuVeM2022_Romania.txt"
 MIDAS_EU = "https://geodesy.unr.edu/velocities/midas.EU.txt"
 FIELDS = ["station", "source", "lat", "lon", "ve", "vn", "vu", "se", "sn", "su", "t_start", "t_end"]

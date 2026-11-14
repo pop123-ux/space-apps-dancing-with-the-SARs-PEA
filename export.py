@@ -1,4 +1,4 @@
-"""06 · App developer — turn the numbers into what the page reads: products/<site>/.
+"""06 · App developer: turn the numbers into what the page reads: products/<site>/.
 
 Owner: 06 · App developer (Darius). Status: STUB (interfaces only). Until it works, build the page on
 `python mock_products.py` (products/mock/), which writes the same contract with invented values.
@@ -7,7 +7,7 @@ Owner: 06 · App developer (Darius). Status: STUB (interfaces only). Until it wo
 
 Reads: up_east.npz (split.py), per track meta.json/ts.npz/cal.npz, products/<site>/stations.geojson + checks.json
 (validate.py) and calib.json (calibrate.py).
-Writes products/<site>/ (contract, docs/contract.md): manifest.json, up.png, east.png, los_<track>.png,
+Writes products/<site>/ (file contracts in docs/build-spec.md): manifest.json, up.png, east.png, los_<track>.png,
 frames/<track>/<date>.png, series.json, up.tif, east.tif, and updates products/index.json.
 
 Starting points (advisor kit + D-002):

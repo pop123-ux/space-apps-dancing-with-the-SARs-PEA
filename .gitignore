@@ -1,6 +1,8 @@
-# Data never enter git (raw NISAR / EGMS / Sentinel-1, intermediates). data/README.md is the only tracked file.
+# Data never enter git (raw NISAR, EGMS, Sentinel-1, intermediates). Only data/README.md and the small
+# query lists in data/scenes/ are tracked.
 data/*
 !data/README.md
+!data/scenes/
 
 # Secrets
 .env
@@ -20,7 +22,10 @@ venv/
 *.zip
 *.npz
 
-# OS / editors
+# Pytest
+.pytest_cache/
+
+# OS and editors
 .DS_Store
 Thumbs.db
 .idea/
