@@ -114,6 +114,74 @@ Done on the committed Sentinel-1 grids (`sentinel1/assets`, checksums verified) 
 
 **Suggested wording for the page (01 decides):** "z3 sank about 19 mm a year from 2020 to 2025 (EGMS). Sentinel-1 cannot confirm 2026 here: the ascending track loses coherence over the bowl, and on the descending track the expected 4 mm over July to October is within the noise."
 
+## Station misfit, 094D and the Compare pairing (14 Nov 2026, about 21:45)
+
+Done by Alex with Claude Code, on Matei's session. Figure: [04_height_and_pairing.png](figures/04_height_and_pairing.png). UI before the fix: [ui-review-14nov/](figures/ui-review-14nov/).
+
+![Rate by height, zones by reference, and pairing bias](figures/04_height_and_pairing.png)
+
+**Which stacks:** the team stack behind the live page is not on this machine. These numbers use the two local stacks:
+- NISAR 129A: the team's own stream, tied with one offset (−5.80 mm/yr).
+- NISAR 094D: the advisor's rehearsal stack. It has the same T3 problem, with zones at +27.5 mm/yr.
+
+Each conclusion below is about method, so it carries over to the team stack. Rerun `validate.py` where that stack lives to get the page's numbers.
+
+### 1 · VLC1 and VLC2 "fail": the check cannot decide, it does not show a problem
+
+| | Live page (plane tie) | Local 129A (offset tie) | GNSS in 129A LOS |
+| --- | --- | --- | --- |
+| NISAR at VLC1/VLC2 (7 × 7 box, 49 px) | **+3.9 mm/yr** | **−4.6 mm/yr** | VLC1 −0.6 · VLC2 +0.3 |
+| Tolerance the check used | ±2.7 | | |
+| Honest σ of one 7 × 7 box against the frame | | **26 mm/yr** (129A) · 37 (094D) | ±0.5 |
+
+- **The tolerance is about ten times too tight.** The check divided the box scatter by √49, as if neighbouring pixels were independent. They are not: the noise (troposphere, short span) is correlated over kilometres. Sampled across all the stable ground, a 7 × 7 box median scatters by 26 mm/yr, about the same as a single pixel.
+- **The tie method alone moves VLC by 8.5 mm/yr.** The page's 129A tie is a plane with an east slope of −12.0 mm/yr per 10 km. VLC lies 6 km east of the window centre, so it gets about −7 mm/yr more correction than the centre. That swing is twice the station misfit.
+- **The terrain height does not explain it.** VLC is at 247 m, in the Olt valley. The height trend predicts −0.9 mm/yr there.
+- **Fix in `validate.py`:**
+  - σ_NISAR is now the measured spread of box medians on the tie ground.
+  - A tolerance wider than 20 mm/yr gives **warn**, "neither confirms nor rejects the tie". That is the same rule check 8 already used.
+  - VLC1 and VLC2 will read warn, not fail.
+- **What would make the station test real:** many dates (a long stack averages the atmosphere down), or a station inside a coherent, corner-reflector-like target. Neither exists in 2026. The page should say the station check is not decisive yet.
+
+### 2 · Compare pairing: pair by east sensitivity, not by direction (O-19 proposal)
+
+| Track | Looks | e | n | u |
+| --- | --- | --- | --- | --- |
+| NISAR 129A ascending | left | **+0.624** | +0.207 | 0.753 |
+| NISAR 094D descending | left | **−0.616** | +0.240 | 0.750 |
+| Sentinel-1 029A ascending | right | **−0.636** | (dropped) | 0.764 |
+| Sentinel-1 007D descending | right | **+0.640** | (dropped) | 0.760 |
+
+Check 8 scales NISAR by the ratio of the up components and assumes no east-west motion. EGMS gives the zones east rates of −4.1, −3.3, +0.2 and +4.9 mm/yr (stable ground −0.1). The geometry alone therefore puts this into NISAR − Sentinel-1:
+
+| Pairing | Z1 | Z2 | Z3 | Z4 |
+| --- | --- | --- | --- | --- |
+| 129A with 029A (by direction, what ran) | −5.1 | −4.1 | +0.4 | **+6.3** |
+| **129A with 007D** (by geometry) | 0.0 | 0.0 | 0.0 | −0.1 |
+
+- **Proposed default:** 129A with 007D, and 094D with 029A. Within each pair the east parts cancel to under 0.1 mm/yr, so "scale by the up ratio" becomes nearly exact.
+- **Bonus:** 007D has 55 usable pixels in Zone 3, where 029A has none, so Zone 3 becomes testable.
+- **Done in `validate.py`:** `S1_PAIR = {"129A": "007D", "094D": "029A"}`, and each Sentinel-1 track uses its own up component. Before this, both used 029A's, taken from `forecast.json`.
+- **Still to do in the page:** the Compare default (`docs/ui.md` says "ascending with ascending"). Compare is disabled on the page "until O-19"; this pairing is the O-19 answer for 129A.
+
+### 3 · NISAR 094D: the far reference measures the valley, not the zones
+
+- **The valley floor is the signal.** On stable ground, 094D reads **+15 to +25 mm/yr below 300 m**, after the tie and a fitted plane. It drops to about −16 mm/yr at 475 m. The zones lie at 275 to 350 m, right on the valley floor. The tie ground's median height is 434 m.
+- **A plane does not help.** The fitted plane barely changes the scatter (50.7 → 48.5 mm/yr) and leaves the zones where they were. The signal follows the terrain, not a ramp.
+- **Neither does a straight line in height.** The rate rises and falls with height (panel A), so the per-pair linear troposphere slope in `stack.py` cannot remove it. 03's notebook measured −3.7 to +2.5 mm per 100 m, changing sign from pair to pair.
+- **Against ground at the same height within 3 km**, the zones read:
+
+| Track | Z1 | Z2 | Z3 | Z4 |
+| --- | --- | --- | --- | --- |
+| 094D | −6.3 | +3.6 | −3.5 | +8.0 |
+| 129A (control) | −14.4 | −15.5 | −14.5 | −5.9 |
+
+  - **094D:** mixed. The +23.5 mm/yr is gone, but there is no consistent sinking either.
+  - **129A:** all four zones sink clearly.
+- **Hypothesis, not tested:** 094D images at about 07:30 local time, when valleys hold morning temperature inversions and humid air pooled in the low ground. 129A images in the evening, when the boundary layer is mixed. A 0.25° weather model cannot resolve a 2 km valley, which fits 03's finding that the ECMWF correction made 094D worse (+43 mm/yr).
+- **Conclusion:** do not flip 094D's phase sign. The +23.5 mm/yr comes from using a far reference, not from a sign error. Keep 094D off the page.
+- **Fix in `validate.py`:** check 1 now also prints the height-matched zone values. The pass/fail rule is unchanged, because T3 was predeclared.
+
 ## Red team at hours 12 / 24 / 40 (with the advisor)
 
 | Hour | Finding | Owner | Verdict (fix / cut / explain) |
