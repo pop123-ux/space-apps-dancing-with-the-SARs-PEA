@@ -37,7 +37,7 @@ The full plan, hour by hour, is [docs/schedule.md](docs/schedule.md).
 | 02 Alexandru and Eric | Token; T1 (venue network); T2 (`fetch.py --list` gives 22 pairs) | [§ 02](docs/build-spec.md#02--nisar-data-alexandru-and-eric) |
 | 03 Alexandru and Eric | O-05 (method); read 02's hand-off | [§ 03](docs/build-spec.md#03--insar-analyst-alexandru-and-eric) |
 | 04 Matei | `refs.py` and `calibrate.py` implemented and tested on synthetic inputs. Run `python refs.py ocnele_mari` on real inputs, then tie per track after 02 and 03 hand off. T8 and the EGMS stable-ground comparison are pending. | [§ 04](docs/build-spec.md#04--geodesist-matei) |
-| 05 Paul | HyP3 order; EGMS Up tile; station screening | [§ 05](docs/build-spec.md#05--validator-paul) |
+| 05 Paul | EGMS 2020–2025 tile cut (`egms_cut.py`): z3 sinks −18.9 mm/yr, stable ground −0.5 mm/yr. Station screening and the 2026 third-witness search done: no open station within 70 km has 2026 data. Next: check 8 and T10 (`docs/validation-log.md`) | [§ 05](docs/build-spec.md#05--validator-paul) |
 | 06 Darius | `python mock_products.py`; the page on `products/mock/`; Pages; O-09 | [§ 06](docs/build-spec.md#06--app-developer-darius) |
 
 ## Early tests

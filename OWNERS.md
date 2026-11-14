@@ -53,6 +53,7 @@ Every file in this repository has an owner role, 01 to 06, or is shared. The own
 
 | File | Owner | What to do with it |
 | --- | --- | --- |
+| `egms_cut.py` | 05 · Validator (Paul) | Cut the EGMS Ortho tile to `refs/egms_up.csv`; per-zone history and the 05 EGMS figures |
 | `validate.py` | 05 · Validator (Paul) | Checks 1 to 8, stations.geojson, checks.json; nobody else edits it |
 | `hyp3_order.py` | 05 · Validator (Paul) | Order and fetch Sentinel-1 on HyP3 (hour 0 to 1) |
 | `docs/validation-log.md` | 05 · Validator (Paul) | HyP3 orders, station screening, red-team notes, frozen-build rerun |
