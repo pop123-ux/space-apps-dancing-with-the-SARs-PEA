@@ -1,5 +1,7 @@
 # AI disclosure
 
+**Owner:** all roles append to the log; 01 finalises section 1
+
 This file says how we used AI tools to build **Dancing on Salt** for NASA Space Apps 2026 (Cluj-Napoca, 14 to 15 Nov 2026), and what people did and checked. Space Apps allows AI tools (it now calls them "SI"), and the submission must say how they were used. The disclosure below is the text for the project page. The log underneath is the record it is built from.
 
 **Exact wording:** 01 (Mario) checks the required wording and field against the 2026 Project Submission Guide (13 Nov) and the Cluj-Napoca participant's guide, then finalises section 1 in hours 30 to 36.
@@ -25,7 +27,7 @@ Add a row the moment anyone uses another AI tool.
 
 ## 3. What AI was not used for
 
-- **Data and results.** No number on the page, in the video or in the submission is produced or adjusted by AI. All of them come from `products/ocnele_mari/`, written by the pipeline (`CLAUDE.md`, "Honest numbers").
+- **Data and results.** No number on the page, on the slides or in the submission is produced or adjusted by AI. All of them come from `products/ocnele_mari/`, written by the pipeline (`CLAUDE.md`, "Honest numbers").
 - **Media.** No generated images, video, voices or music. Map overlays are computed from radar data. Any diagram is drawn from simple shapes and carries the note "Diagram made with AI assistance".
 - **Decisions.** Team decisions (the site, the story, the frozen methods) are made by people at the checkpoints and logged in `docs/build-spec.md`. AI sessions record only small working choices, in `DECISIONS.md`, where anyone can see and overturn them.
 - **Accounts.** AI never sees passwords or tokens. People log in themselves.
@@ -49,3 +51,4 @@ One row per substantive use. The "checked" column says what a person verified, n
 | Sat 14 Nov 2026, about 12:45 | Alexandru (02/03) | Claude Code | The repository skeleton: plan documents, `common.py`, the pipeline stubs (interfaces only, no science), `checkpoint.py`, `run_all.py`, `mock_products.py`, the smoke test. It also ran the NISAR GUNW catalogue query on NASA CMR (22 pairs) | To fill in: each owner reviews the stub and section for their role |
 | Sat 14 Nov 2026, about 13:30 | Alexandru (02/03) | Claude Code | Restructured the documents (`STATUS.md`, `DECISIONS.md`, `CITATIONS.md`, `docs/`, `prompts/`); wrote `data/scenes/ocnele_mari_gunw.csv` from CMR | To fill in |
 | Sat 14 Nov 2026, about 14:30 | Alexandru (02/03) | Claude Code | `docs/schedule.md` (who does what, hour by hour) and this disclosure file | To fill in: 01 checks the wording against the guides |
+| Sat 14 Nov 2026, about 15:00 | Alexandru (02/03) | Claude Code | `OWNERS.md`, an owner line in every file, `tests/test_owners.py`; switched the plan from a video to the 7-slide PowerPoint (D-003) with an owner per slide | To fill in: each role checks its rows in `OWNERS.md` and its slide |

@@ -1,5 +1,7 @@
 # Dancing on Salt
 
+**Owner:** 01 · Lead and story (Mario)
+
 This is the team repo for NASA Space Apps 2026, challenge **Dancing with the SARs**, on 14 to 15 Nov 2026. Six people, one site: **Ocnele Mari**, Romania.
 
 ## The project
@@ -16,7 +18,8 @@ Start here:
 - **[docs/synopsis.md](docs/synopsis.md):** the one-page version, to explain the project to the team.
 - **[STATUS.md](STATUS.md):** where the build is right now, what waits on whom, and each role's next step.
 - **[docs/schedule.md](docs/schedule.md):** who does what, hour by hour: one column per role, with the gates and cut lines.
-- **[docs/overview.md](docs/overview.md):** why it matters, the page, the candidate claims and how each could fail, the video, scope in tiers, the 48 hours, risks and fallbacks.
+- **[OWNERS.md](OWNERS.md):** every file and its owner role (01 to 06, or shared), grouped by role. Each file also says its owner in its first lines.
+- **[docs/overview.md](docs/overview.md):** why it matters, the page, the candidate claims and how each could fail, the 7 slides, scope in tiers, the 48 hours, risks and fallbacks.
 - **[docs/build-spec.md](docs/build-spec.md):**
   - the locked and proposed decisions, and the file contracts between roles;
   - **each role's steps**, done-criteria per tier and unknowns;
@@ -39,6 +42,7 @@ Two decisions are locked:
 
 - **D-001:** Ocnele Mari is the only site.
 - **D-002:** the map opens on the town, with Romania blurred when you zoom out.
+- **D-003:** the submission is a 7-slide PowerPoint, with no video.
 
 Everything else is proposed until the hour-2 review.
 
@@ -46,7 +50,7 @@ Everything else is proposed until the hour-2 review.
 
 | # | Role | Who | Owns |
 | --- | --- | --- | --- |
-| 01 | Lead and story | Mario | scope, cut lines, checkpoints, story, video, submission; `checkpoint.py` |
+| 01 | Lead and story | Mario | scope, cut lines, checkpoints, story, the 7-slide deck, submission; `checkpoint.py` |
 | 02 | NISAR data | Alexandru and Eric | search, streamed windows, masks, ionosphere; `fetch.py` |
 | 03 | InSAR analyst | Alexandru and Eric | time series, rates with errors, up and east; `stack.py`, `split.py` |
 | 04 | Geodesist | Matei | references, frame, tie, model swap; `refs.py`, `calibrate.py` |
@@ -56,19 +60,20 @@ Everything else is proposed until the hour-2 review.
 ## Layout
 
 ```
-STATUS.md  DECISIONS.md  CITATIONS.md  AI-DISCLOSURE.md  CLAUDE.md  README.md  INFO.md  LICENSE
-common.py               shared settings: site, zones, stations, thresholds, helpers
-refs.py fetch.py stack.py calibrate.py split.py validate.py hyp3_order.py export.py
+STATUS.md (01)  OWNERS.md (01)  DECISIONS.md  CITATIONS.md  AI-DISCLOSURE.md (all)  CLAUDE.md (01)  README.md (01)
+common.py               shared: site, zones, stations, thresholds, helpers
+refs.py (04) fetch.py (02) stack.py (03) calibrate.py (04) split.py (03) validate.py (05) hyp3_order.py (05) export.py (06)
                         the pipeline, one script per owner (stubs with fixed interfaces)
 checkpoint.py           01: is products/<site>/ complete? (works)
-run_all.py              runs the steps in order and stops cleanly at the first stub (works)
+run_all.py              shared: runs the steps in order and stops cleanly at the first stub (works)
 mock_products.py        06: invented products/mock/ on the real acquisition dates (works)
-tests/                  pytest smoke test; must pass before every push
-data/scenes/            committed query output: the 22 NISAR pairs over the town (CMR, 14 Nov)
+tests/                  shared: smoke test and owner check; must pass before every push
+data/scenes/            02: the 22 NISAR pairs over the town (CMR, 14 Nov)
 data/work/              local intermediates, git-ignored
 products/<site>/        what the page reads (written by scripts only)
-prompts/                Claude Code prompts: setup, early tests, build
-docs/                   synopsis, overview, schedule, build spec, data, rehearsal, validation log
+prompts/                01: Claude Code prompts: setup, early tests, build
+docs/                   01: synopsis, overview, schedule, build spec, rehearsal · 02: data · 05: validation log
+slides/                 01: the 7-slide PowerPoint (D-003), not created yet
 ```
 
 ## Quickstart

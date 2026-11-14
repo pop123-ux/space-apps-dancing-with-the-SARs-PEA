@@ -1,5 +1,7 @@
 # Dancing on Salt
 
+**Owner:** 01 · Lead and story (Mario)
+
 Version 1, Sat 14 Nov 2026. Methods, file formats and done-criteria per role are in [build-spec.md](build-spec.md). The evidence behind the plan is in [rehearsal.md](rehearsal.md) and [data.md](data.md).
 
 We're building a web page that shows anyone how the ground moves above the salt-brine fields of Ocnele Mari, in Vâlcea county, Romania. The measurement is NISAR's L-band radar: 22 interferograms from November 2025 to October 2026, tied to open GNSS velocity models. Every number is checked against stations, the European Ground Motion Service (EGMS) and Sentinel-1. The page opens on the town and plays the ground through time. Where the radar cannot yet see the motion, it says so. Built by six people in the 48 hours of NASA Space Apps, 14 to 15 Nov 2026.
@@ -49,16 +51,27 @@ If B fails, the story becomes "the honest test": what NISAR's first months can a
 
 There are 22 NISAR GUNW pairs over the town: 13 on 129A ascending and 9 on 094D descending, with no acquisitions from 18 Jan to 23 Jun 2026. The references are EuVeM2022, NGL MIDAS, Muntean et al. 2026, EGMS Ortho and Sentinel-1 via HyP3. Details and traps are in [data.md](data.md); sources are in [../CITATIONS.md](../CITATIONS.md).
 
-## The video
+## The slides
 
-The length and format follow the 13 November guide (01 checks). It is screen-recorded from the live page, with subtitles, and has no AI-generated images or video.
+The submission is a **7-slide PowerPoint, with no video** (D-003, locked).
 
-1. The hook, in the first ten seconds: the town, and what lies under it.
-2. The map opens on Ocnele Mari; zoom out to Romania, then back.
-3. The slider plays; the gap is named.
-4. A red pin and its reason.
-5. What NISAR can and cannot see yet, in one sentence.
-6. Credits, AI use, open source.
+- **The file:** 01 assembles the deck at `slides/dancing-on-salt.pptx`.
+- **Owners:** each slide has an owner role who supplies its content and checks its numbers.
+- **The outline below is proposed;** 01 confirms it at the hour-2 review.
+- **Rules:**
+  - Screenshots come from the live page. A mock or demo screenshot always shows the "Simulated, not data" banner.
+  - Every number comes from the frozen build.
+  - No AI-generated images.
+
+| Slide | Content | Owner | Source |
+| --- | --- | --- | --- |
+| 1 | **Title and hook:** Dancing on Salt; the town, and what lies under it, in one sentence | 01 | 01's story stops (O-01) |
+| 2 | **The place and the problem:** Ocnele Mari, brine extraction, the collapses of 2001 and 2009, who lives there | 01 | `INFO.md`, local reports (Q6) |
+| 3 | **The data:** NISAR L-band, 22 pairs, the winter and summer-to-autumn windows, the January to June gap, beta/provisional | 02 | `docs/data.md`, `data/scenes/ocnele_mari_gunw.csv` |
+| 4 | **The method:** pairs to rates (03), tied to a GNSS frame the way EGMS does it (04), up and east | 03, 04 | `ts.npz`, `calib.json`, `up_east.npz` |
+| 5 | **The map:** screenshots of the live page, the opening view (D-002), the slider with the gap, a red pin; the demo link | 06 | the live page |
+| 6 | **What holds up, and what NISAR cannot see yet:** the checks, the honest pins, the zone rates with their intervals | 05, 03 | `checks.json`, `stations.geojson`, `series.json` |
+| 7 | **Team, credits, AI use, prior work, links** | 01 | `CITATIONS.md`, `AI-DISCLOSURE.md` |
 
 ## Why the results will hold up
 
@@ -81,7 +94,7 @@ These are past years' criteria; 01 checks the 2026 sheet.
 | Creativity | Satellite and stations checking each other; the ground moving on a slider |
 | Validity | Rates only where they beat their error; stations held out of the tie; EGMS history; Sentinel-1 |
 | Relevance | NISAR first, interactive, open source, hometown context |
-| Presentation | Story stops, one map, numbers second; a hook in the first ten seconds |
+| Presentation | Seven slides and one live map; numbers second; the hook on slide 1 |
 
 ## Scope
 
@@ -94,7 +107,7 @@ Tier 1 alone is a complete submission. Everything after it raises the ceiling wi
 | 1 | The tie | 04 |
 | 1 | Every check written and explained | 05 |
 | 1 | The page on real files: view, slider, pins, labels | 06 |
-| 1 | Story, video, page, AI use, credits | 01 |
+| 1 | Story, the 7 slides, page, AI use, credits | 01, with each slide's owner |
 | 2 | Up and east on the common window; zone intervals | 03 |
 | 2 | Sentinel-1 comparison | 05 |
 | 2 | Model swap | 04 |
@@ -109,12 +122,12 @@ Hour 0 is the kickoff, set by 01 in `STATUS.md`. **Hour by hour, per role: [sche
 
 | Role | 0 to 6 | 6 to 18 | 18 to 30 | 30 to 40 | 40 to 48 |
 | --- | --- | --- | --- | --- | --- |
-| 01 Lead | Hour 0, guide, hour-2 review, contract freeze | Story, checkpoint at 12, script | Checkpoint at 24, rough cut | `SUBMISSION.md`, credits, AI use | Freeze, video, submit |
-| 02 Data | Token, T1, T2, both tracks on disk | DEM, synthetic stack, QA | GSLC pairs (Tier 3) | Frames with 06 | Captions |
-| 03 InSAR | Method, first pairs | Rates, T3, T4, zones | Up and east | Grey-out, errors, freeze | Captions |
-| 04 Geodesist | `refs.py`, Table S3 | The tie | Model swap, T8 | Final tie, frame paragraph | Captions |
-| 05 Validator | HyP3 order (hour 0 to 1), EGMS, screening | Sentinel-1 rates | `validate.py`, every WARN | Agree flags, red team | Rerun on the frozen build |
-| 06 App | Mock site, Pages, blur | Map, slider, `export.py` | Pins, story mode, phone | Captions, accessibility | Polish (no numbers) |
+| 01 Lead | Hour 0, guide, hour-2 review, contract freeze, slide outline | Story, checkpoint at 12, slides 1 and 2 | Checkpoint at 24, slides first draft | `SUBMISSION.md`, credits, AI use, slide 7 | Freeze, final slides, submit |
+| 02 Data | Token, T1, T2, both tracks on disk | DEM, synthetic stack, QA | GSLC pairs (Tier 3) | Frames with 06, slide 3 | Check slide 3 against the frozen build |
+| 03 InSAR | Method, first pairs | Rates, T3, T4, zones | Up and east | Grey-out, errors, freeze, slides 4 and 6 | Check slides 4 and 6 |
+| 04 Geodesist | `refs.py`, Table S3 | The tie | Model swap, T8 | Final tie, frame paragraph, slide 4 | Check slide 4 |
+| 05 Validator | HyP3 order (hour 0 to 1), EGMS, screening | Sentinel-1 rates | `validate.py`, every WARN | Agree flags, red team, slide 6 | Rerun on the frozen build; check slide 6 |
+| 06 App | Mock site, Pages, blur | Map, slider, `export.py` | Pins, story mode, phone | Accessibility, slide 5 screenshots | Polish (no numbers) |
 
 **Gates:**
 
@@ -132,7 +145,7 @@ If a gate slips by more than an hour, cut from the top of this ladder:
 4. Sentinel-1.
 5. Up and east (keep LOS per track).
 
-Never cut the sign check, the honest pins, the gap label, the video or the submission text.
+Never cut the sign check, the honest pins, the gap label, the slides or the submission text.
 
 ## Risks and fallbacks
 
@@ -145,8 +158,8 @@ Never cut the sign check, the honest pins, the gap label, the video or the submi
 | The zones do not beat their error | Hour 24 | "The honest test" framing (O-01 a) |
 | HyP3 is late | Hour 8 (T10) | Sentinel-1 moves to Tier 3 |
 | The page does not work on a phone | Hour 30 (T9) | Map, slider and one card |
-| The interactive page fails | Hour 36 | Static story map plus a recorded walk-through |
-| Anything changes numbers after hour 40 | Hour 40 | Freeze; text, captions and video only |
+| The interactive page fails | Hour 36 | Static story map plus screenshots on the slides |
+| Anything changes numbers after hour 40 | Hour 40 | Freeze; text, styling and slides only |
 
 ## At kickoff
 

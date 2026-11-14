@@ -1,3 +1,4 @@
+# Owner: shared · announce changes; 01 reviews
 """Everyone: the skeleton smoke test. `pytest -q` must pass before any push.
 
     pytest -q                        # from the repo root

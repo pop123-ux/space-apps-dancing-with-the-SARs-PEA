@@ -1,3 +1,4 @@
+# Owner: shared · announce changes; 01 reviews
 # Python >= 3.11. Install: pip install -r requirements.txt
 # The skeleton tools (checkpoint.py, run_all.py, mock_products.py, test_skeleton.py) need only the standard library.
 # The pipeline will need these (owners add pins when they know what they use):

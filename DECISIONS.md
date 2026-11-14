@@ -1,5 +1,7 @@
 # Decisions
 
+**Owner:** all roles append; 01 reviews at checkpoints
+
 This file has one line per decision taken without the whole team, by a person or by their Claude Code session. The format is `HH:MM | role | decision | options considered | why`. Times are `Europe/Bucharest` (assumed; 01 confirms `EVENT_TZ` in `STATUS.md`).
 
 Team decisions, and any change to a decision in `docs/build-spec.md`, go in the build spec's open-decisions table and change log instead.
@@ -20,3 +22,6 @@ A decision recorded here is not a question. Nobody blocks on one. If a line look
 14:30 | 02/03 (Claude Code) | Add `docs/schedule.md`: one table, one column per role, rows by hour block, with gates and cut lines in bold | leave the hours split between the overview table and the build-spec sections; one dedicated sheet | The user could not find the per-role hours; one sheet is what people look at during the event. Proposed; 01 approves at the hour-2 review
 14:30 | 02/03 (Claude Code) | Replace `docs/AI_USE.md` with `AI-DISCLOSURE.md` at the root: the submission text on top (draft), then tools, what AI was not used for, how people checked, and the running log | keep both files; one file | The user asked for an AI-disclosure file; one file avoids two logs drifting apart
 14:30 | 02/03 (Claude Code) | Keep `EVENT_TZ=Europe/Bucharest` and leave hour 0 and the deadline to 01 | guess the kickoff time; leave it to 01 | The Cluj-Napoca participant's guide (Notion) and the Space Apps guides could not be read from the setup machine; a guessed time would mislead
+15:00 | team (via 02/03) | D-003: the submission is a 7-slide PowerPoint, with no video. Recorded as locked in `docs/build-spec.md`; every video task in the plan became a slide task | | Team decision, relayed by Alexandru
+15:00 | 02/03 (Claude Code) | Propose an owner per slide: 1 and 2 and 7 for 01, 3 for 02, 4 for 03 with 04, 5 for 06, 6 for 05 with 03 | one person writes all slides; one owner per slide | Every role supplies what it knows best; 01 assembles. Proposed; 01 confirms at hour 2
+15:00 | 02/03 (Claude Code) | Mark owners with an owner line inside each file plus `OWNERS.md`, enforced by `tests/test_owners.py`; no renaming of files | prefix file names with 01 to 06; owner lines plus a list | Python cannot import a module whose name starts with a digit, and renaming breaks the drop-in with the advisor kit (O-03)

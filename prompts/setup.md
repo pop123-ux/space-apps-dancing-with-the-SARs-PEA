@@ -1,5 +1,7 @@
 # Setup: Claude Code prompt
 
+**Owner:** 01 · Lead and story (Mario)
+
 ## How to use this
 
 Every team member does this once, on their own laptop, at the start of the event. Open a terminal in the repo folder, start Claude Code, and say: **"Read prompts/setup.md and carry it out. I am role 0N."** It works on Windows, macOS or Linux; the prompt works out where it is.

@@ -1,10 +1,12 @@
 # Dancing on Salt: Build spec and plan
 
+**Owner:** 01 · Lead and story (Mario); each role checks its own section
+
 Version 1, Sat 14 Nov 2026. This is the companion to [overview.md](overview.md). The evidence it rests on is the advisor's rehearsal, summarised in [rehearsal.md](rehearsal.md), and the data notes in [data.md](data.md).
 
 It covers what each of the six roles builds, in what format, with which fixed numbers, and when it hands off. It exists so the hours go to building, not debating. It contains no code. Every role's Claude Code session works from it through [../prompts/build.md](../prompts/build.md). The same steps laid out hour by hour, one column per role, are in [schedule.md](schedule.md).
 
-**How decisions work here.** Only D-001 and D-002 are locked. Everything else in "Decisions to fix by hour 2" is **proposed**. The team reviews it at the hour-2 checkpoint, and from then on it is frozen: nobody changes a cut, threshold, window or test after seeing a result. Any later change goes in the change log at the end of this file, with a reason that comes from a test, not from a result. Day-to-day choices go in [../DECISIONS.md](../DECISIONS.md).
+**How decisions work here.** Only D-001, D-002 and D-003 are locked. Everything else in "Decisions to fix by hour 2" is **proposed**. The team reviews it at the hour-2 checkpoint, and from then on it is frozen: nobody changes a cut, threshold, window or test after seeing a result. Any later change goes in the change log at the end of this file, with a reason that comes from a test, not from a result. Day-to-day choices go in [../DECISIONS.md](../DECISIONS.md).
 
 ## Decisions
 
@@ -14,6 +16,7 @@ It covers what each of the six roles builds, in what format, with which fixed nu
 | --- | --- | --- |
 | D-001 | **Ocnele Mari is the only site.** Praid and Slănic, from the advisor's deck and kit, are out of scope. | Our hometown story, done well at one site. |
 | D-002 | **The map opens zoomed on the Ocnele Mari area:** the Google Maps view at 45.086281° N, 24.2704806° E, zoom 13. When the user zooms out, Romania shows as deliberately blurred, de-emphasised context, not data. | Only our area of interest matters on the map. |
+| D-003 | **The submission is a 7-slide PowerPoint, with no video.** Each slide has an owner role ([overview.md](overview.md#the-slides)). 01 assembles the deck at `slides/dancing-on-salt.pptx`. | Team decision, Sat 14 Nov 2026. |
 
 ### To fix by hour 2 (proposed)
 
@@ -62,7 +65,7 @@ It covers what each of the six roles builds, in what format, with which fixed nu
 | Colours | RdBu diverging, red = sinking or moving away, with a fixed symmetric scale per layer. Never red and green alone. | Colour-blind safe. |
 | Pins | NISAR against GNSS per track, with the tolerance, an agree flag and a reason. A red pin means they disagree. | Honest pins, as the deck promised. |
 | Labels | "Simulated, not data" whenever `synthetic` is true. "NISAR beta/provisional products" always. | Judges trust a map that names its limits. |
-| Numbers | Every number on the page, in the video and in the submission comes from `products/ocnele_mari/`. Before submitting, `___`, `TODO`, `TBD` and `computing` appear nowhere in the page, `SUBMISSION.md` or the captions. | Honest numbers, no silent placeholders. |
+| Numbers | Every number on the page, on the slides and in the submission comes from `products/ocnele_mari/`. Before submitting, `___`, `TODO`, `TBD` and `computing` appear nowhere in the page, `SUBMISSION.md` or the slides. | Honest numbers, no silent placeholders. |
 
 ## File contracts
 
@@ -109,21 +112,21 @@ Everyone works on their own laptop. 02 streams the window on one machine: about 
 
 ## 01 · Lead and story (Mario)
 
-01 owns scope, the cut lines, the checkpoints, the story, the video and the submission. Files: `checkpoint.py`, `README.md`, `STATUS.md` (the team view), this spec's change log, and `SUBMISSION.md` (created at hour 30).
+01 owns scope, the cut lines, the checkpoints, the story, the 7-slide deck (D-003) and the submission. Files: `checkpoint.py`, `README.md`, `STATUS.md` (the team view), this spec's change log, `slides/dancing-on-salt.pptx` and `SUBMISSION.md` (created at hour 30).
 
 1. **Hour 0 to 2.**
    - Set hour 0 and `EVENT_TZ` in `STATUS.md` (O-04).
    - Read the 13 Nov guide aloud: prior work, format, judging. Settle O-02 and O-03.
    - Run the hour-2 review of the proposed decisions above with the team, and freeze the contract with 06.
    - Check that everyone has an Earthdata login and has run `pytest -q`.
-2. **Hour 2 to 6.** Settle the story framing (O-01). Write the story stops, one sentence each, and the first ten seconds of the video. Reassign the freed Praid slots (O-15).
+2. **Hour 2 to 6.** Settle the story framing (O-01). Write the story stops, one sentence each, and the 7-slide outline with one owner per slide ([overview.md](overview.md#the-slides)). Reassign the freed Praid slots (O-15).
 3. **Checkpoints at hours 12 and 24.**
    - Run `python checkpoint.py ocnele_mari` and read every WARN and FAIL aloud.
    - Give each one an owner and a verdict (fix, cut or explain), and write them in `STATUS.md`.
    - The advisor joins.
-4. **Hour 18 to 30.** Video script, then a rough cut on the mock or demo site with the banner visible.
+4. **Hour 18 to 30.** First draft of the slides. Each slide's owner sends its content. Screenshots come from the mock or demo site with the banner visible, until the real site exists.
 5. **Hour 30 to 40.** `SUBMISSION.md`: name, summary, demo link, details, data, AI use (section 1 of [../AI-DISCLOSURE.md](../AI-DISCLOSURE.md)), prior work and credits (from [../CITATIONS.md](../CITATIONS.md)).
-6. **Hour 40.** Freeze: no number changes after this. Then the final video, the project page, and the submission (a person clicks).
+6. **Hour 40.** Freeze: no number changes after this. Then the final slides with the frozen numbers, the project page, and the submission (a person clicks).
 
 Watch out: our copy of the deck still says −250 mm/yr. Never quote it.
 
@@ -208,7 +211,7 @@ Watch out: HAR1's mast swings 38 mm a year, so stations can lie. A station serie
    - The basemap and the Romania blur (O-09).
 3. **Hour 6 to 18.** Map (D-002), slider with honest gaps, legend, units, both labels. `export.py` as soon as `up_east.npz` exists.
 4. **Hour 18 to 30.** Pins, story mode, phone layout, keyboard use, a colour-blind check (T9).
-5. **Hour 30 to 40.** Captions, accessibility, the demo link.
+5. **Hour 30 to 40.** Accessibility, the demo link, and the screenshots for slide 5 from the real site.
 
 Watch out: Leaflet image overlays are axis-aligned, so resample to lon/lat for the PNGs. The GeoTIFFs keep the UTM grid.
 
@@ -223,7 +226,7 @@ A tier is done when every box is ticked, not when the code runs. Tick them durin
 - [ ] The tie per track in `calib.json` (04).
 - [ ] `checks.json` covers every check, and every WARN and FAIL is explained (05).
 - [ ] `products/ocnele_mari/` passes `checkpoint.py`. The page is live with the D-002 view, the slider with honest gaps, the pins and both labels, and it works on two phones (06).
-- [ ] Story stops, video, project page, AI use, prior work and credits (01).
+- [ ] Story stops, the 7 slides with every number from the frozen build, project page, AI use, prior work and credits (01, with each slide's owner).
 
 **Tier 2**
 
@@ -273,7 +276,7 @@ Each maps to a test in [../prompts/early-tests.md](../prompts/early-tests.md), a
 | O-09 | Basemap and the Romania blur | Tile source; CSS blur or opacity below a zoom; an outline only | 06 | 6 |
 | O-10 | Accept the file contracts above as written | | 01, 06 | 2 |
 | O-11 | Window size | 50 km (kit) or smaller; the D-002 view is independent | 02, 04 | 6 |
-| O-12 | HAR1 in the app, or only in the video | | 01 | 24 |
+| O-12 | HAR1 in the app, or only on a slide | | 01 | 24 |
 | O-13 | May the app quote Muntean et al. 2026 supplement values? | Ask INFP; else "see paper" | 01 | 24 |
 | O-14 | Why is there no NISAR over Romania from mid-January to late June 2026? | ASF or NISAR forum | 02 | 24 |
 | O-15 | The slots freed by dropping Praid (02 and 03, hours 6 to 30) | Zone series, closure, Sentinel-1, O-08 | 01 | 6 |

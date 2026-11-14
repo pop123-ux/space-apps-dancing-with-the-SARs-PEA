@@ -1,6 +1,7 @@
+# Owner: 06 · App developer (Darius)
 """06 · App developer: turn the numbers into what the page reads: products/<site>/.
 
-Owner: 06 · App developer (Darius). Status: STUB (interfaces only). Until it works, build the page on
+Status: STUB (interfaces only). Until it works, build the page on
 `python mock_products.py` (products/mock/), which writes the same contract with invented values.
 
     python export.py ocnele_mari

@@ -1,5 +1,7 @@
 # Citations
 
+**Owner:** all roles append; 01 checks links and licences
+
 These are the data, software, documents and prior work this project uses, with where each was fetched. Started Sat 14 Nov 2026 and completed during the event.
 
 **Append a row the moment you use a source.** 01 checks every link and licence in hours 30 to 40. Third-party data are linked and credited, never copied into the repository.

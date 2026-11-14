@@ -1,6 +1,7 @@
+# Owner: 01 · Lead and story (Mario)
 """01 · Lead: is products/<site>/ complete and sane? Run it at hours 2, 12, 24 and 40, and before pushing products.
 
-Owner: 01 · Lead & story (Mario). Status: WORKS (checks the file contracts in docs/build-spec.md).
+Status: WORKS (checks the file contracts in docs/build-spec.md).
 
     python checkpoint.py ocnele_mari
     python checkpoint.py mock                         # the invented set from mock_products.py

@@ -1,6 +1,7 @@
+# Owner: 03 · InSAR analyst (Alexandru, Eric)
 """03 · InSAR analyst: pairs → displacement time series and rate ± σ, per track.
 
-Owner: 03 · InSAR analyst (Alexandru & Eric). Status: STUB (interfaces only).
+Status: STUB (interfaces only).
 
     python stack.py ocnele_mari            # every fetched track
     python stack.py ocnele_mari --track 129A

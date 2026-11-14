@@ -1,5 +1,7 @@
 # Early tests: Claude Code prompt
 
+**Owner:** 01 · Lead and story (Mario); each test names its owner
+
 ## How to use this
 
 These tests check the plan in `docs/build-spec.md` against the real data in the first hours of the event, before the team leans on it. Each test has one owner. The owner's Claude Code session runs it when they say **"Read prompts/early-tests.md and run T<n>."**

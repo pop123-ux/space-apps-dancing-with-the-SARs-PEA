@@ -1,6 +1,7 @@
+# Owner: 05 · Validator (Paul)
 """05 · Validator: order Sentinel-1 interferograms on ASF HyP3 for the same months as NISAR (the second radar).
 
-Owner: 05 · Validator (Paul). Status: STUB (interfaces only). **Order at hour 0–1: HyP3 queues for hours.**
+Status: STUB (interfaces only). **Order at hour 0–1: HyP3 queues for hours.**
 
     python hyp3_order.py ocnele_mari --plan      # list the Sentinel-1 pairs that would be ordered (no login)
     python hyp3_order.py ocnele_mari --submit    # submit INSAR_GAMMA jobs (Earthdata login)

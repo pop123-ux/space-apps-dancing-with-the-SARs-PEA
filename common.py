@@ -1,6 +1,7 @@
+# Owner: shared · announce changes; 01 reviews
 """Shared settings and small helpers. Every script imports this as `import common as C`.
 
-Owner: shared. A value changed here changes everyone's results, so announce it to the team and get the Lead's (01) OK in
+A value changed here changes everyone's results, so announce it to the team and get the Lead's (01) OK in
 the PR. Nothing here talks to the network, and nothing heavy is imported at the top, so `python <script>.py --help`
 works on a bare Python before the environment is installed.
 
