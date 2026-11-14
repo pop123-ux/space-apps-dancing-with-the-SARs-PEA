@@ -38,8 +38,8 @@ The full plan, hour by hour, is [docs/schedule.md](docs/schedule.md).
 | 02 Alexandru and Eric | Token; T1 (venue network); T2 (`fetch.py --list` gives 22 pairs) | [§ 02](docs/build-spec.md#02--nisar-data-alexandru-and-eric) |
 | 03 Alexandru and Eric | O-05 (method); read 02's hand-off | [§ 03](docs/build-spec.md#03--insar-analyst-alexandru-and-eric) |
 | 04 Matei | 14 Nov, 17:40: 129A on the team's own stream. First pair verified on the full HDF5 (mask, grid, look vectors target to sensor, LOS sign consistent; phase sign still T3). 13 pairs, two acquisition groups referenced separately, gap 18 Jan to 23 Jun. Real tie: offset −5.80 mm/yr, 347,765 px, scatter 39.2; swap vs EGMS 0.70 mm/yr. `meta.json`, `geom.npz`, `ts.npz`, `cal.npz`, overlays handed to 06; `calib.json` (129A). Next: 094D; T3 with 03/05; frame paragraph. Log: `logs/04-geodesist.md` | [§ 04](docs/build-spec.md#04--geodesist-matei) |
-| 05 Paul | Zone 4 and control-ring moisture/rainfall screening in progress. Use the [forecast handoff](docs/forecast.md#paul--05-handoff) for the model and inputs. | [§ 05](docs/build-spec.md#05--validator-paul) |
-| 06 Darius | Page pushed on `r06/page` (14 Nov, 16:16; not merged): NISAR Coverage by default, Sentinel-1 Jul to Oct as dots with Zones, processing choices and the town boundary; mock still works. `checkpoint.py ocnele_mari` contract OK, `pytest -q` 8 passed. Log and proposals for 01: [logs/06-app.md](logs/06-app.md). Next: Pages deploy, T9 on two phones, the Jan to Oct window when 03 commits it | [§ 06](docs/build-spec.md#06--app-developer-darius) |
+| 05 Paul | EGMS 2020–2025 tile cut (`egms_cut.py`): z3 sinks −18.9 mm/yr, stable ground −0.5 mm/yr. Station screening and the 2026 third-witness search done: no open station within 70 km has 2026 data. T10 done (PASS WITH NOTE). z3 investigated: zone in place, 029A incoherent there, 007D's expected 4 mm is within noise, so 2026 "not detected"; needs the Jan to Oct extension (03). EGMS GNSS model CSV found and passed to 04 for T8. Moisture and rain screen (NISAR SME2, ERA5) for z4 and the control ring: no flags; predeclared 7-day rain fails to beat persistence in the r06 forecast backtest (4.74 against 4.19 mm). Closure vs moisture change (58 HyP3 ZIPs): no link (window ρ 0.19, p 0.42). EGMS stable-ground check done: the tie area sinks −0.6 mm/yr (79 % within ±1.5), small moving patches shift it by only 0.1 mm/yr. Next: monument screening, then check 8 (`docs/validation-log.md`) | [§ 05](docs/build-spec.md#05--validator-paul) |
+| 06 Darius | Page merged on `main` (14 Nov, 16:25). Open audit findings for 06 (phone sheet covers the controls, sign convention hidden on phone, Compare mixing time spans, no Pages workflow): see the audit table under Notes. | [§ 06](docs/build-spec.md#06--app-developer-darius) |
 
 ## Early tests
 
@@ -57,7 +57,7 @@ The tests are defined in [prompts/early-tests.md](prompts/early-tests.md). Each 
 | T7 Station hold-out | 05 | | |
 | T8 Model swap and EGMS | 04, 05 | PASS WITH NOTE (14 Nov, 16:10) | Swap EuVeM2022 vs EGMS: 0.72 (094D) and 0.70 (129A) mm/yr, under 1 mm/yr (04, on the rehearsal NISAR stack). EGMS stable ground: tie area −0.6 mm/yr, 79 % within ±1.5 mm/yr, moving patches shift it 0.1 mm/yr (05, `docs/validation-log.md`). Rerun on the team's 129A stream (17:40): 0.704 mm/yr, unchanged. Note: 094D still on the rehearsal stack; check 6 is separate. `logs/04-geodesist.md` |
 | T9 Phones | 06 | | |
-| T10 Sentinel-1 holds up | 05, 03 | | |
+| T10 Sentinel-1 holds up | 05, 03 | PASS WITH NOTE | 14 Nov: sign and spread hold on 029A z1, z2, z4 and 007D z4; not testable on 029A z3 and 007D z1, z2, z3. z4 is the only zone that holds on both tracks. z3 shows no Sentinel-1 signal although EGMS has it sinking −18.9 mm/yr (red flag). Table in `docs/validation-log.md` |
 
 ## Notes
 
