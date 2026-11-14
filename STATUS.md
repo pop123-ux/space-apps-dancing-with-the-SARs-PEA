@@ -37,7 +37,7 @@ The full plan, hour by hour, is [docs/schedule.md](docs/schedule.md).
 | 01 Mario | Hour 0, the guide, the hour-2 review, the contract freeze | [build-spec.md § 01](docs/build-spec.md#01--lead-and-story-mario) |
 | 02 Alexandru and Eric | Token; T1 (venue network); T2 (`fetch.py --list` gives 22 pairs) | [§ 02](docs/build-spec.md#02--nisar-data-alexandru-and-eric) |
 | 03 Alexandru and Eric | O-05 (method); read 02's hand-off | [§ 03](docs/build-spec.md#03--insar-analyst-alexandru-and-eric) |
-| 04 Matei | 14 Nov, 15:20: station rates checked against Muntean Tables S1/S3 and NGL MIDAS; first real `refs.py ocnele_mari` run (VLC1, VLC2, HORE; Italian VLC2 dropped); EGMS swap hook passes a synthetic known-answer test. Next: tie per track after 02 and 03 hand off. T8 waits on the EGMS GNSS model CSV (O-06). Log: `logs/04-geodesist.md` | [§ 04](docs/build-spec.md#04--geodesist-matei) |
+| 04 Matei | 14 Nov, 16:10: T8 PASS WITH NOTE (swap 0.72 / 0.70 mm/yr; 05's EGMS stable ground −0.6 mm/yr). EGMS GNSS model (A-EPND 2023, ETRF2000) in `refs.py`. Told 05 to expect NISAR − EGMS of about +0.6 mm/yr from the references alone in check 6. Next: rerun the tie and swap on 03's `ts.npz`; frame paragraph. Log: `logs/04-geodesist.md` | [§ 04](docs/build-spec.md#04--geodesist-matei) |
 | 05 Paul | HyP3 order; EGMS Up tile; station screening | [§ 05](docs/build-spec.md#05--validator-paul) |
 | 06 Darius | Page pushed on `r06/page` (14 Nov, 16:16; not merged): NISAR Coverage by default, Sentinel-1 Jul to Oct as dots with Zones, processing choices and the town boundary; mock still works. `checkpoint.py ocnele_mari` contract OK, `pytest -q` 8 passed. Log and proposals for 01: [logs/06-app.md](logs/06-app.md). Next: Pages deploy, T9 on two phones, the Jan to Oct window when 03 commits it | [§ 06](docs/build-spec.md#06--app-developer-darius) |
 
@@ -55,7 +55,7 @@ The tests are defined in [prompts/early-tests.md](prompts/early-tests.md). Each 
 | T5 Gap groups (synthetic) | 03 | | |
 | T6 Summer-only bias (synthetic) | 03 | | |
 | T7 Station hold-out | 05 | | |
-| T8 Model swap and EGMS | 04, 05 | PARTIAL (14 Nov) | Swap code passes a synthetic test (0.78/0.79 mm/yr for a known 0.78/0.79); real EGMS model CSV and real tie still missing. `logs/04-geodesist.md` |
+| T8 Model swap and EGMS | 04, 05 | PASS WITH NOTE (14 Nov, 16:10) | Swap EuVeM2022 vs EGMS: 0.72 (094D) and 0.70 (129A) mm/yr, under 1 mm/yr (04, on the rehearsal NISAR stack). EGMS stable ground: tie area −0.6 mm/yr, 79 % within ±1.5 mm/yr, moving patches shift it 0.1 mm/yr (05, `docs/validation-log.md`). Note: rerun the swap on 03's stack; check 6 is separate. `logs/04-geodesist.md` |
 | T9 Phones | 06 | | |
 | T10 Sentinel-1 holds up | 05, 03 | | |
 
