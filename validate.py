@@ -1,6 +1,7 @@
+# Owner: 05 · Validator (Paul)
 """05 · Validator: the checks the team did not tune. Nobody else edits this file.
 
-Owner: 05 · Validator (Paul). Status: STUB (interfaces only).
+Status: STUB (interfaces only).
 
     python validate.py ocnele_mari
 

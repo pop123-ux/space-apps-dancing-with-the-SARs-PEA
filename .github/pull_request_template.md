@@ -1,3 +1,4 @@
+<!-- Owner: shared · announce changes; 01 reviews -->
 ## What and why
 
 <!-- one or two lines -->
@@ -6,6 +7,7 @@
 
 - **Role:** 01 · 02 · 03 · 04 · 05 · 06 (delete the others). Only that role's files are touched (CLAUDE.md, "Who owns what").
 - [ ] `pytest -q` passes
+- [ ] New files have a row in `OWNERS.md` and an owner line at the top
 - [ ] A file contract in `docs/build-spec.md` changed? If yes: 01 and 06 approve, and `checkpoint.py`, `mock_products.py` and the page change in this PR
 - [ ] `common.py` changed? If yes: announced to the team, and 01 approves
 - [ ] Numbers in `products/` change? (Not allowed after the hour-40 freeze)

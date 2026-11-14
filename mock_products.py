@@ -1,6 +1,7 @@
+# Owner: 06 · App developer (Darius)
 """06 · App developer: write an INVENTED products/mock/ in the contract's shape, so the page can be built right away.
 
-Owner: 06 · App developer (Darius). Status: WORKS. Standard library only (no numpy, no Pillow).
+Status: WORKS. Standard library only (no numpy, no Pillow).
 
     python mock_products.py                        # → products/mock/ and an entry in products/index.json
     python mock_products.py --out /tmp/products    # anywhere else (tests/test_skeleton.py does this)

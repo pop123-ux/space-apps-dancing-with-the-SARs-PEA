@@ -1,5 +1,7 @@
 # Build your role: Claude Code prompt
 
+**Owner:** 01 · Lead and story (Mario)
+
 ## How to use this (for the team)
 
 **When.** From hour 0, on your own laptop, after `prompts/setup.md`.
@@ -15,7 +17,7 @@ Then say: **"Read prompts/build.md. I am role 0N."** (01 Mario, 02 or 03 Alexand
 
 **If it stops or the window closes:** `claude --continue`, then say **"Continue prompts/build.md for role 0N from STATUS.md."**
 
-**What only a person does.** Logins and tokens; anything needing `sudo`; publishing outside GitHub (the video upload, the Space Apps form); team decisions; merging into `main` after review.
+**What only a person does.** Logins and tokens; anything needing `sudo`; publishing outside GitHub (uploading the slides, the Space Apps form); team decisions; merging into `main` after review.
 
 ---
 
@@ -49,12 +51,12 @@ Send one short message saying exactly what the person must do, then wait. Keep w
 
 1. **Prior work.** No code from the advisor's rehearsal kit or earlier studies goes in unless the team decided O-03 that way. Whatever is reused gets a row in `CITATIONS.md` (Prior work) in the same commit.
 2. **Honest numbers.**
-   - Every number on the page, in the video and in the submission comes from `products/ocnele_mari/`, written by the pipeline.
+   - Every number on the page, on the slides and in the submission comes from `products/ocnele_mari/`, written by the pipeline.
    - Never hard-code a number, round it to flatter, or invent one.
    - Never flip a sign or drop data to pass a check.
    - A failed check is reported as failed, with the reason.
    - If a real bug forces a change after a result exists, fix it, mark it "changed after results" in `DECISIONS.md`, and rerun everything downstream (`python run_all.py ocnele_mari --from <step>`).
-3. **No silent placeholders.** Mock and synthetic outputs carry `synthetic: true`. Before submitting there must be zero matches for `___`, `TODO`, `TBD` or `computing` in the page, `SUBMISSION.md` and the captions.
+3. **No silent placeholders.** Mock and synthetic outputs carry `synthetic: true`. Before submitting there must be zero matches for `___`, `TODO`, `TBD` or `computing` in the page, `SUBMISSION.md` and the slides.
 4. **Data and credentials.**
    - Never commit `data/work/`, `.h5`, `.nc`, `.npz`, `.zip`, `.env` or tokens.
    - Before every push, run `pytest -q` and `git ls-files | xargs du -k | sort -n | tail -3`, so nothing over 50 MB goes in.

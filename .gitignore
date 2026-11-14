@@ -1,3 +1,4 @@
+# Owner: shared · announce changes; 01 reviews
 # Data never enter git (raw NISAR, EGMS, Sentinel-1, intermediates). Only data/README.md and the small
 # query lists in data/scenes/ are tracked.
 data/*

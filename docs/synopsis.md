@@ -1,5 +1,7 @@
 # Synopsis for the team
 
+**Owner:** 01 · Lead and story (Mario)
+
 Version 1, Sat 14 Nov 2026. The full plan is in [overview.md](overview.md). The build details, per role, are in [build-spec.md](build-spec.md).
 
 **Dancing on Salt**
@@ -14,7 +16,7 @@ The honest part matters most. Our advisor's dress rehearsal on 12 November ran a
 
 **The six roles:**
 
-- **01, Mario:** story, video, submission and checkpoints.
+- **01, Mario:** story, the 7-slide deck (no video), submission and checkpoints. Every role supplies one or two slides.
 - **02 and 03, Alexandru and Eric:** fetch the radar data and turn it into rates.
 - **04, Matei:** ties the radar to a real reference frame.
 - **05, Paul:** checks everything and is our own red team.

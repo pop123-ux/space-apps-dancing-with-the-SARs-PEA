@@ -1,5 +1,7 @@
 # NISAR data and references for Ocnele Mari
 
+**Owner:** 02 · NISAR data (Alexandru, Eric); the references table with 04 and 05
+
 Checked Sat 14 Nov 2026 against NASA CMR, plus the advisor's rehearsal of 12 Nov 2026 ([rehearsal.md](rehearsal.md)). Every number here carries the date it was checked, because the archive changes.
 
 ## What is public, and which part we use

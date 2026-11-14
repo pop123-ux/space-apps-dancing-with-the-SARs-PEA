@@ -1,6 +1,7 @@
+# Owner: 04 · Geodesist (Matei)
 """04 · Geodesist: tie each track to the GNSS velocity model, the way EGMS calibrates its own product.
 
-Owner: 04 · Geodesist (Matei). Status: STUB (interfaces only).
+Status: STUB (interfaces only).
 
     python calibrate.py ocnele_mari
     python calibrate.py ocnele_mari --model egms     # second model, once its CSV exists (model swap)

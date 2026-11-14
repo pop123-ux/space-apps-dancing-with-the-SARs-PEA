@@ -1,3 +1,4 @@
+# Owner: shared · announce changes; 01 reviews
 """Shared: run the pipeline end to end, one command. Each step is the script one team member owns.
 
 Status: WORKS (stops cleanly at the first step that is still a stub).

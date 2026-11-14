@@ -1,5 +1,7 @@
 # The advisor's rehearsal (12 Nov 2026)
 
+**Owner:** 01 · Lead and story (Mario)
+
 Before the event, our advisor ran a full pipeline on real NISAR data over Ocnele Mari: the *dancing-on-salt* rehearsal kit. It is **prior work**, and it is declared in [../CITATIONS.md](../CITATIONS.md#prior-work-and-advisor-help). Whether we adopt its code is decision O-03.
 
 This file records what it found, because those findings shape our plan. **These are its numbers, not ours.** Our own numbers come from our pipeline during the event.

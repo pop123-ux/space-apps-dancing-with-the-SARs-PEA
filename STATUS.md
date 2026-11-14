@@ -1,5 +1,7 @@
 # Status
 
+**Owner:** 01 · Lead and story (Mario); every role updates its own row
+
 Updated Sat 14 Nov 2026, 14:30 Europe/Bucharest. Event: NASA Space Apps Cluj-Napoca, ClujHUB, 14 to 15 Nov 2026, so `EVENT_TZ=Europe/Bucharest`.
 
 **Hour 0:** `____` (01 fills this in, O-04). **Submission deadline:** `____` (01, from the 13 Nov guide).
@@ -17,7 +19,7 @@ Updated Sat 14 Nov 2026, 14:30 Europe/Bucharest. Event: NASA Space Apps Cluj-Nap
 
 ## Waiting on a person
 
-- **01:** hour 0 and `EVENT_TZ` (O-04); read the 13 Nov guide aloud (O-02); O-03 (adopt or rebuild); the hour-2 review of the proposed decisions in `docs/build-spec.md`.
+- **01:** the 7-slide outline with one owner per slide (D-003, see `docs/overview.md`); hour 0 and `EVENT_TZ` (O-04); read the 13 Nov guide aloud (O-02); O-03 (adopt or rebuild); the hour-2 review of the proposed decisions in `docs/build-spec.md`.
 - **05:** order Sentinel-1 on HyP3 now. It queues for hours.
 - **Everyone:** an Earthdata login, and `prompts/setup.md` run on their laptop.
 - **Repo owner:** set the Drive copy of the rehearsal kit back to Restricted, if it isn't already.
@@ -54,6 +56,9 @@ The tests are defined in [prompts/early-tests.md](prompts/early-tests.md). Each 
 | T10 HyP3 queue | 05 | | |
 
 ## Notes
+
+- **D-003 (Sat 14 Nov):** the submission is a 7-slide PowerPoint, with no video. Every role supplies one or two slides.
+- Every file names its owner role in its first lines; the full list is `OWNERS.md`.
 
 - Our copy of the deck says −250 mm/yr on slides 1, 5 and 6. The rehearsal corrects it to about −25 mm/yr. Never quote −250.
 - The Space Apps resources page and the 2026 Project Submission Guide returned HTTP 503 from the setup machine on 14 Nov. 01 lists what we use in `CITATIONS.md`.

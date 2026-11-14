@@ -1,5 +1,7 @@
 # Validation log (05, Paul)
 
+**Owner:** 05 · Validator (Paul)
+
 This is the hand-kept side of validation. `validate.py` writes the automatic checks to `products/<site>/checks.md`; this file records what the scripts cannot: station screening, HyP3 orders, red-team notes and the frozen-build re-run.
 
 ## Sentinel-1 orders (hyp3_order.py)
