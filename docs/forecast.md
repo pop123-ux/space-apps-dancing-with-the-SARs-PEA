@@ -9,7 +9,7 @@ The entry point is [index.html](../index.html). It imports [app/main.js](../app/
 - [CPU script](../sentinel1/scripts/forecast.py) and [export](../products/ocnele_mari/forecast.json).
 - Zone 4, 029A, 16 epochs, 29 summer interferograms and 34 connected pixels. Latest fitted acquisition 5 October 2026. The requested 1 January 2027 endpoint is 88 days beyond it. Six later catalog dates through 10 November need processing before they can update the fit.
 - Thirty-day rolling-cutoff MAE over four overlapping windows: persistence 4.19 mm, Theil–Sen 5.53 mm, Matérn Gaussian process 3.95 mm, long-term trend (EGMS-anchored, added 14 Nov 18:30) 3.97 mm. These scores rank the models in the experiment and do not validate 88-day extrapolation. January LOS endpoints are −7.89, −15.08, −13.78 and −9.21 mm respectively. There is no calibrated prediction interval. See "Verification and the January anchor" below.
-- Data and panel checks on this branch: verified static entry paths and real-product overlay references; loaded the actual JSON and rendered the forecast panel in a JavaScript harness, including model switching and scenario gating. Full browser verification remains pending because Chromium was blocked by the workspace runtime.
+- Data and panel checks on this branch: verified static entry paths and real-product overlay references; loaded the actual JSON and rendered the forecast panel in a JavaScript harness, including model switching and scenario gating. Browser verification with Playwright passed on 14 Nov (desktop and iPhone 13; see the audit note in `STATUS.md`).
 
 ## What to investigate while moisture and rainfall are in progress
 

@@ -71,3 +71,23 @@ The tests are defined in [prompts/early-tests.md](prompts/early-tests.md). Each 
 - The [Cluj-Napoca participant's guide](https://app.notion.com/p/Participant-s-Guide-NASA-Space-Apps-Challenge-Cluj-Napoca-2026-40903dd4dbcc80eab387c2962430efef) (Notion) could not be read from the setup machine. It renders in the browser only, and the Notion connector is not signed in. 01 reads it at hour 0 and copies the kickoff time, the submission deadline and any AI-disclosure wording into `STATUS.md` and `AI-DISCLOSURE.md`.
 
 **14 Nov 19:30:** January to October Sentinel-1 fit committed (`sentinel1/analysis_jan_oct/`, grids in `assets_jan_oct/`); weather-model troposphere scenario added (removes 78 % of the elevation leakage on 029A; zone 4 029A −30.5 → −23.6 mm/yr); Chronos-2 integrated zero-shot on CPU (best MAE on every long backtest, 88-day 3.81 mm against 4.29 persistence; calibrated 80 % interval). Default January model awaits a team decision. [Details](docs/forecast.md#troposphere-the-january-to-october-fit-and-chronos-2-14-nov-2026-1930). **14 Nov 18:30 (verifier):** the forecast reproduces exactly from the raw data on CPU; a long-term trend model anchored on EGMS 2020–2025 (−5.5 mm/yr LOS, 1 Jan endpoint −9.21 mm) was added because the summer slope (−30.5 mm/yr) is about 5.5 times the long-term rate; Paul's rain test, re-inverted per cutoff, still shows no improvement (MAE 4.80 against persistence 4.19). Details and next steps: [forecast handoff](docs/forecast.md#verification-and-the-january-anchor-14-nov-2026-1830). The 1 January Zone 4 LOS scenario is connected in the frontend. See the [forecast handoff](docs/forecast.md) for its evaluation limits and next checks.
+
+### App audit, 14 Nov 2026, 20:00 (03 verifier, Claude Code; main at 5304f94)
+
+Checked with `pytest -q` (11 passed), `checkpoint.py` (contract OK on both sites), and Playwright on desktop 1280×900 and iPhone 13 (no JS errors, no failed requests). All 45 zone and scenario numbers on the page match `sentinel1/analysis/summary.json` exactly. Fixed in this PR: forecast MAE shown with "+", raw floats in "Show as table", hard-coded "Zone 4" and "029A", "undefined" for unknown model labels, clipped model buttons (they now wrap), and the Chronos-2 80 % interval is stated at the endpoint. Open, by owner:
+
+| Priority | Finding | Owner |
+| --- | --- | --- |
+| High | Phone: the Coverage sheet (z-index 25, 72 % tall) opens by default and covers the dock and the satellite menu, so clicks on views, tracks and "Sentinel-1" are intercepted (`app/style.css:282`) | 06 |
+| High | Phone: the sign convention is hidden (legend caps hidden at `style.css:268`, status line cut by an ellipsis); breaks honest-comparison rule 5 | 06 |
+| High | Compare can mix time spans: NISAR "since 2025-11-07" next to Sentinel-1 "since 2026-07-07" on mock; snap the date into `common_window` and start Compare frames there (`main.js` `pickSat`, `export.py`); breaks rule 1 | 06 |
+| High | No Pages workflow, no `slides/`, no `SUBMISSION.md` yet | 06, 01 |
+| Medium | `docs/build-spec.md` file contracts lag the export (`coverage.json`, `sensitivity.json`, `forecast.json`, `s1/points_*.json`, several manifest keys; `series.json` lacks `up`); `checkpoint.py` checks none of the sidecars | 01, 06 |
+| Medium | `manifest.json` still has `story: "TODO(01)…"` | 01 |
+| Medium | The sheet is `aria-live="polite"` and re-renders on every slider step, so screen readers re-read it during Play (`index.html:68`) | 06 |
+| Medium | PR #9 (05, `r05/egms-and-witnesses`) is not merged, but main cites its EGMS commit and the forecast uses its `z4_screen_inputs.csv` | 05, 01 |
+| Medium | Mock site 404s on `coverage.json`, `sensitivity.json`, `forecast.json` (`mock_products.py`) | 06 |
+| Low | Stale text: `CLAUDE.md` "no page yet"; this file's header ("skeleton", 14:30, hour 0 blank) and its "r06/page not merged" line; `docs/ui.md` says the page is on `r06/page`; the build-spec change log is empty though MapLibre, the satellite menu, Coverage as default and the forecast default all moved | 01, 06 |
+| Low | Checks pill hidden on phone; EGMS table uses "-" not "−"; `#site=` ignored without reload; `#sat=compare` falls back silently; About gives NISAR a EuVeM2022 tie though no NISAR measurement exists | 06 |
+| Low | Merged branches that could be deleted: `r03/z3-coverage-and-windows`, `r04/egms-model`, `r04/refs`, `r04/station-check`, `r06/page`, `r06/zone-1-2` | owners |
+

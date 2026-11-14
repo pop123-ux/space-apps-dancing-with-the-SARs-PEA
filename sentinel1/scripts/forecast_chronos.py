@@ -83,6 +83,11 @@ def main():
                      'here (about 77 to 78 % of truths inside the 80 % band on the Jan-Oct backtests), still from one '
                      'zone, one track and overlapping cutoffs.')
     f['chronos2'] = block
+    cov = [v['interval80_coverage'] for k, v in block.items() if k.startswith('janoct_')]
+    if cov:
+        f['interval_reason'] = (f"Only Chronos-2 has an interval: its 80 % band held the truth in {min(cov):.0%} to {max(cov):.0%} "
+                                "of the overlapping January to October backtests. The other models have none, because four "
+                                "summer backtests cannot calibrate one.")
     a.forecast.write_text(json.dumps(f, indent=2, allow_nan=False) + '\n')
     print({k: round(v['mae_mm'], 2) for k, v in f['metrics'].items()}, '| 1 Jan', round(f['model_paths_mm']['chronos2'][-1], 2),
           '80%', [round(f['intervals']['chronos2'][k][-1], 2) for k in ('q10', 'q90')])

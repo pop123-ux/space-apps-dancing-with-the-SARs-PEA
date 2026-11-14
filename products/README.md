@@ -32,7 +32,7 @@ Values beyond a layer's scale are drawn at full colour and the legend says so. A
 
 ## Zone 4 displacement predictor
 
-`ocnele_mari/forecast.json` is an optional sidecar for the Zones view, tied to Sentinel-1 029A, July–October baseline and Zone 4. The UI checks that the exported observation dates and values match the active series. The dashed scenario ends 1 January 2027, 88 days after the 5 October observation cutoff. The three model paths can be selected in Zones. The backtest horizon is 30 days and its scores do not validate the January endpoint. The interval is unavailable because the four overlapping backtest windows are insufficient to calibrate it.
+`ocnele_mari/forecast.json` is an optional sidecar for the Zones view, tied to Sentinel-1 029A, July–October baseline and Zone 4. The UI checks that the exported observation dates and values match the active series. The dashed scenario ends 1 January 2027, 88 days after the 5 October observation cutoff. The five model paths (persistence, Theil–Sen, Gaussian process, long-term trend, Chronos-2) can be selected in Zones; only Chronos-2 has an interval (`intervals.chronos2`). The backtest horizon is 30 days and its scores do not validate the January endpoint. The other models have no interval because the four overlapping summer backtest windows cannot calibrate one.
 
 Rebuild on CPU using NumPy, SciPy, pyproj and GDAL:
 
