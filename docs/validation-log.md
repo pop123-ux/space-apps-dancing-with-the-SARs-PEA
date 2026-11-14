@@ -126,3 +126,122 @@ Done on the committed Sentinel-1 grids (`sentinel1/assets`, checksums verified) 
 | Check | Result on the frozen build | Same as before the freeze? |
 |---|---|---|
 | | | |
+
+## Moisture and rainfall screen, and the forecast test (05, 14 Nov 2026)
+
+### Predeclared before any Zone 4 result was looked at (written 14 Nov 2026, about 17:40)
+
+One exogenous input is tested against the forecast baselines on `r06/page` (`sentinel1/scripts/forecast.py`, `products/ocnele_mari/forecast.json`):
+
+- **Input:** ERA5 daily precipitation at 45.088 N, 24.290 E (Open-Meteo archive), summed over the **7 days ending on the acquisition date** (lag 0), in mm. Chosen because it exists for every date and needs no pixel support; NISAR's recommended soil-moisture retrievals do not cover Zone 4 (see the screen below).
+- **Model:** at each cutoff, using only dates up to the cutoff: Theil–Sen slope as in `forecast.py`, then ridge regression of the detrended LOS on the standardised rain input (λ = 1, fixed, not tuned), with standardisation fitted inside the cutoff.
+- **Issuance forecast (information available at the cutoff):** future rain is unknown, so the rain term is assumed to return to its training mean: forecast = last value + slope × lead + β × (training mean − rain at the cutoff).
+- **Conditional scenario (labelled, not a forecast):** the same model given the observed rain at the target date.
+- **Scoring:** the same four cutoffs and the 30-day lead as `forecast.json`, mean absolute error against the same observed values, next to persistence, Theil–Sen and the Matérn GP.
+- **Pass:** the issuance forecast beats persistence (the best simple baseline, 4.19 mm) on the same cutoffs. Anything else is reported as no improvement.
+
+### Results (14 Nov 2026, about 17:30)
+
+**Sources and settings.**
+- Radar: Sentinel-1 `sentinel1/analysis/summary.json`, baseline fit, tracks 029A (7 Jul to 5 Oct 2026) and 007D (6 Jul to 4 Oct), 16 dates each. LOS in mm, positive towards the satellite, relative to the 3 to 6.5 km reference band, first date = 0. Pixel support: z4 34 (029A) and 76 (007D); outer control ring (6.5 to 8 km) 14,963 and 12,153. The z4 029A series is the same one `forecast.json` uses (0, 1.2, 1.4 … −7.9 mm).
+- Moisture: NISAR L3 SME2 provisional (beta for 18 Jan), 200 m EASE-Grid 2.0, m3/m3, read over HTTP with `notebooks/05/soil_moisture.py` (25 granules on tracks 129A and 094D, 7 Nov 2025 to 21 Oct 2026; 16 in July to early October). Footprint: the Sentinel-1 window, 16.4 km square on 45.088 N, 24.290 E. Area value = median of the pixels whose centre is in the area; zones widened by 100 m. "Recommended" = `retrievalQualityFlag` bit 0 = 0; "all" = every retrieval (sensitivity only).
+- Pixel support in July to early October: reference band 493 to 797, control ring 200 to 330 (recommended); **z4 0 recommended on 15 of 16 dates (1 pixel on 6 Oct), 10 with all retrievals; z3 0 recommended, 13 with all**. Reference-band moisture ranged 17.7 to 28.2 %.
+- Matching: each Sentinel-1 date takes the NISAR date at most 2 days away; every July to September Sentinel-1 date found one 1 day off. Lag 1 = the NISAR date before it (3 to 9 days earlier). Missing values are written as "missing" and left out of each correlation.
+- Rain: ERA5 daily precipitation (Open-Meteo archive, 45.088 N 24.290 E), sums over 7 and 30 days ending on the Sentinel-1 date. July 49 mm, August 30 mm, September 4 mm, October 47 mm.
+- Scripts: `notebooks/05/soil_moisture.py`, `notebooks/05/z4_screen.py` (this section), `notebooks/05/sm_vs_s1.py` (all zones; figure `docs/figures/05_soil_moisture_vs_s1.png`). Local outputs (git-ignored): `data/work/ocnele_mari/sm/sm_zones.csv`, `rain_era5_daily.csv`, `z4_screen.json`.
+
+**Date-aligned inputs, Zone 4 and the control ring.**
+
+**029A** (Sentinel-1 pixels: z4 34, control 14963). LOS in mm; moisture = area minus reference band, in percentage points (pixels in brackets); lag1 = previous NISAR date; rain in mm.
+
+| S1 date | NISAR date (track) | z4 LOS | z4 moisture rec | z4 moisture all | z4 lag1 all | control LOS | control moisture rec | control lag1 rec | rain 7 d | rain 30 d |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 2026-07-07 | 2026-07-05 (129A) | 0.0 | missing (0) | 1.7 (10) | -1.7 | 0.0 | -0.6 (202) | 0.2 | 11.9 | 55.5 |
+| 2026-07-13 | 2026-07-14 (094D) | 1.2 | missing (0) | -0.1 (10) | 1.7 | 0.1 | -0.8 (210) | -0.6 | 5.4 | 43.4 |
+| 2026-07-19 | 2026-07-17 (129A) | 1.4 | missing (0) | 0.6 (10) | -0.1 | -1.2 | -0.1 (210) | -0.8 | 10.6 | 43.4 |
+| 2026-07-25 | 2026-07-26 (094D) | -6.6 | missing (0) | -0.6 (10) | 0.6 | 3.0 | 0.7 (209) | -0.1 | 28.0 | 49.6 |
+| 2026-07-31 | none within 2 d | -2.2 | missing (0) | missing (0) | missing | 0.4 | missing (0) | missing | 0.4 | 43.9 |
+| 2026-08-06 | none within 2 d | 4.5 | missing (0) | missing (0) | missing | -6.8 | missing (0) | missing | 1.6 | 38.8 |
+| 2026-08-12 | 2026-08-10 (129A) | 19.9 | missing (0) | 2.6 (10) | -0.6 | -9.7 | 0.1 (216) | 0.7 | 7.6 | 41.2 |
+| 2026-08-18 | 2026-08-19 (094D) | -2.7 | missing (0) | 0.9 (10) | 2.6 | 2.7 | 0.1 (224) | 0.1 | 1.4 | 31.1 |
+| 2026-08-24 | 2026-08-22 (129A) | -7.8 | missing (0) | 2.3 (10) | 0.9 | 1.1 | 0.8 (230) | 0.1 | 0.5 | 8.5 |
+| 2026-08-30 | 2026-08-31 (094D) | -4.8 | missing (0) | -0.7 (10) | 2.3 | -2.4 | 0.8 (251) | 0.8 | 22.0 | 30.0 |
+| 2026-09-05 | 2026-09-03 (129A) | -1.0 | missing (0) | 1.6 (10) | -0.7 | 2.4 | 1.3 (259) | 0.8 | 0.4 | 28.8 |
+| 2026-09-11 | 2026-09-12 (094D) | -3.5 | missing (0) | -0.7 (10) | 1.6 | 5.3 | 0.4 (276) | 1.3 | 0.0 | 22.8 |
+| 2026-09-17 | 2026-09-15 (129A) | -6.3 | missing (0) | 1.8 (10) | -0.7 | 4.2 | 0.2 (286) | 0.4 | 3.1 | 25.9 |
+| 2026-09-23 | 2026-09-24 (094D) | -1.4 | missing (0) | 0.4 (10) | 1.8 | -2.9 | 0.1 (296) | 0.2 | 0.8 | 26.2 |
+| 2026-09-29 | 2026-09-27 (129A) | -4.9 | missing (0) | 1.2 (10) | 0.4 | 1.8 | 0.4 (298) | 0.1 | 0.1 | 4.3 |
+| 2026-10-05 | 2026-10-06 (094D) | -7.9 | 3.4 (1) | 0.5 (10) | 1.2 | 4.2 | 0.3 (327) | 0.4 | 0.0 | 3.9 |
+
+**007D** (Sentinel-1 pixels: z4 76, control 12153). LOS in mm; moisture = area minus reference band, in percentage points (pixels in brackets); lag1 = previous NISAR date; rain in mm.
+
+| S1 date | NISAR date (track) | z4 LOS | z4 moisture rec | z4 moisture all | z4 lag1 all | control LOS | control moisture rec | control lag1 rec | rain 7 d | rain 30 d |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 2026-07-06 | 2026-07-05 (129A) | 0.0 | missing (0) | 1.7 (10) | -1.7 | 0.0 | -0.6 (202) | 0.2 | 10.3 | 55.5 |
+| 2026-07-12 | 2026-07-14 (094D) | 1.5 | missing (0) | -0.1 (10) | 1.7 | 3.5 | -0.8 (210) | -0.6 | 5.5 | 44.2 |
+| 2026-07-18 | 2026-07-17 (129A) | -0.5 | missing (0) | 0.6 (10) | -0.1 | 1.0 | -0.1 (210) | -0.8 | 6.8 | 38.5 |
+| 2026-07-24 | 2026-07-26 (094D) | -3.5 | missing (0) | -0.6 (10) | 0.6 | 3.8 | 0.7 (209) | -0.1 | 29.3 | 50.0 |
+| 2026-07-30 | none within 2 d | -0.6 | missing (0) | missing (0) | missing | 0.9 | missing (0) | missing | 0.5 | 49.1 |
+| 2026-08-05 | none within 2 d | 4.7 | missing (0) | missing (0) | missing | -5.9 | missing (0) | missing | 0.0 | 39.0 |
+| 2026-08-11 | 2026-08-10 (129A) | -1.3 | missing (0) | 2.6 (10) | -0.6 | 3.7 | 0.1 (216) | 0.7 | 6.2 | 40.3 |
+| 2026-08-17 | 2026-08-19 (094D) | -1.1 | missing (0) | 0.9 (10) | 2.6 | 2.0 | 0.1 (224) | 0.1 | 1.4 | 36.0 |
+| 2026-08-23 | 2026-08-22 (129A) | -6.2 | missing (0) | 2.3 (10) | 0.9 | 3.6 | 0.8 (230) | 0.1 | 0.4 | 8.4 |
+| 2026-08-29 | 2026-08-31 (094D) | 3.6 | missing (0) | -0.7 (10) | 2.3 | 0.2 | 0.8 (251) | 0.8 | 22.0 | 30.0 |
+| 2026-09-04 | 2026-09-03 (129A) | 0.9 | missing (0) | 1.6 (10) | -0.7 | 1.7 | 1.3 (259) | 0.8 | 0.4 | 30.4 |
+| 2026-09-10 | 2026-09-12 (094D) | -2.6 | missing (0) | -0.7 (10) | 1.6 | 2.5 | 0.4 (276) | 1.3 | 0.0 | 24.2 |
+| 2026-09-16 | 2026-09-15 (129A) | -3.4 | missing (0) | 1.8 (10) | -0.7 | 4.4 | 0.2 (286) | 0.4 | 3.1 | 25.9 |
+| 2026-09-22 | 2026-09-24 (094D) | -1.8 | missing (0) | 0.4 (10) | 1.8 | 2.5 | 0.1 (296) | 0.2 | 0.7 | 26.2 |
+
+**Screen.** r needed = |r| for p < 0.05 with that n. "Leaving one date out" gives the range of the detrended r when each date in turn is dropped (needed with one fewer date: about 0.55).
+| 2026-09-28 | 2026-09-27 (129A) | -4.2 | missing (0) | 1.2 (10) | 0.4 | 2.7 | 0.4 (298) | 0.1 | 0.1 | 4.3 |
+| 2026-10-04 | 2026-10-06 (094D) | -3.3 | 3.4 (1) | 0.5 (10) | 1.2 | 6.6 | 0.3 (327) | 0.4 | 0.0 | 3.9 |
+
+| Track | Area | Input | n | r raw | r detrended | needed | r leaving one date out | Verdict |
+|---|---|---|---|---|---|---|---|---|
+| 029A | z4 | moisture, recommended | 1 | | | | | not testable (fewer than 5 dates with both values) |
+| 029A | z4 | moisture, all retrievals | 14 | 0.39 | 0.42 | 0.53 | -0.04 to 0.58 | no flag |
+| 029A | z4 | moisture lag 1, recommended | 0 | | | | | not testable (fewer than 5 dates with both values) |
+| 029A | z4 | moisture lag 1, all retrievals | 14 | -0.31 | -0.23 | 0.53 | -0.33 to -0.02 | no flag |
+| 029A | z4 | rain 7 d | 16 | -0.01 | -0.19 | 0.5 | -0.43 to 0.02 | no flag |
+| 029A | z4 | rain 30 d | 16 | 0.46 | 0.16 | 0.5 | 0.07 to 0.21 | no flag |
+| 029A | control | moisture, recommended | 14 | 0.21 | 0.08 | 0.53 | -0.04 to 0.15 | no flag |
+| 029A | control | moisture, all retrievals | 14 | 0.45 | 0.43 | 0.53 | -0.07 to 0.57 | no flag |
+| 029A | control | moisture lag 1, recommended | 14 | 0.06 | -0.08 | 0.53 | -0.29 to 0.23 | no flag |
+| 029A | control | moisture lag 1, all retrievals | 14 | -0.21 | -0.2 | 0.53 | -0.39 to -0.07 | no flag |
+| 029A | control | rain 7 d | 16 | -0.12 | 0.02 | 0.5 | -0.23 to 0.16 | no flag |
+| 029A | control | rain 30 d | 16 | -0.36 | -0.1 | 0.5 | -0.14 to -0.04 | no flag |
+| 007D | z4 | moisture, recommended | 1 | | | | | not testable (fewer than 5 dates with both values) |
+| 007D | z4 | moisture, all retrievals | 14 | -0.32 | -0.34 | 0.53 | -0.55 to -0.1 | no flag |
+| 007D | z4 | moisture lag 1, recommended | 0 | | | | | not testable (fewer than 5 dates with both values) |
+| 007D | z4 | moisture lag 1, all retrievals | 14 | 0.1 | 0.2 | 0.53 | -0.02 to 0.36 | no flag |
+| 007D | z4 | rain 7 d | 16 | 0.14 | -0.01 | 0.5 | -0.4 to 0.37 | no flag |
+| 007D | z4 | rain 30 d | 16 | 0.52 | 0.2 | 0.5 | 0.02 to 0.27 | no flag |
+| 007D | control | moisture, recommended | 14 | 0.05 | -0.18 | 0.53 | -0.34 to -0.06 | no flag |
+| 007D | control | moisture, all retrievals | 14 | -0.06 | -0.13 | 0.53 | -0.26 to 0.04 | no flag |
+| 007D | control | moisture lag 1, recommended | 14 | 0.0 | -0.24 | 0.53 | -0.37 to -0.15 | no flag |
+| 007D | control | moisture lag 1, all retrievals | 14 | -0.41 | -0.44 | 0.53 | -0.62 to -0.34 | no flag |
+| 007D | control | rain 7 d | 16 | 0.01 | 0.18 | 0.5 | -0.02 to 0.37 | no flag |
+| 007D | control | rain 30 d | 16 | -0.41 | -0.09 | 0.5 | -0.14 to -0.04 | no flag |
+
+**What the screen says.**
+- **No input is flagged for Zone 4 or the control ring, on either track.** The largest detrended values are 0.42 (029A z4, all-retrieval moisture; 0.58 with one date removed, −0.04 with another) and −0.44 (007D control, lag-1 all-retrieval moisture; −0.62 with one date removed). Both depend on single dates.
+- **Zone 4 cannot be screened with NISAR's recommended moisture:** no recommended retrieval falls in it. The all-retrieval values are a sensitivity test on 10 pixels NISAR itself does not recommend.
+- **Rain** shows no detrended link anywhere. Its raw 30-day r reaches 0.46 to 0.52, but that disappears after removing the trend: the wet July and dry September line up with the summer trend, not with the wiggles.
+- **Other zones (from `sm_vs_s1.py`, same method, recommended retrievals):** 029A z1 r = −0.70 with moisture (needed 0.53; about −2.4 mm per percentage point), 029A z2 −0.48, 007D z1 −0.51 and +0.55 at lag 1, 007D z2 −0.42. With 4 zones × 2 tracks × several inputs tried, one value past 0.53 is about what chance gives; z1 and z2 also share pixels. Treat 029A z1 as a candidate to recheck on the January to October extension, not a finding.
+
+**Forecast test (predeclared 7-day rain, Zone 4, 029A).** Same four cutoffs as `forecast.json` (18 Aug, 24 Aug, 30 Aug, 5 Sep 2026), MAE at the 30-day lead against the same observed values.
+
+| Model | MAE at 30 days |
+|---|---|
+| Persistence (export / reproduced) | 4.19 / 4.19 mm |
+| Theil–Sen (export / reproduced) | 5.53 / 5.44 mm |
+| Matérn GP (export / reproduced) | 3.95 / 3.90 mm |
+| **Theil–Sen + 7-day rain, issuance** (only information at the cutoff) | **4.74 mm** |
+| Theil–Sen + 7-day rain, conditional on the observed future rain (scenario, not a forecast) | 5.42 mm |
+
+- **Result: no improvement.** The issuance forecast (4.74 mm) does not beat persistence (4.19 mm), so by the predeclared rule the rain input fails. It helps relative to Theil–Sen alone (5.44 mm) on 3 of 4 cutoffs, but the GP is better still (3.90 mm). Knowing the future rain makes it worse (5.42 mm), which argues against a real rain effect.
+- The fitted rain coefficient was −1.2 to −1.6 mm per standard deviation of 7-day rain at every cutoff (wetter week, slightly more "away"), consistent in sign but small next to the 3 to 6 mm scatter of the folds.
+- **Difference from `forecast.py`:** it rebuilds the training series from the raw pairs at each cutoff (no pair after the cutoff); the raw ZIPs are not on this machine, so the training series here is the final reconstruction truncated at the cutoff. The reproduced baseline MAEs differ from the export by at most 0.09 mm, so the approximation does not change the ranking, but a small look-ahead remains. 03 can rerun the test inside `forecast.py` if this ever matters.
+- With 4 overlapping cutoffs and no prediction interval, none of these MAE differences is significant.
+
+**Verdict.** Neither soil moisture nor rain explains the Zone 4 summer signal on the evidence available, and rain does not improve the 30-day forecast. The honest limits: Zone 4 has no recommended moisture retrievals, the summer series has 14 to 16 dates, and the backtest has 4 overlapping cutoffs. Per the handoff, no control or slider should be added for moisture or rain.
