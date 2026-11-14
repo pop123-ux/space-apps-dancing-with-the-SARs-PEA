@@ -1,6 +1,7 @@
 ## **Scopul aplicatiei:** 
 
 vizualizarea schimbarilor legate de altitudinea solului in Ocnele Mari - jud. Valcea (loc cu multe alunecari de teren inregistrate din cauza exploatarii a zacamintelor de sare)
+
 Coordonate Ocnele Mari (pt vizualizare pe site uri care cer lat-long coords): 45.08846°, 24.29666°
 
 
@@ -8,9 +9,13 @@ Coordonate Ocnele Mari (pt vizualizare pe site uri care cer lat-long coords): 45
 ## **Ideea de baza:**
 
 Exploatarea depozitelor de sare in zona Ocnelor Mari duce la schimbari ale solului si chiar la alunecari de teren. Acestea sunt observate in zonele:
+
   -Țeica (Socon-Țeica): una dintre zonele cele mai grav afectate de _exploatarea_ sării. Aici s-au produs prăbușiri importante începând cu anul 2001.
+  
   -Câmpul II de sonde – zona în care s-a produs o prăbușire majoră a cavernei subterane în 2001, afectând gospodării și terenuri.
+  
   -Câmpul I de sonde – a prezentat fenomene de instabilitate, inclusiv prăbușirea unei caverne în 2009.
+  
   -Lunca și Ocnița – localități în care anumite terenuri au fost încadrate în zone cu risc asociat exploatării sării.
 
 #### Putem vizualiza aceste schimbari cu ajutorul unor tehnologii:
