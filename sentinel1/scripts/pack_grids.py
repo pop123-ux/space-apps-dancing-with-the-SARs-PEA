@@ -1,11 +1,13 @@
 # Owner: 03 · InSAR analyst (Alexandru, Eric)
 """Split the fitted NPZ grids into Git-sized chunks and write a manifest that ties them to summary.json.
 
-    python scripts/pack_grids.py [ANALYSIS_DIRECTORY]     (default: analysis)
+    python scripts/pack_grids.py                       # analysis/          -> assets/
+    python scripts/pack_grids.py analysis_jan_oct      # analysis_jan_oct/  -> assets_jan_oct/
 
-Run it after every refit, in the same commit as the new summary.json. It rewrites assets/<track>.npz.partNN,
-assets/SHA256SUMS and assets/MANIFEST.json (the dates of each grid and the SHA-256 of the summary.json they belong
-to). restore_grids.py refuses to restore grids whose dates or summary do not match.
+Run it after every refit, in the same commit as the new summary.json. Each analysis folder gets its own assets folder,
+so packing one window never overwrites another. It rewrites <assets>/<track>.npz.partNN, <assets>/SHA256SUMS and
+<assets>/MANIFEST.json (the dates of each grid and the SHA-256 of the summary.json they belong to).
+restore_grids.py refuses to restore grids whose dates or summary do not match.
 """
 import argparse
 import hashlib
@@ -21,9 +23,10 @@ root = Path(__file__).resolve().parents[1]
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('analysis', nargs='?', default='analysis')
-    analysis = root / ap.parse_args().analysis
+    name = ap.parse_args().analysis.strip('/')
+    analysis = root / name
     summary = json.loads((analysis / 'summary.json').read_text())
-    assets = root / 'assets'
+    assets = root / ('assets' if name == 'analysis' else 'assets' + name.removeprefix('analysis'))
     assets.mkdir(exist_ok=True)
     sums, manifest = [], {'summary': str((analysis / 'summary.json').relative_to(root)),
                           'summary_sha256': hashlib.sha256((analysis / 'summary.json').read_bytes()).hexdigest(),

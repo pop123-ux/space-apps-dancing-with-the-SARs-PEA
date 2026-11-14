@@ -1,2 +1,5 @@
 # Owner: shared · announce changes; 01 reviews
 sentinel1/analysis/summary.json -text
+sentinel1/analysis*/summary.json -text
+sentinel1/assets*/MANIFEST.json -text
+sentinel1/assets*/SHA256SUMS -text
