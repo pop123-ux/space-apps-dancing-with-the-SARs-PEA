@@ -347,3 +347,9 @@ body.side-open.side-wide .layers-wrap { right: calc(var(--side-wide) + var(--gap
 .fc-slider input[type="range"] { width: 100%; accent-color: #7C3AED; }
 .fc-slider output { font-size: 14px; }
 .tracks button.held { opacity: .55; cursor: help; font-size: 13px; }
+
+/* NISAR gap filled by Sentinel-1 (15 Nov 2026) */
+.tl .gap.filled { pointer-events: auto; }
+.tl .gap .gap-fill { margin-left: 8px; pointer-events: auto; vertical-align: 1px; border: 1px solid var(--s1); color: var(--s1);
+  background: var(--card); border-radius: 999px; padding: 0 9px; font-size: 12px; line-height: 18px; white-space: nowrap; }
+.tl .gap .gap-fill:hover { background: #F5F3FF; }

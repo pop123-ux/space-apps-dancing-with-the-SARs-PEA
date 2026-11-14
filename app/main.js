@@ -485,8 +485,27 @@ function monthLabels(R) {
 function dotsFor(s, t, R, lane, shown, hollow = false) {
   return datesOf(s, t).map(d => `<span class="dot ${SATS[s].shape === 'tri' ? 'tri' : ''} ${lane}${hollow ? ' hollow' : ''}${d === shown ? ' on' : ''}" style="left:${R.x(d)}%;--c:${SATS[s].color}" title="${esc(sensors()[s].label)} ${d}"></span>`).join('');
 }
+// Sentinel-1's window that covers NISAR's acquisition gap (sensitivity.json windows.<k>.fills_gap), if exported.
+const gapFill = () => Object.entries(S.sens?.windows || {}).find(([, w]) => w.fills_gap?.sensor === 'nisar') || null;
 function gapsFor(s, t, R) {
-  return gapsOf(s, t).map(([a, b]) => `<div class="gap" style="left:${R.x(a)}%;width:${R.x(b) - R.x(a)}%" title="No ${esc(sensors()[s].label)} data from ${a} to ${b}"><span><span class="long">No ${esc(sensors()[s].label)} data · ${human(a, false)} to ${human(b)}</span><span class="short">No data</span></span></div>`).join('');
+  const fill = s === 'nisar' && S.sat === 'nisar' ? gapFill() : null;
+  return gapsOf(s, t).map(([a, b]) => {
+    const covers = fill && fill[1].fills_gap.gap[0] <= b && fill[1].fills_gap.gap[1] >= a;
+    return `<div class="gap${covers ? ' filled' : ''}" style="left:${R.x(a)}%;width:${R.x(b) - R.x(a)}%" title="No ${esc(sensors()[s].label)} data from ${a} to ${b}${covers ? '. Sentinel-1 covers these months.' : ''}"><span><span class="long">No ${esc(sensors()[s].label)} data · ${human(a, false)} to ${human(b)}</span><span class="short">No data</span></span>${covers ? `<button type="button" class="gap-fill" data-fill="${esc(a)}|${esc(b)}">Sentinel-1 covers this →</button>` : ''}</div>`;
+  }).join('');
+}
+// Show the gap months with Sentinel-1: same direction of flight, its January to October window, a date mid-gap.
+function fillGap(a, b) {
+  const fill = gapFill(); if (!fill) return;
+  const [k, w] = fill;
+  const dir = dirOf('nisar', S.track.nisar);
+  stopPlay(); S.sat = 's1'; S.window = k; S.note = null;
+  S.track.s1 = tracksOf('s1').find(t => dirOf('s1', t) === dir) || S.track.s1;
+  const ds = w.frames[S.track.s1]?.dates || [];
+  const mid = (day(a) + day(b)) / 2;
+  S.date = ds.reduce((best, d) => Math.abs(day(d) - mid) < Math.abs(day(best) - mid) ? d : best, ds[0]); S.dateUser = true;
+  if (!viewAllowed(S.view)) S.view = 'change';
+  changed();
 }
 function renderTimeline() {
   const tl = $('#tl'); const R = axisRange(); const w = S.man.common_window; const cmp = S.sat === 'compare';
@@ -497,6 +516,10 @@ function renderTimeline() {
   for (const s of sideSats()) html.push(dotsFor(s, S.track[s], R, cmp ? (s === 'nisar' ? 'lane-a' : 'lane-b') : '', cmp ? layerFor(s)?.date : S.date, !measured(s)));
   if (cmp && w) html.push(`<div class="shade" style="left:0;width:${R.x(w[0])}%"></div><div class="shade" style="left:${R.x(w[1])}%;right:0"></div>`);
   tl.innerHTML = html.join('');
+  tl.querySelectorAll('[data-fill]').forEach(b => {
+    b.addEventListener('pointerdown', (e) => e.stopPropagation());
+    b.addEventListener('click', (e) => { e.stopPropagation(); const [a, c] = b.dataset.fill.split('|'); fillGap(a, c); });
+  });
   const ds = sliderDates();
   tl.setAttribute('aria-valuemin', '1'); tl.setAttribute('aria-valuemax', String(Math.max(1, ds.length)));
   tl.setAttribute('aria-valuenow', String(Math.max(1, ds.indexOf(S.date) + 1)));
@@ -922,13 +945,27 @@ function stationSheet(id) {
 function zoneSheet(id) {
   const z = S.series.find(p => p.id === id); if (!z) return null;
   const sats = sideSats().filter(measured);
-  let html = `<h2>${esc(zoneName(z))}</h2><div class="kicker">Salt zone · ${esc(z.lat)}° N, ${esc(z.lon)}° E${win() ? ` · ${esc(win().label)}` : ''}</div>`;
+  let html = `<h2>${esc(zoneName(z))}</h2><div class="kicker">Salt zone · ${esc(z.lat)}° N, ${esc(z.lon)}° E${win() && S.sat === 's1' ? ` · ${esc(win().label)}` : ''}</div>`;
   if (!sats.length) return html + `<div class="verdict na">${esc(pendingText(S.sat))}</div>`;
   const facts = S.sat === 'compare' ? sats.map(s => factRow(z, s, S.track[s])).join('') : tracksOf(S.sat).map(t => factRow(z, S.sat, t)).join('');
   html += `${notesBox(z, S.sat === 'compare' ? sats : [S.sat], true)}<div class="facts">${facts}</div>${choicesPanel()}`;
   const lines = sats.map(s => lineOf(z, s, S.track[s])).filter(Boolean);
   const ctl = control();
   if (ctl) for (const s of sats) { const l = lineOf(ctl, s, S.track[s], { dash: true, color: '#A8A29E', label: cleanLabel(ctl.label) }); if (l) lines.push(l); }
+  // NISAR has no acquisitions from 18 Jan to 23 Jun 2026: Sentinel-1's January to October series fills those months,
+  // in its own line of sight and reference (never spliced onto the NISAR line).
+  const fill = S.sat === 'nisar' ? gapFill() : null;
+  let fillNote = '';
+  if (fill) {
+    const st = tracksOf('s1').find(t => dirOf('s1', t) === dirOf('nisar', S.track.nisar));
+    const e = st && fill[1].variants?.[st]?.baseline?.[z.id];
+    if (e) {
+      lines.push({ label: `Sentinel-1 ${st}, ${fill[1].label} (fills NISAR's gap)`, color: SATS.s1.color, shape: SATS.s1.shape,
+        dates: e.dates, mm: e.mm, gaps: [], n: e.n_pixels, dash: false });
+      fillNote = `<p class="reason">The purple line is Sentinel-1 ${esc(st)}, which kept imaging the town while NISAR had no acquisitions. It is in Sentinel-1's own line of sight and reference, so read its shape, not its offset from the NISAR line.</p>`;
+    } else if (st) fillNote = `<p class="reason">Sentinel-1 ${esc(st)} has no continuous January to October series in this zone, so NISAR's gap stays empty here.</p>`;
+  }
+  html += fillNote;
   html += block(`d-${z.id}`, 'Change over time, mm', '', lines, { foot: lines.filter(l => !l.dash).map(l => `${l.label}: ${l.n ?? 'n/a'} pixels`).join(' · ') });
   if (scenarios() && S.sat === 's1') {
     const rows = Object.entries(scenarios()).map(([k, l]) => `<tr${k === S.scenario ? ' class="here"' : ''}><td>${esc(l)}</td>${tracksOf('s1').map(t => { const e = entry(z, 's1', t, k); return `<td>${e ? `${fmt(e.fitted_change_mm, 1)} mm · ${e.n_pixels} px` : '<span class="sub">no series</span>'}</td>`; }).join('')}</tr>`).join('');

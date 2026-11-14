@@ -4,7 +4,7 @@
  "story": "TODO(01): one sentence, written by the Lead",
  "synthetic": false,
  "note": "Sentinel-1 measurements (Jul to Oct 2026) and NISAR measurements (129A).",
- "built": "2026-11-14T17:20:09+00:00",
+ "built": "2026-11-14T17:27:57+00:00",
  "bounds": [
   [
    45.016685,
@@ -292,7 +292,8 @@
   "reason": "Compare waits for both NISAR tracks to pass T3 and a shared window and reference (O-19); NISAR 094D is under review."
  },
  "windows": {
-  "jul_oct": "July to October 2026"
+  "jul_oct": "July to October 2026",
+  "jan_oct": "January to October 2026"
  },
  "default_window": "jul_oct",
  "checks": {
