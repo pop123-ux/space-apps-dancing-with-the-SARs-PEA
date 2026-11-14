@@ -78,6 +78,7 @@ Every file in this repository has an owner role, 01 to 06, or is shared. The own
 | `tests/test_sentinel1_fit.py` | shared · announce changes; 01 reviews | Checks the Sentinel-1 solver and rate estimators, gaps included |
 | `requirements.txt` | shared · announce changes; 01 reviews | Python packages; each owner adds what their script needs |
 | `.gitignore` | shared · announce changes; 01 reviews | Keeps data and secrets out of git |
+| `.gitattributes` | shared · announce changes; 01 reviews | Preserves exact bytes for checksum-tracked files |
 | `.env.example` | shared · announce changes; 01 reviews | Template for the Earthdata token; the real .env is never committed |
 | `.github/workflows/tests.yml` | shared · announce changes; 01 reviews | Runs pytest on every push |
 | `.github/pull_request_template.md` | shared · announce changes; 01 reviews | The checklist on every PR |
