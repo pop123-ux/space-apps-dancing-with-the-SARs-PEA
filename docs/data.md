@@ -44,7 +44,7 @@ All 22 are in [../data/scenes/ocnele_mari_gunw.csv](../data/scenes/ocnele_mari_g
 | Reference | What it gives | Covers our NISAR months? | Use | Owner |
 | --- | --- | --- | --- | --- |
 | EuVeM2022 (Lantmäteriet) | 3D velocity grid, 0.1°, from the EPN densification, Oct 2008 to Mar 2021 | As a rate | The tie | 04 |
-| EGMS GNSS model | East, north and up on a 50 km grid from about 3,770 stations | As a rate | Second tie (O-06; CSV link still to be found) | 04 |
+| EGMS GNSS model | East, north and up on a 50 km grid from about 3,770 stations | As a rate | Second tie (O-06). A-EPND 2023, ETRF2000, columns N before E; link in `CITATIONS.md` (found 14 Nov 2026) | 04 |
 | NGL MIDAS (`midas.EU.txt`) | Eurasia-fixed station rates; VLC1 to 2018, HORE to 2020 | As a rate | Held-out stations | 04, 05 |
 | NGL daily series (tenv3, IGS20) | Daily positions; URL pattern verified 14 Nov (STOL) | Some stations | Screening, plots | 05 |
 | Muntean et al. 2026 | Published rates at ROMPOS stations VLC2 (7 km) and HORE (24 km); verticals still to be read from Table S3 | As a rate, to 2025 | Held-out check close to the town | 04 |
