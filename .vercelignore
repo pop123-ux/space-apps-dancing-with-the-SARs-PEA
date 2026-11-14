@@ -1,0 +1,18 @@
+# Owner: 06 · App developer (Darius)
+# Not served by the page: pipeline code, raw grids and intermediates. The page reads index.html, app/ and products/,
+# and links some docs (docs/, sentinel1/docs/, sentinel1/analysis/README.md), which stay.
+data/work
+data/raw
+sentinel1/assets
+sentinel1/assets_jan_oct
+sentinel1/provenance
+notebooks
+tests
+prompts
+logs
+__pycache__
+*.py
+*.npz
+*.h5
+.env
+.netrc
