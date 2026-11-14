@@ -31,14 +31,21 @@ The checks (DRAFT thresholds from the advisor kit; 05 owns them):
 
 Choices made in this draft (05 to confirm):
 - Check 1 runs on every fitted track, exported or not (094D is held off the page because of this check).
-- Check 2 compares only tracks on the page; σ_NISAR is the robust scatter of the pixels around the station divided by
-  √n (a lower bound), σ_GNSS the published LOS-projected error.
-- Check 8 reports warn, not pass, when its tolerance is wider than S1_TOL_DECISIVE (20 mm/yr): a check that cannot
-  fail is not evidence.
-- Check 2's σ_NISAR (scatter / √n) treats neighbouring pixels as independent; they are not, so the tolerance is too
-  tight and a fail there may be the tolerance, not the station or the radar.
-- Check 8 needs one shared quantity; O-19 is open, so it scales NISAR into Sentinel-1's line of sight assuming vertical
-  motion only, and says so. It reports, it does not tune.
+- Check 1 also reports each zone against ground at the same height (±30 m) within 3 km, when the track has dem.npz.
+  On 094D the far stable ground sits 100 m above the zones and the valley floor reads +15 to +25 mm/yr at every height
+  below 300 m, so a far reference measures the valley, not the zones (docs/validation-log.md, 14 Nov 21:45). The
+  pass/fail rule is unchanged; the height-matched numbers are reported beside it.
+- Check 2 compares only tracks on the page; σ_GNSS is the published LOS-projected error. σ_NISAR is the robust spread
+  of 7 × 7 box medians sampled over the tie pixels: what one station-sized box scatters by against the frame. The old
+  σ (box scatter / √n) treated neighbouring pixels as independent and came out about ten times too small (2.7 against
+  about 26 mm/yr on 129A), because the noise is correlated over kilometres.
+- Checks 2 and 8 report warn, not pass or fail, when their tolerance is wider than TOL_DECISIVE (20 mm/yr): a check
+  that cannot fail is not evidence, and a "fail" inside noise that large is not evidence either way.
+- Check 8 pairs tracks by look geometry, not by direction (O-19 proposal, 14 Nov 21:45): NISAR looks left and
+  Sentinel-1 right, so NISAR 129A (ascending, east +0.62) sees east-west motion like Sentinel-1 007D (descending,
+  east +0.64), not like 029A (east -0.64). With EGMS zone east rates of -4.1 to +4.9 mm/yr, pairing by direction put
+  -5 to +6 mm/yr of geometry into the difference; pairing by geometry leaves under 0.1 mm/yr. NISAR is still scaled
+  into Sentinel-1's line of sight by the ratio of the up components, which is now nearly exact.
 """
 from __future__ import annotations
 
@@ -54,7 +61,13 @@ TIE_MAX = 6.0            # mm/yr, check 3
 EGMS_MAX = 1.5           # mm/yr, check 6
 STATION_R_PX = 3         # pixels around a station (7 × 7 at 80 m)
 S1_MIN_PX = 10           # pixels a zone needs on each satellite, check 8
-S1_TOL_DECISIVE = 20.0   # mm/yr: a wider tolerance cannot fail, so check 8 reports warn instead of pass (draft choice)
+TOL_DECISIVE = 20.0      # mm/yr: a wider tolerance cannot decide, so checks 2 and 8 report warn (draft choice)
+S1_TOL_DECISIVE = TOL_DECISIVE
+SAME_HEIGHT_M, LOCAL_BOX_PX = 30.0, 38   # check 1: same-height ground within ±30 m, in a box ±3 km around the zone
+# Sentinel-1 track with the same east sensitivity as each NISAR track (left vs right looking), and its look vector:
+# medians of the e and u grids in sentinel1/analysis/<track>.npz (14 Nov 2026). The north component is not in the S1 fit.
+S1_PAIR = {"129A": "007D", "094D": "029A"}
+S1_LOOK = {"029A": dict(e=-0.636, u=0.764), "007D": dict(e=0.640, u=0.760)}
 ZONES = ("z1", "z2", "z3", "z4")
 
 
@@ -109,11 +122,39 @@ def check_sign(site, add):
         m = zone_masks(site, meta)
         v = np.concatenate([ts["vel"][m[z] & np.isfinite(ts["vel"])] for z in ZONES])
         r = float(np.median(v))
+        local = same_height(site, t, ts["vel"], m)
         add(f"sign-{t}", "pass" if r < SIGN_MAX else "fail", f"Salt zones sink on NISAR {t}",
             f"Median line-of-sight rate over the zone pixels: {r:+.1f} mm/yr from {v.size} pixels "
             f"(needs < {SIGN_MAX:+.0f}; phase sign {int(ts['phase_sign']):+d}). "
-            + ("" if r < SIGN_MAX else "Not a global sign error: see notebooks/03/t3_094d_checks.json; the track is held off the page."),
-            round(r, 2))
+            + ("" if r < SIGN_MAX else "Not a global sign error: see notebooks/03/t3_094d_checks.json; the track is held off the page. ")
+            + local, round(r, 2))
+
+
+def same_height(site, track, vel, masks) -> str:
+    """Each zone's median minus ground at the same height (±SAME_HEIGHT_M) within ±3 km, zones excluded."""
+    import numpy as np
+    f = C.WORK / site / track / "dem.npz"
+    if not f.exists():
+        return "No dem.npz for this track: the height-matched reading is not available."
+    h = np.load(f)["height"]
+    anyzone = np.zeros(vel.shape, bool)
+    for z in ZONES:
+        anyzone |= masks[z]
+    out = []
+    for z in ZONES:
+        zm = masks[z] & np.isfinite(vel)
+        if not zm.any():
+            continue
+        ii, jj = np.nonzero(masks[z])
+        box = np.zeros(vel.shape, bool)
+        box[max(ii.min() - LOCAL_BOX_PX, 0):ii.max() + LOCAL_BOX_PX + 1,
+            max(jj.min() - LOCAL_BOX_PX, 0):jj.max() + LOCAL_BOX_PX + 1] = True
+        zh = float(np.nanmedian(h[masks[z]]))
+        ref = box & ~anyzone & np.isfinite(vel) & (np.abs(h - zh) <= SAME_HEIGHT_M)
+        if ref.sum() < 100:
+            continue
+        out.append(f"{z} {float(np.median(vel[zm]) - np.median(vel[ref])):+.1f}")
+    return ("Against ground at the same height within 3 km (mm/yr): " + ", ".join(out) + ".") if out else ""
 
 
 def read_stations(site):
@@ -131,16 +172,18 @@ def read_stations(site):
 def check_stations(site, add):
     import numpy as np
     tracks = [t for t in on_page(site) if t in fitted_tracks(site)]
-    feats = []
+    feats, box_sig = [], {}
     s = C.SITES[site]
     for r in read_stations(site):
         lat, lon = float(r["lat"]), float(r["lon"])
         ve, vn, vu, se, sn, su = (float(r[k]) for k in ("ve", "vn", "vu", "se", "sn", "su"))
-        per, agree_all, reasons = {}, [], []
+        per, agree_all, reasons, decisive = {}, [], [], []
         for t in tracks:
             meta, ts, geom, cal = load(site, t)
             if cal is None:
                 continue
+            if t not in box_sig:
+                box_sig[t] = box_sigma(cal)
             v, sig, n = pick(meta, cal["vel_cal"], lon, lat, STATION_R_PX)
             e, nn, u = (pick(meta, geom[k], lon, lat, 0)[0] for k in ("los_e", "los_n", "los_u"))
             if not n or not np.isfinite(e):
@@ -148,11 +191,12 @@ def check_stations(site, add):
                 continue
             g = C.enu_to_los(e, nn, u, ve, vn, vu)
             sg = math.sqrt((e * se) ** 2 + (nn * sn) ** 2 + (u * su) ** 2)
-            sn_ = sig / math.sqrt(n)
+            sn_ = box_sig[t] if math.isfinite(box_sig[t]) else sig / math.sqrt(n)
             tol = max(C.TOL_FLOOR, 2 * math.sqrt(sn_ ** 2 + sg ** 2))
             ok = abs(v - g) <= tol
             per[f"nisar:{t}"] = dict(nisar=round(v, 2), gnss=round(g, 2), diff=round(v - g, 2), tol=round(tol, 1), n_px=n)
             agree_all.append(ok)
+            decisive.append(tol <= TOL_DECISIVE)
             reasons.append(f"{t}: NISAR {v:+.1f} vs GNSS {g:+.1f} mm/yr (±{tol:.1f}, {n} px)")
         agree = None if not agree_all else all(agree_all)
         dist = C.haversine_km(s["lat"], s["lon"], lat, lon)
@@ -161,12 +205,30 @@ def check_stations(site, add):
                           properties=dict(station=r["station"], source=r["source"], dist_km=round(dist, 1),
                                           tracks=per, agree=agree, reason="; ".join(reasons) or "No NISAR track on the page",
                                           nisar_up=None, gnss_up=vu, t_end=str(r["t_end"])[:4] if old else None)))
-        st = "info" if agree is None else ("pass" if agree else "fail")
+        st = "info" if agree is None else ("warn" if not all(decisive) else "pass" if agree else "fail")
         add(f"station-{r['station']}", st, f"Held-out station {r['station']} against NISAR",
-            ("; ".join(reasons) or "No NISAR track on the page") + (f". The GNSS series ends in {str(r['t_end'])[:4]}: "
-                                                                     "it assumes steady motion since." if old else "")
+            ("; ".join(reasons) or "No NISAR track on the page")
+            + (f". The tolerance is wider than {TOL_DECISIVE:.0f} mm/yr (a station-sized box of NISAR scatters by that "
+               "much on stable ground), so this neither confirms nor rejects the tie" if st == "warn" else "")
+            + (f". The GNSS series ends in {str(r['t_end'])[:4]}: it assumes steady motion since." if old else "")
             + f" Source: {r['source']}.", None if not per else round(max(abs(p['diff']) for p in per.values()), 2))
     C.save_json(C.PRODUCTS / site / "stations.geojson", dict(type="FeatureCollection", features=feats))
+
+
+def box_sigma(cal, r_px: int = STATION_R_PX, step: int = 9) -> float:
+    """Robust spread of (2r+1)² box medians over the tie pixels, on a regular sample: σ of one station-sized box."""
+    import numpy as np
+    v, tie = cal["vel_cal"], cal["tie"].astype(bool) & np.isfinite(cal["vel_cal"])
+    meds = []
+    for i in range(r_px, v.shape[0] - r_px, step):
+        for j in range(r_px, v.shape[1] - r_px, step):
+            b = v[i - r_px:i + r_px + 1, j - r_px:j + r_px + 1][tie[i - r_px:i + r_px + 1, j - r_px:j + r_px + 1]]
+            if b.size >= (2 * r_px + 1) ** 2 // 2:
+                meds.append(np.median(b))
+    if len(meds) < 50:
+        return math.nan
+    m = np.asarray(meds)
+    return float(1.4826 * np.median(np.abs(m - np.median(m))))
 
 
 def check_tie(site, add):
@@ -229,11 +291,9 @@ def check_sentinel1(site, add):
     import numpy as np
     series = C.load_json(C.PRODUCTS / site / "series.json")
     w0, w1 = C.COMMON_WINDOW
-    pairs = {"129A": "029A", "094D": "007D"}
-    ftc = C.load_json(C.PRODUCTS / site / "forecast.json") if (C.PRODUCTS / site / "forecast.json").exists() else {}
-    u_s1 = (ftc.get("long_term") or {}).get("look_u")
     for t in on_page(site):
-        s1t = pairs[t]
+        s1t = S1_PAIR[t]
+        u_s1 = S1_LOOK[s1t]["u"]
         meta, ts, geom, cal = load(site, t)
         masks = zone_masks(site, meta)
         ctl = next(p for p in series if p["id"] == "outer_control")
@@ -266,8 +326,8 @@ def check_sentinel1(site, add):
             status = "fail" if abs(diff) > tol else ("pass" if tol <= S1_TOL_DECISIVE else "warn")
             same = (rn < 0) == (rs < 0)
             add(f"agree-z{num}-{t}", status, f"Zone {num}: NISAR {t} against Sentinel-1 {s1t}",
-                f"Zone minus outer comparison area, {w0} to {w1}: NISAR {rn * k:+.1f} (scaled ×{k:.2f}, vertical motion "
-                f"assumed; O-19 open) against Sentinel-1 {rs:+.1f} mm/yr; difference {diff:+.1f}, tolerance ±{tol:.1f} "
+                f"Zone minus outer comparison area, {w0} to {w1}: NISAR {rn * k:+.1f} (scaled ×{k:.2f}; tracks paired by "
+                f"east sensitivity, so east-west motion cancels) against Sentinel-1 {rs:+.1f} mm/yr; difference {diff:+.1f}, tolerance ±{tol:.1f} "
                 f"(2σ, dates assumed independent: a lower bound); {nn} and {ns} dates, {a['n_pixels']} and {b['n_pixels']} px. "
                 + (f"The tolerance is wider than {S1_TOL_DECISIVE:.0f} mm/yr, so agreeing is not evidence; "
                    if status == "warn" else "")
