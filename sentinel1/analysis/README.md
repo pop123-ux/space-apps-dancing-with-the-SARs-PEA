@@ -19,3 +19,7 @@ Linear slopes and Theil–Sen robust slopes are fitted to per-date zone medians.
 
 ## UI contract
 Publish each track independently with dates, units, sign, reference, coverage, and masked values. Plot zone histories from summary.json and show observation-window mm by default. Label mm/yr as an annualized short-window slope. The linear slope times the duration is a fitted change, not the measured endpoint difference. Use explicit no-data states (especially zone 3 on 029A). Show the outer reference comparison alongside zone histories. Keep derived vertical/east rates experimental until the reference and atmosphere sensitivities are resolved.
+
+## Weather-model scenario (14 Nov 2026)
+
+`summary.json` has a sixth scenario, `weather_model`: each interferogram minus the differential slant delay from ECMWF IFS pressure-level profiles at the acquisition hour (`scripts/tropo.py`, stored in `tropo.json`), evaluated at every pixel's DEM height. The five earlier scenarios are unchanged. Reproduce with `python scripts/fit.py RAW OUT --tropo analysis/tropo.json`; `fit.py` reads products with GDAL bindings or, without them, with rasterio (verified identical).

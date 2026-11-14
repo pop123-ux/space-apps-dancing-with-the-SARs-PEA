@@ -1,0 +1,21 @@
+{
+  "zone_1": {
+    "matched_pixels": 0
+  },
+  "zone_2": {
+    "matched_pixels": 0
+  },
+  "zone_3": {
+    "matched_pixels": 0
+  },
+  "zone_4": {
+    "matched_pixels": 0
+  },
+  "outer_control": {
+    "matched_pixels": 3445,
+    "asc_mm_yr": 25.73810730390699,
+    "desc_mm_yr": 21.672250107437428,
+    "up_mm_yr": 30.988007681463554,
+    "east_mm_yr": -3.5708920022471844
+  }
+}

@@ -83,7 +83,7 @@ def rain_by_date(path):
     return {date.fromisoformat(r['date']): float(r['rain7_mm']) for r in rows if r['rain7_mm']}
 
 
-def observations(raw):
+def observations(raw, tropo=None):
     geo = geometry()
     zone, ref = geo['masks'][3], geo['refs'][0]
     pairs, look = [], None
@@ -101,6 +101,10 @@ def observations(raw):
             raise ValueError(f'{path.name}: no valid reference')
         valid &= p['comp'] == labels[np.argmax(counts)]
         d = p['phase'] * FACTOR
+        if tropo is not None:   # weather_model scenario, as in fit.py
+            h = np.array(tropo['heights_m']); z = tropo['tracks']['029A']
+            dz = np.interp(p['dem'], h, z[b.strftime('%Y%m%d')]) - np.interp(p['dem'], h, z[a.strftime('%Y%m%d')])
+            d = d + dz / np.sin(p['theta'])
         d -= np.median(d[ref & valid])
         pairs.append((a,b,np.where(valid[zone],d[zone],np.nan),
                       np.where(valid[zone],p['coh'][zone]**2,0.)))
@@ -119,8 +123,8 @@ def invert(pairs, dates):
                  np.zeros(len(dates), dtype=int))
 
 
-def build(raw, as_of, end_date=None, rain_csv=None):
-    pairs, (e, u) = observations(raw)
+def build(raw, as_of, end_date=None, rain_csv=None, tropo=None):
+    pairs, (e, u) = observations(raw, tropo)
     lt_rate = e * EGMS_Z4['east'] + u * EGMS_Z4['up']   # north ignored (EGMS Ortho has none)
     rain = rain_by_date(rain_csv) if rain_csv else None
     rain_scores = {'issuance': [], 'conditional': []}
@@ -152,6 +156,7 @@ def build(raw, as_of, end_date=None, rain_csv=None):
             rain_scores['conditional'].append(abs(truth[-1] - float(cond[-1])))
             extra = dict(rain7_beta_mm_per_sd=beta, rain7_issuance_mm=iss.tolist(), rain7_conditional_mm=cond.tolist())
         folds.append(dict(origin=origin.isoformat(), lead_days=ahead, **extra,
+                          train_days=t.tolist(), train_mm=(y - y[-1]).tolist(),
                           training_pixels=int(train_pixels.sum()), scoring_pixels=int(score_pixels.sum()),
                           observed_mm=truth.tolist(), predicted_mm={k:v.tolist() for k,v in preds.items()}))
     if not folds:
@@ -172,7 +177,7 @@ def build(raw, as_of, end_date=None, rain_csv=None):
         raise ValueError('Forecast end date must follow the last acquisition')
     ahead = np.array([*range(6, horizon, 6), horizon])
     pred = forecasts(t,hist,ahead,lt_rate)
-    return dict(zone='z4', track='029A', sensor='s1', window='jul_oct', scenario='baseline',
+    return dict(zone='z4', track='029A', sensor='s1', window='jul_oct', scenario='baseline' if tropo is None else 'weather_model',
                 last_observation=last.isoformat(), end_date=end.isoformat(), as_of=as_of.isoformat(),
                 status='retrospective' if end<=as_of else 'experimental',
                 horizon_days=horizon, backtest_horizon_days=HORIZON, connected_pixels=int(keep.sum()), model=candidate,
@@ -204,5 +209,6 @@ if __name__=='__main__':
     parser.add_argument('--as-of',type=date.fromisoformat,required=True)
     parser.add_argument('--end-date',type=date.fromisoformat)
     parser.add_argument('--rain-csv',type=Path,help='notebooks/05/z4_screen_inputs.csv (05)')
+    parser.add_argument('--tropo',type=Path,help='tropo.json: forecast the weather_model scenario instead of baseline')
     args=parser.parse_args()
-    args.output.write_text(json.dumps(build(args.raw,args.as_of,args.end_date,args.rain_csv),indent=2,allow_nan=False)+'\n')
+    args.output.write_text(json.dumps(build(args.raw,args.as_of,args.end_date,args.rain_csv,json.loads(args.tropo.read_text()) if args.tropo else None),indent=2,allow_nan=False)+'\n')
