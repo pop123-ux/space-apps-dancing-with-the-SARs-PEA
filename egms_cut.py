@@ -66,6 +66,57 @@ def zone_masks(df, site: dict):
     return masks
 
 
+def dist_m(df, lat: float, lon: float):
+    """Distance in metres from (lat, lon) to every cell (equirectangular; fine inside a 50 km window)."""
+    import numpy as np
+    return 111_320 * np.hypot(df.lat - lat, (df.lon - lon) * np.cos(np.radians(lat))).to_numpy()
+
+
+def station_positions(site_name: str) -> dict:
+    """Station (lat, lon): refs/stations.csv when 04 has written it, else common.PUBLISHED (VLC1 shares VLC2's spot)."""
+    import csv
+    p = C.WORK / site_name / "refs" / "stations.csv"
+    if p.exists():
+        with open(p, encoding="utf-8") as f:
+            return {r["station"]: (float(r["lat"]), float(r["lon"])) for r in csv.DictReader(f)}
+    pos = {k: (v[0], v[1]) for k, v in C.PUBLISHED.items()}
+    pos.setdefault("VLC1", pos.get("VLC2"))
+    return pos
+
+
+def stable_ground(up, site: dict, site_name: str) -> dict:
+    """Does EGMS agree that the ground the tie assumes stable is stable? Two areas from docs/build-spec.md:
+    tie area = outside the zones plus C.EXCLUDE_KM and more than C.STATION_HOLDOUT_M from any station;
+    check-6 set = EGMS points with |v| < 1.5 mm/yr outside the zones plus 500 m."""
+    import numpy as np
+    zone_d = np.min([dist_m(up, z["lat"], z["lon"]) - z["r_m"] for z in site["zones"]], axis=0)
+    st_d = np.min([dist_m(up, la, lo) for la, lo in station_positions(site_name).values()], axis=0)
+    tie = (zone_d > C.EXCLUDE_KM * 1000) & (st_d > C.STATION_HOLDOUT_M)
+    v = up.mean_velocity.to_numpy()
+
+    def describe(m):
+        x = v[m]
+        med = float(np.median(x))
+        return dict(points=int(m.sum()), median=round(med, 2), p05=round(float(np.percentile(x, 5)), 2),
+                    p95=round(float(np.percentile(x, 95)), 2),
+                    robust_scatter=round(float(1.4826 * np.median(np.abs(x - med))), 2),
+                    share_abs_below_1_5=round(float(np.mean(np.abs(x) < 1.5)), 3),
+                    share_below_minus_5=round(float(np.mean(x <= -5)), 4))
+
+    # where the "stable" tie area is not stable: 1 km squares with at least 3 cells sinking 5 mm/yr or faster
+    moving = up[tie & (v <= -5)]
+    sq = moving.assign(kx=(moving.dx_km // 1).astype(int), ky=(moving.dy_km // 1).astype(int))
+    g = sq.groupby(["kx", "ky"]).agg(cells=("mean_velocity", "size"), median=("mean_velocity", "median"),
+                                     lat=("lat", "mean"), lon=("lon", "mean"))
+    g = g[g.cells >= 3].sort_values("cells", ascending=False).head(10)
+    patches = [dict(lat=round(r.lat, 4), lon=round(r.lon, 4), cells=int(r.cells), median=round(float(r.median), 1),
+                    km_from_centre=round(C.haversine_km(site["lat"], site["lon"], r.lat, r.lon), 1))
+               for r in g.itertuples()]
+    check6 = (np.abs(v) < 1.5) & (zone_d > 500)
+    return dict(tie_area=describe(tie), check6_set=describe(check6), moving_patches_in_tie_area=patches,
+                stations=sorted(station_positions(site_name))), tie
+
+
 def series(df, mask):
     import pandas as pd
     cols = [c for c in df.columns if c.isdigit() and len(c) == 8]
@@ -110,6 +161,7 @@ def main():
                         f"{dates[-1][:4]}-{dates[-1][4:6]}-{dates[-1][6:]}"],
                 epochs=len(dates), window_half_km=site["half_km"], points=int(len(up)),
                 units="mm/yr; up positive (sinking negative), east positive", zones=zones)
+    meta["stable_ground"], tie = stable_ground(up, site, a.site)
     C.save_json(refs / "egms_meta.json", meta)
 
     figs = C.DOCS / "figures"
@@ -139,11 +191,42 @@ def main():
     ax.legend(fontsize=8)
     fig.savefig(figs / "05_egms_zone_history.png", dpi=110)
 
+    # the tie area as EGMS sees it: grey = within ±1.5 mm/yr, coloured = moving
+    sg = meta["stable_ground"]
+    t = up[tie]
+    still = t[t.mean_velocity.abs() < 1.5]
+    moves = t[t.mean_velocity.abs() >= 1.5]
+    fig, ax = plt.subplots(figsize=(8, 7.5), constrained_layout=True)
+    ax.scatter(still.dx_km, still.dy_km, s=1, c="#c8c8c8", label=f"|v| < 1.5 mm/yr ({len(still)})")
+    sc = ax.scatter(moves.dx_km, moves.dy_km, s=3, c=moves.mean_velocity, cmap="RdBu", vmin=-10, vmax=10,
+                    label=f"|v| ≥ 1.5 mm/yr ({len(moves)})")
+    for p in sg["moving_patches_in_tie_area"][:5]:
+        x = (p["lon"] - site["lon"]) * 111.32 * np.cos(np.radians(site["lat"]))
+        y = (p["lat"] - site["lat"]) * 111.32
+        ax.add_patch(plt.Rectangle((x - 0.6, y - 0.6), 1.2, 1.2, fill=False, lw=1.2))
+        ax.annotate(f"{p['median']}", (x, y), xytext=(8, 8), textcoords="offset points", fontsize=8)
+    ax.set_aspect("equal")
+    ax.set_xlabel("km east of the window centre")
+    ax.set_ylabel("km north")
+    ax.set_title(f"EGMS Up on the tie area (zones + {C.EXCLUDE_KM:g} km and stations excluded): "
+                 f"median {sg['tie_area']['median']} mm/yr", fontsize=10)
+    ax.legend(loc="lower left", fontsize=8, markerscale=4)
+    fig.colorbar(sc, label="mm/yr (red = sinking)")
+    fig.savefig(figs / "05_egms_stable_ground.png", dpi=100)
+
     print(f"egms: {len(up)} points in the {2 * site['half_km']} km window, {meta['period'][0]} to {meta['period'][1]}, "
           f"{len(dates)} epochs → {refs / 'egms_up.csv'}")
     for zid, z in zones.items():
         print(f"  {zid:6s} up {z['up']['v_median']} mm/yr (min {z['up']['v_min']}, {z['up']['cells']} cells, "
               f"{z['up']['cumulative_mm']} mm total)   east {z['east']['v_median']} mm/yr")
+    for k in ("tie_area", "check6_set"):
+        s = sg[k]
+        print(f"  {k:10s} {s['points']} points: median {s['median']} mm/yr, robust scatter {s['robust_scatter']}, "
+              f"5-95 % {s['p05']} to {s['p95']}, |v|<1.5: {100 * s['share_abs_below_1_5']:.0f} %, "
+              f"≤ −5: {100 * s['share_below_minus_5']:.1f} %")
+    for p in sg["moving_patches_in_tie_area"]:
+        print(f"    moving patch in tie area: {p['lat']} N {p['lon']} E, {p['km_from_centre']} km out, "
+              f"{p['cells']} cells, median {p['median']} mm/yr")
 
 
 if __name__ == "__main__":

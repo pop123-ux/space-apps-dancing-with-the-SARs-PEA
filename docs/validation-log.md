@@ -45,6 +45,21 @@ What EGMS shows per zone (`common.py` zones, cells whose centre is inside the ci
 - z1, z2 and z4 hold only 2 to 10 cells each, so their medians are fragile. Several fast cells lie between z3 and z1 and just north of z1, outside every zone circle: 01 and 03 may want to check the zone positions against this map.
 - What this cannot tell us: anything after 2025-11, motion inside 100 m cells, or north–south motion (the Ortho split assumes none). The cell uncertainties EGMS reports (0.0 to 0.1 mm/yr) are rounded and understate the real error.
 
+### EGMS on the stable ground (05's half of T8; separate from 04's model swap)
+
+Question: does EGMS agree that the ground the tie treats as stable really is stable? `egms_cut.py` (14 Nov 2026) uses the two areas defined in `docs/build-spec.md`, writes the numbers to `refs/egms_meta.json` (`stable_ground`) and the map to `docs/figures/05_egms_stable_ground.png`. Stations from `common.PUBLISHED` (VLC1 placed with VLC2); `refs/stations.csv` is used instead once it exists.
+
+| Area | EGMS points | Median Up | Robust scatter | 5 to 95 % | Within ±1.5 mm/yr | Sinking ≥ 5 mm/yr |
+|---|---|---|---|---|---|---|
+| Tie area: outside zones + 3 km, more than 1 km from stations | 27,478 | −0.6 mm/yr | 0.9 mm/yr | −3.0 to +0.6 mm/yr | 79 % | 1.2 % |
+| Check-6 set: \|v\| < 1.5 mm/yr, outside zones + 500 m | 22,864 | −0.4 mm/yr | 0.6 mm/yr | −1.3 to +0.6 mm/yr | 100 % (by definition) | 0 % |
+
+- **The tie area is stable, with a small regional sink.** Median −0.6 mm/yr, close to what the EGMS GNSS model gives at the window centre (−0.8 mm/yr Up). So "stable" here means about −0.6 mm/yr, not 0; a tie to a GNSS model keeps that level, which is correct.
+- **It is not clean everywhere.** 1.2 % of the tie area sinks 5 mm/yr or faster, in small patches. The ten largest are in `egms_meta.json`; the fastest is 10 cells at 45.193 N, 24.057 E (21.7 km north-west of the centre, about 7 km from HORE) at −19.6 mm/yr, and the nearest is 10 cells at 45.004 N, 24.299 E (9.3 km south) at −6.8 mm/yr. Their cause is not known.
+- **Effect on the tie is small.** Dropping every cell sinking 5 mm/yr or faster moves the tie-area median from −0.60 to −0.50 mm/yr; the tie's own 3σ clipping (twice) moves the mean from −0.79 to −0.67 mm/yr and drops 832 of 27,478 points. Both shifts are 0.1 mm/yr, well under the 1.5 mm/yr EGMS check and the 1 mm/yr T8 limit. 04 may still want to mask the two nearest patches.
+- **Still to do (check 6, when NISAR up exists):** NISAR up minus EGMS up on the check-6 set, median below 1.5 mm/yr in absolute value. The set is ready; it waits on `up_east.npz` (03).
+- What this cannot tell us: EGMS ends in Nov 2025, so it shows the ground was stable then, not in 2026; and EGMS is itself calibrated to a GNSS model, so it shares that model's level.
+
 ## Third witness for 2026 (build spec § 05, hour 6 to 18)
 
 Searched 14 Nov 2026 for GNSS or radar with 2026 dates over the town, other than NISAR:
