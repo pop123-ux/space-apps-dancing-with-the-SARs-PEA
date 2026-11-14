@@ -11,7 +11,7 @@
   "horizon_days": 88,
   "backtest_horizon_days": 30,
   "connected_pixels": 34,
-  "model": "gaussian_process",
+  "model": "chronos2",
   "training_dates": [
     "2026-07-07",
     "2026-07-13",
@@ -66,21 +66,21 @@
     "2027-01-01"
   ],
   "forecast_mm": [
-    -7.82181012171587,
-    -7.791196195524053,
-    -8.114554646003432,
-    -8.562019983589446,
-    -9.042319872086194,
-    -9.5303533335672,
-    -10.020095503174844,
-    -10.51020021674474,
-    -11.000379729278352,
-    -11.490574360828129,
-    -11.980772000836229,
-    -12.470970232122442,
-    -12.961168578459834,
-    -13.451366946999551,
-    -13.778165862035944
+    -6.257284164428711,
+    -5.738187789916992,
+    -5.510525703430176,
+    -5.380798816680908,
+    -5.297577142715454,
+    -5.195948362350464,
+    -5.060472011566162,
+    -4.970584869384766,
+    -4.631607532501221,
+    -4.4867167472839355,
+    -4.4748289585113525,
+    -4.4923436641693115,
+    -4.3549864292144775,
+    -3.974365234375,
+    -3.8746070861816406
   ],
   "model_paths_mm": {
     "persistence": [
@@ -169,7 +169,43 @@
       -3.8746070861816406
     ]
   },
-  "interval": null,
+  "interval": {
+    "q10": [
+      -9.336553573608398,
+      -9.85667085647583,
+      -10.10547399520874,
+      -10.356753826141357,
+      -10.476433277130127,
+      -10.71981954574585,
+      -10.818665981292725,
+      -10.734334468841553,
+      -10.785293102264404,
+      -10.795131206512451,
+      -10.868308544158936,
+      -10.896109104156494,
+      -11.013048648834229,
+      -11.160906314849854,
+      -11.274102369944254
+    ],
+    "q90": [
+      0.40314292907714844,
+      3.3986434936523438,
+      4.957091331481934,
+      5.802007675170898,
+      6.797481536865234,
+      7.623342514038086,
+      8.924154281616211,
+      8.52325439453125,
+      10.196266174316406,
+      11.56739616394043,
+      11.61062240600586,
+      11.649362564086914,
+      12.256248474121094,
+      13.762569427490234,
+      15.16623814900716
+    ],
+    "level": 0.8
+  },
   "interval_reason": "Only Chronos-2 has an interval: its 80 % band held the truth in 77% to 78% of the overlapping January to October backtests. The other models have none, because four summer backtests cannot calibrate one.",
   "selection_metric": "Mean absolute error at 30 days relative to the cutoff",
   "metrics": {
@@ -571,6 +607,49 @@
         "conditional": 5.486299991607666
       },
       "note": "Refitted on a re-inversion at each cutoff (removes the look-ahead in 05's first run). Conditional uses observed future rain, so it is a scenario, not a forecast."
+    },
+    "chronos2_weather": {
+      "source": "ERA5 precipitation and ERA5-Land 0-7 cm soil moisture via the Open-Meteo archive API",
+      "target": "029A Zone 4 baseline, January to October 2026, 6-day steps",
+      "rule": "past replaces none only if it lowers MAE at both 30 and 88 days",
+      "results": {
+        "30d": {
+          "none": {
+            "n": 32,
+            "mae_mm": 3.493,
+            "interval80_coverage": 0.781
+          },
+          "past": {
+            "n": 32,
+            "mae_mm": 3.551,
+            "interval80_coverage": 0.781
+          },
+          "oracle": {
+            "n": 32,
+            "mae_mm": 3.622,
+            "interval80_coverage": 0.688
+          }
+        },
+        "88d": {
+          "none": {
+            "n": 22,
+            "mae_mm": 3.809,
+            "interval80_coverage": 0.773
+          },
+          "past": {
+            "n": 22,
+            "mae_mm": 3.858,
+            "interval80_coverage": 0.773
+          },
+          "oracle": {
+            "n": 22,
+            "mae_mm": 3.524,
+            "interval80_coverage": 0.818
+          }
+        }
+      },
+      "adopted": false,
+      "note": "Past-only rain and soil-moisture covariates did not lower the error, so the export uses Chronos-2 without covariates. Known-future weather (not available for a real forecast) helped only at 88 days."
     }
   },
   "intervals": {
@@ -635,5 +714,6 @@
       "first_cutoff": "2026-03-02"
     },
     "note": "Chronos-2 is a pretrained time-series model: it extrapolates the shape of this one series and knows nothing about salt, weather or the mine. Its interval is the only calibrated-looking one here (about 77 to 78 % of truths inside the 80 % band on the Jan-Oct backtests), still from one zone, one track and overlapping cutoffs."
-  }
+  },
+  "model_reason": "Team decision, 14 Nov 2026: lowest MAE on every backtest that reaches the January horizon (30-day summer and January to October, 88-day January to October), and the only interval with near-nominal coverage."
 }

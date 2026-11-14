@@ -170,6 +170,20 @@ By the predeclared rule (lowest 30-day MAE) Chronos-2 would now be the default; 
 5. Team decision: the default January model.
 6. 04/02: Matei's NISAR file (uploading to Google Drive).
 
+## Chronos-2 is the default; weather covariates tested (14 Nov 2026, 20:30)
+
+**Decision (team, via Alexandru):** Chronos-2 is the default January model. It has the lowest MAE on every backtest that reaches the January horizon and the only interval with near-nominal coverage. `forecast_chronos.py --default` writes it into `forecast.json` (`model`, `forecast_mm`, `interval`, `model_reason`). The page opens on it: 1 January 2027 at **−3.87 mm** LOS relative to 7 July 2026, 80 % interval −11.27 to +15.17 mm. The other four paths stay selectable.
+
+**Weather as an outside feature** (`sentinel1/scripts/chronos_weather.py`, report in `sentinel1/analysis/chronos_weather.json`). The rule was predeclared in `DECISIONS.md` before the first run: past-only covariates are adopted only if they lower the MAE at both 30 and 88 days. Covariates at each 6-day step: ERA5 rain over 6 and 30 days, and ERA5-Land 0 to 7 cm soil moisture (Open-Meteo archive). 05's NISAR SME2 moisture covers only the summer dates, too few for this backtest.
+
+| January to October backtest, 029A Zone 4 | 30-day MAE, mm (80 % coverage) | 88-day MAE, mm (80 % coverage) |
+| --- | --- | --- |
+| Chronos-2 alone (default) | **3.49** (78 %) | 3.81 (77 %) |
+| With past rain and soil moisture | 3.55 (78 %) | 3.86 (77 %) |
+| With the real future weather (diagnostic; impossible for a real forecast) | 3.62 (69 %) | **3.52** (82 %) |
+
+Not adopted. Past weather adds nothing. Knowing the actual future weather would help at 88 days but hurts at 30, which points at a weak seasonal link at most. This agrees with 05's rain and moisture screen (PR #9). The test cannot tell whether moisture matters at 200 m scale inside the bowls: ERA5-Land is about 9 km, one cell for the whole window.
+
 ## References
 
 - [Hill et al., Sentinel-1 deformation forecasting](https://doi.org/10.1029/2020JB020176)

@@ -1,0 +1,42 @@
+{
+  "target": "029A Zone 4 baseline, January to October 2026, 6-day steps",
+  "covariates": "ERA5 precipitation and ERA5-Land 0-7 cm soil moisture via the Open-Meteo archive API",
+  "rule": "past replaces none only if it lowers MAE at both 30 and 88 days",
+  "results": {
+    "30d": {
+      "none": {
+        "n": 32,
+        "mae_mm": 3.493,
+        "interval80_coverage": 0.781
+      },
+      "past": {
+        "n": 32,
+        "mae_mm": 3.551,
+        "interval80_coverage": 0.781
+      },
+      "oracle": {
+        "n": 32,
+        "mae_mm": 3.622,
+        "interval80_coverage": 0.688
+      }
+    },
+    "88d": {
+      "none": {
+        "n": 22,
+        "mae_mm": 3.809,
+        "interval80_coverage": 0.773
+      },
+      "past": {
+        "n": 22,
+        "mae_mm": 3.858,
+        "interval80_coverage": 0.773
+      },
+      "oracle": {
+        "n": 22,
+        "mae_mm": 3.524,
+        "interval80_coverage": 0.818
+      }
+    }
+  },
+  "adopt_past": false
+}
