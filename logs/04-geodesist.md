@@ -6,6 +6,75 @@ This is the running log for role 04, newest entry first, so the team can follow 
 
 ---
 
+## Sat 14 Nov 2026, about 15:45 · EGMS GNSS model in, frame checked, first real model swap (T8, part 1)
+
+Branch `r04/egms-model`. Done with Claude Code (see the `AI-DISCLOSURE.md` log).
+
+### The EGMS GNSS model
+
+05 (Paul) found the link, which needs no login: `EGMS_AEPND_V2023.0.csv`, 3,773 nodes on a 50 km grid (row in `CITATIONS.md`).
+- **Columns:** checked on the file: `Latitude, Longitude, N, E, Up, SigmaN, SigmaE, SigmaUP, easting, northing`. **N comes before E.**
+- **Reader:** `refs.parse_egms_gnss` swaps both lat/lon and N/E into the `model_euvem.csv` order. It refuses any other header.
+- **Output:** `refs.py ocnele_mari` now writes `refs/model_egms.csv` from the 29 nodes within 150 km of the site.
+- **Check against Paul:** at the site centre, `load_model("ocnele_mari", "egms")` gives ve −0.75, vn −1.18, vu −0.80 mm/yr, the same as Paul's numbers.
+
+### Frame: confirmed, with one catch in the vertical
+
+The EGMS GNSS Calibration Report (v5.2, section 1.2) says the A-EPND 2023 model, and the EGMS 2020 to 2024 delivery calibrated with it, are in **ETRF2000**. ETRF2000 is the ETRS89 realization fixed to stable Eurasia.
+- **Horizontals:** the same frame as EuVeM2022's horizontals (ETRF2000).
+- **Vertical:** EuVeM2022's up is IGS14, and ETRF2000's up is not. The report's Figure 10 gives ETRF2000 minus ETRF2020 in up from −0.88 mm/yr in the north to −0.16 mm/yr in the south.
+  - **At Ocnele Mari:** about **−0.4 mm/yr**, read by eye from the colour scale, so ±0.1 at best.
+  - **ETRF2020 vs IGS14:** ETRF2020's up stays close to ITRF2020 and IGS14. That is my expectation, not a number from the report.
+- **Model vs model at the site centre (mm/yr):**
+
+| Model | ve | vn | vu |
+| --- | --- | --- | --- |
+| EuVeM2022 | −0.74 | −1.06 | +0.08 |
+| EGMS | −0.75 | −1.18 | −0.80 |
+
+  - The horizontals agree within 0.12 mm/yr.
+  - About −0.4 of the −0.88 mm/yr up difference is the frame; the other ~−0.5 is the models disagreeing.
+- **No frame shift applied:** EGMS is used as published. Applying a number read by eye from a figure would be a hard-coded tweak; see `DECISIONS.md`.
+
+### Real model swap, on the rehearsal NISAR stack (PRELIMINARY)
+
+**What the stack is:** 02 and 03 have not handed off `ts.npz` yet, so the real swap ran on the advisor's rehearsal stack of 12 Nov. That is real NISAR GUNW over Ocnele Mari, processed by the advisor's code, not ours. The track files were copied into `data/work/ocnele_mari/` (not committed).
+- **Products:** `products/ocnele_mari/calib.json` from this run was deleted, not committed. Products must come from the team's own pipeline.
+- **Tie pixels:** 309,198 (094D) and 347,767 (129A).
+
+| Run | 094D | 129A |
+| --- | --- | --- |
+| Tie to EuVeM2022: offset (scatter) | −8.89 mm/yr (51.6) | −5.80 mm/yr (39.2) |
+| Tie to EGMS: offset | −8.17 mm/yr | −5.10 mm/yr |
+| **Swap EuVeM2022 vs EGMS** (median absolute change in vel_cal on the tie pixels) | **0.72 mm/yr** | **0.70 mm/yr** |
+| Swap EuVeM2022 vs rigid plate | 0.25 mm/yr | 0.63 mm/yr |
+
+- **What the 0.70 to 0.72 includes:** about 0.3 mm/yr of it is the ETRF2000 vertical offset projected onto the line of sight (−0.4 mm/yr × an up component of about 0.78). So the pure model share is nearer 0.4 mm/yr.
+- **T8 threshold:** the swap is under 1 mm/yr on both tracks, so the tie does not depend on which GNSS model we pick.
+- **Scatter:** the pixel scatter (39 to 52 mm/yr) is about 50 times larger than the swap. The model is not what limits the result.
+
+**Synthetic** (unchanged from 15:20): the swap path recovers a known 0.78/0.79 mm/yr.
+
+### For 05 (Paul): the EGMS Ortho comparison
+
+EGMS Ortho 2020 to 2024 is calibrated to this ETRF2000 model. Our NISAR up is tied to EuVeM2022 (IGS14 up). Near the site, the two frames differ by about 0.4 mm/yr in up, before any real difference: EGMS's up should read about 0.4 mm/yr lower for the same ground. That is small next to a 27 mm/yr scatter, but it belongs in the bias budget of the stable-ground check.
+
+### T8 status: PARTIAL
+
+| Part | Status |
+| --- | --- |
+| Model swap | Done on real NISAR (rehearsal stack): 0.72 / 0.70 mm/yr, under 1 mm/yr |
+| Swap on the team's own stack | Rerun when 03 hands off `ts.npz` |
+| EGMS Ortho stable-ground comparison | Recorded by 05 on the team stack |
+
+T8 is complete only when the last two are recorded.
+
+### Proposed for 01 (Mario), not edited
+
+`docs/build-spec.md` row O-06 still says "CSV link still to be found". Suggested text: "EGMS GNSS model A-EPND 2023 (found 14 Nov; ETRF2000); rigid plate stays as the fallback".
+
+---
+
 ## Sat 14 Nov 2026, about 15:35 · merged to `main`
 
 `r04/station-check` (commit 56b5e96) merged into `main` with `--no-ff` at Matei's request. `main` had not moved since the branch was cut; `pytest -q` on the merge: 8 passed. No PR was opened: the merge was pushed directly.

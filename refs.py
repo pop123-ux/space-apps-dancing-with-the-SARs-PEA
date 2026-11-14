@@ -11,6 +11,7 @@ internet, the build machine could not reach the two servers on 14 Nov 2026).
 Writes data/work/<site>/refs/ (never committed). Hand-off to calibrate.py and validate.py:
     model_euvem.csv    lon, lat, ve, vn, vu, se, sn, su          (0.1° grid)
     stations.csv       station, source, lat, lon, ve, vn, vu, se, sn, su, t_start, t_end
+    model_egms.csv     lon, lat, ve, vn, vu, se, sn, su          (EGMS A-EPND 2023, 50 km grid; the second model, O-06)
     egms_up.csv        lon, lat, v   ← written by 05 (EGMS L3 Ortho Up tile); refs.py only checks that it is there
     truth.json         (synthetic only) the regional velocity and the name of the station that lies
 Raw downloads are cached in data/raw/refs/ (never committed).
@@ -36,6 +37,12 @@ import common as C
 # Sources (checked against the advisor kit; see CITATIONS.md)
 EUVEM_ROMANIA = "https://www.lantmateriet.se/geodesi_data/EuVeM2022/country_results/EuVeM2022_Romania.txt"
 MIDAS_EU = "https://geodesy.unr.edu/velocities/midas.EU.txt"
+# EGMS GNSS calibration model A-EPND 2023 (file EGMS_AEPND_V2023.0.csv), 50 km grid, ETRF2000 (GNSS Calibration Report
+# v5.2, section 1.2). Found by 05 (Paul) on 14 Nov 2026; no login. Columns: Latitude, Longitude, N, E, Up, SigmaN, SigmaE,
+# SigmaUP, easting, northing (EPSG:3035). N comes BEFORE E: swapped when written as model_egms.csv. Second model (O-06, T8).
+EGMS_GNSS = "https://land.copernicus.eu/en/technical-library/gnss-calibration-data-2023-csv/@@download/file"
+EGMS_GNSS_FILE = "EGMS_AEPND_V2023.0.csv"
+EGMS_RADIUS_KM = 150    # grid nodes kept around the site: the 50 km grid needs a wide ring to cover the window
 UA = {"User-Agent": "dancing-on-salt/0.2 (NASA Space Apps 2026)"}
 FIELDS = ["station", "source", "lat", "lon", "ve", "vn", "vu", "se", "sn", "su", "t_start", "t_end"]
 MODEL_FIELDS = ["lon", "lat", "ve", "vn", "vu", "se", "sn", "su"]
@@ -56,9 +63,9 @@ def raw_dir():
     return p
 
 
-def download(url: str, cached: bool) -> str:
-    """Text of url, cached in data/raw/refs/<file name>. With cached=True, reuse the file if it is there."""
-    p = raw_dir() / url.rsplit("/", 1)[-1]
+def download(url: str, cached: bool, name: str | None = None) -> str:
+    """Text of url, cached in data/raw/refs/<name or the URL's file name>. With cached=True, reuse the file if it is there."""
+    p = raw_dir() / (name or url.rsplit("/", 1)[-1])
     if cached and p.exists():
         print(f"  cached: {p.name}")
         return p.read_text(encoding="utf-8", errors="replace")
@@ -122,6 +129,30 @@ def get_model(site: str, cached: bool = False) -> list[list[float]]:
     lats = [r[1] for r in rows]
     if not (min(lons) < s["lon"] < max(lons) and min(lats) < s["lat"] < max(lats)):
         raise ValueError("EuVeM2022 grid does not cover the site centre")
+    return rows
+
+
+def parse_egms_gnss(text: str) -> list[list[float]]:
+    """EGMS A-EPND CSV → rows [lon, lat, ve, vn, vu, se, sn, su] (mm/yr), the column order of model_euvem.csv.
+    The file's order is lat, lon, N, E, Up, sN, sE, sU: lat/lon and N/E are both swapped here."""
+    lines = [ln for ln in text.splitlines() if ln.strip()]
+    head = [h.strip().lstrip("#").lower() for h in lines[0].split(",")]
+    want = ["latitude", "longitude", "n", "e", "up", "sigman", "sigmae", "sigmaup"]
+    if head[:8] != want:
+        raise ValueError(f"EGMS GNSS CSV header is {head[:8]}, expected {want}; has the file format changed?")
+    rows = []
+    for ln in lines[1:]:
+        la, lo, vn, ve, vu, sn, se, su = (float(v) for v in ln.split(",")[:8])
+        rows.append([lo, la, ve, vn, vu, se, sn, su])
+    return rows
+
+
+def get_egms_gnss(site: str, cached: bool = False) -> list[list[float]]:
+    """EGMS GNSS model nodes within EGMS_RADIUS_KM of the site, in model_euvem.csv's columns."""
+    rows = [r for r in parse_egms_gnss(download(EGMS_GNSS, cached, EGMS_GNSS_FILE))
+            if dist_km(site, r[1], r[0]) <= EGMS_RADIUS_KM]
+    if len(rows) < 4:
+        raise ValueError(f"EGMS GNSS model: only {len(rows)} nodes within {EGMS_RADIUS_KM} km of the site")
     return rows
 
 
@@ -224,7 +255,7 @@ def model_file(site: str, model: str = "euvem"):
 
 def load_model(site: str, model: str = "euvem"):
     """→ f(lon, lat) = array (..., 3) of (ve, vn, vu), linear inside the grid, NaN outside. Used by calibrate.py.
-    model='egms' reads model_egms.csv, written by hand in the same columns once its CSV is found (O-06)."""
+    model='egms' reads model_egms.csv, written by main() from the EGMS A-EPND 2023 CSV (O-06)."""
     import numpy as np
     from scipy.interpolate import LinearNDInterpolator
     p = model_file(site, model)
@@ -265,6 +296,12 @@ def main() -> None:
     grid = get_model(a.site, a.cached)
     rows = get_midas(a.site, wanted, a.cached) + published_rows(a.site)
     write(out, grid, rows)
+    egms = get_egms_gnss(a.site, a.cached)
+    with open(out / "model_egms.csv", "w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(MODEL_FIELDS)
+        w.writerows(egms)
+    print(f"  EGMS GNSS model (A-EPND 2023, ETRF2000): {len(egms)} nodes within {EGMS_RADIUS_KM} km → model_egms.csv")
     near = sum(1 for g in grid if dist_km(a.site, g[1], g[0]) <= window_radius_km(a.site))
     print(f"{a.site}: model {len(grid)} grid nodes ({near} inside the window) · stations: "
           + ", ".join(f"{r['station']} ({r['source'].split(' ')[0]}, {dist_km(a.site, r['lat'], r['lon']):.1f} km, "
