@@ -106,6 +106,7 @@ Whoever creates these adds the owner line from this table.
 | `SUBMISSION.md` | 01 · Lead and story (Mario) | The project page text, from hour 30 |
 | `index.html` | 06 · App developer (Darius) | The page |
 | `app/` | 06 · App developer (Darius) | The page's scripts, styles and images, if they get a folder |
+| `logo.png` | 06 · App developer (Darius) | Full-size team logo (1254 px); the page uses the small copies `app/logo.png` and `app/favicon.png` |
 | `.github/workflows/pages.yml` | 06 · App developer (Darius) | The GitHub Pages deploy |
 | `docs/figures/` | all roles · name each figure with your role number first, e.g. 03_rate_129A.png | Figures for the team and the slides, PNG under 1 MB |
 | `notebooks/01/` | 01 · Lead and story (Mario) | Exploration only, outputs stripped, never imported |

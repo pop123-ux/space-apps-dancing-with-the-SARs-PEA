@@ -308,7 +308,7 @@ dialog p { margin: 6px 0; }
 #bar { top: 0; left: 0; right: 0; height: var(--bar-h); padding: 0 var(--gap); align-items: center; background: var(--card);
   border-bottom: 1px solid var(--line); pointer-events: auto; }
 #bar .brand { box-shadow: none; border-radius: 0; padding: 0; align-items: center; }
-.logo { width: 34px; height: 34px; flex: none; }
+.logo { width: 42px; height: 42px; flex: none; border-radius: 50%; object-fit: cover; }
 #bar .pill, #bar .round { box-shadow: none; border: 1px solid var(--line); }
 #stage { top: var(--bar-h); bottom: var(--dock-h); right: 0; transition: right .2s ease; }
 body.side-open #stage { right: var(--side-w); }
@@ -328,7 +328,7 @@ body.side-open.side-wide .layers-wrap { right: calc(var(--side-wide) + var(--gap
 
 @media (max-width: 760px) {
   :root { --bar-h: 58px; }
-  .logo { width: 28px; height: 28px; }
+  .logo { width: 34px; height: 34px; }
   #bar .brand { padding: 0; }
   body.side-open #stage, body.side-open.side-wide #stage { right: 0; }
   body.side-open .layers-wrap, body.side-open.side-wide .layers-wrap { right: var(--gap); }

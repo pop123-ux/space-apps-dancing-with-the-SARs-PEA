@@ -190,13 +190,34 @@ def overlay_png(arr, path: pathlib.Path, vmax: float) -> None:
 
 
 # ------------------------------------------------------------------------------------------------ Sentinel-1
+def town_cover(rate, bounds_utm, epsg: int = 32635) -> int:
+    """Share (%) of the grid cells inside the town boundary (app/ocnele_mari_boundary.geojson) that have a rate."""
+    import numpy as np
+    from matplotlib.path import Path
+    from pyproj import Transformer
+    f = C.ROOT / "app" / "ocnele_mari_boundary.geojson"
+    if not f.exists():
+        return -1
+    g = C.load_json(f)
+    geom = g["features"][0]["geometry"] if "features" in g else g
+    ring = np.array(geom["coordinates"][0] if geom["type"] == "Polygon" else geom["coordinates"][0][0])
+    ny, nx = rate.shape
+    x0, y0, x1, y1 = bounds_utm
+    J, I = np.meshgrid(np.arange(nx), np.arange(ny))
+    lon, lat = Transformer.from_crs(epsg, 4326, always_xy=True).transform(x0 + (J + .5) * (x1 - x0) / nx,
+                                                                         y1 - (I + .5) * (y1 - y0) / ny)
+    inside = Path(ring).contains_points(np.c_[lon.ravel(), lat.ravel()]).reshape(rate.shape)
+    return int(round(100 * float(np.isfinite(rate)[inside].mean()))) if inside.any() else -1
+
+
 def export_s1(out: pathlib.Path, summary: dict, window: str = WINDOW):
     """→ (sensor block for the manifest, display bounds)."""
     meta = C.SENSORS["s1"]
     pre = S1_WINDOWS[window]["prefix"]
-    frames, layers, bounds, points = {}, [], None, {}
+    frames, layers, bounds, points, cover = {}, [], None, {}, {}
     for track in meta["tracks"]:
         z = load_grid(track, window)
+        cover[track] = town_cover(z["rate_mm_yr"], z["bounds_utm"])
         dates = [str(d) for d in z["dates"]]
         if dates != summary[track]["dates"]:
             raise SystemExit(f"{track}: grid dates differ from sentinel1/analysis/summary.json; ask 03 to repack the grids")
@@ -219,9 +240,9 @@ def export_s1(out: pathlib.Path, summary: dict, window: str = WINDOW):
                            png=png, units="mm/yr", vmin=-RATE_VMAX, vmax=RATE_VMAX, track=track, experimental=False,
                            window=window, scenario="baseline", saturates=True))
         print(f"  s1 {window} {track}: {len(dates)} frames + rate map + {n_pts} points, {grid.shape[1]}×{grid.shape[0]} px, "
-              f"{dates[0]}..{dates[-1]}, {summary[track]['pair_count']} pairs")
+              f"{dates[0]}..{dates[-1]}, {summary[track]['pair_count']} pairs, town covered {cover[track]} %")
     block = {k: meta[k] for k in ("label", "agency", "band", "wavelength_cm", "status", "reference", "credit")}
-    block.update(layers=layers, frames=frames, points=points, look=meta["look"], product=meta["product"])
+    block.update(layers=layers, frames=frames, points=points, look=meta["look"], product=meta["product"], town_cover=cover)
     return block, bounds
 
 
@@ -461,7 +482,7 @@ def run(site_key: str) -> None:
                     s1="sentinel1/analysis/summary.json (03)")))
     windows = {WINDOW: dict(label="July to October 2026", empty_zone_label=EMPTY_ZONE_LABEL[WINDOW], dates={t: [f["dates"][0], f["dates"][-1]] for t, f in s1["frames"].items()},
                             frames=s1["frames"], layers=s1["layers"], points=s1["points"], variants=variants,
-                            maps_scenario="baseline",
+                            maps_scenario="baseline", town_cover=s1["town_cover"],
                             quality={t: summary[t]["fits"]["quality"] for t in s1["frames"]})}
     sj = load_summary("jan_oct")
     s1j, _ = export_s1(out, sj, "jan_oct")
@@ -469,7 +490,8 @@ def run(site_key: str) -> None:
     windows["jan_oct"] = dict(label=S1_WINDOWS["jan_oct"]["label"], empty_zone_label=EMPTY_ZONE_LABEL["jan_oct"],
                               dates={t: [f["dates"][0], f["dates"][-1]] for t, f in s1j["frames"].items()},
                               frames=s1j["frames"], layers=s1j["layers"], points=s1j["points"], variants=variants_j,
-                              maps_scenario="baseline", quality={t: sj[t]["fits"].get("quality") for t in s1j["frames"]},
+                              maps_scenario="baseline", town_cover=s1j["town_cover"],
+                              quality={t: sj[t]["fits"].get("quality") for t in s1j["frames"]},
                               fills_gap=dict(sensor="nisar", gap=["2026-01-18", "2026-06-23"],
                                              note="Sentinel-1 kept imaging the town while NISAR had no acquisitions. Its "
                                                   "values are its own line of sight and reference, not NISAR's."),

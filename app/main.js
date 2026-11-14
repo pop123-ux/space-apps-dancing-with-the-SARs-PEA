@@ -624,8 +624,18 @@ function renderFlags() {
       n.innerHTML = `<span>No ${esc(sensors()[S.sat].label)} acquisition on ${esc(S.date)}. The nearest is ${esc(near)}.</span><button type="button" data-date="${esc(near)}">Show ${esc(near)}</button>`;
     }
   }
+  // a Sentinel-1 window can hold no pixel over the town for one track (Jan to Oct 007D: none stays connected through
+  // 49 dates of C-band winter decorrelation); say so instead of showing an empty town, and offer the window that has it
+  const cov = S.sat === 's1' && !n.innerHTML ? win()?.town_cover?.[S.track.s1] : null;
+  if (cov != null && cov >= 0 && cov < 5) {
+    const alt = Object.entries(S.sens?.windows || {}).filter(([k, w]) => k !== S.window && (w.town_cover?.[S.track.s1] ?? -1) >= 5)
+      .sort((a, b) => b[1].town_cover[S.track.s1] - a[1].town_cover[S.track.s1])[0];
+    n.innerHTML = `<span><b>Sentinel-1 ${esc(S.track.s1)} has almost no data over the town in ${esc(win().label)}</b> (${cov} % of it): a dot needs a connected series through every date, and C-band loses coherence in winter.${alt ? ` ${esc(alt[1].label)} covers ${alt[1].town_cover[S.track.s1]} %.` : ''}</span>`
+      + (alt ? `<button type="button" data-window="${esc(alt[0])}">Show ${esc(alt[1].label)}</button>` : '');
+  }
   if (!n.innerHTML) return;
   n.hidden = false;
+  n.querySelector('[data-window]')?.addEventListener('click', (e) => { stopPlay(); S.window = e.currentTarget.dataset.window; S.note = null; S.date = null; changed(); });
   n.querySelector('[data-date]')?.addEventListener('click', (e) => setDate(e.currentTarget.dataset.date));
   n.querySelector('[data-go]')?.addEventListener('click', () => goSentinel());
 }
