@@ -6,6 +6,55 @@ This is the running log for role 04, newest entry first, so the team can follow 
 
 ---
 
+## Sat 14 Nov 2026, about 16:10 · 05's EGMS stable-ground check is in: T8 PASS WITH NOTE
+
+Source: `docs/validation-log.md` on 05's branch `r05/egms-and-witnesses` (PR #9), section "EGMS on the stable ground", read 14 Nov 2026. These are 05's numbers, not ours.
+
+### What 05 found (EGMS L3 Ortho Up 2020 to 2025)
+
+| Area | EGMS points | Median Up | Robust scatter | Within ±1.5 mm/yr | Sinking ≥ 5 mm/yr |
+| --- | --- | --- | --- | --- | --- |
+| Tie area (outside zones + 3 km, more than 1 km from stations) | 27,478 | −0.6 mm/yr | 0.9 mm/yr | 79 % | 1.2 % |
+| Check-6 set (\|v\| < 1.5 mm/yr, outside zones + 500 m) | 22,864 | −0.4 mm/yr | 0.6 mm/yr | 100 % | 0 % |
+
+- **Moving patches:** a few small patches move. The nearest is 9.3 km south at −6.8 mm/yr; the fastest is 21.7 km north-west at −19.6 mm/yr.
+- **Effect on the level:** dropping every cell that sinks 5 mm/yr or faster moves the tie-area median from −0.60 to −0.50 mm/yr. Our 3σ clipping moves the mean from −0.79 to −0.67 mm/yr.
+
+### What it means for the tie (04)
+
+- **The tie area is stable** to within 0.1 mm/yr of its level. That is ten times under T8's 1 mm/yr limit, and 400 times under NISAR's 39 to 52 mm/yr pixel scatter.
+- **No masking of the moving patches.** The tie mask rules are frozen in the build spec, and the patches change the level by 0.1 mm/yr at most. Recorded in `DECISIONS.md`.
+- **The level checks out against the frame.** EGMS stable ground (−0.6 mm/yr, ETRF2000) sits next to the EGMS GNSS model at the centre (−0.8 mm/yr, ETRF2000), as it should: EGMS is calibrated to that model. In our frame (EuVeM2022, IGS14 up), the same ground would read about −0.6 + 0.4 = −0.2 mm/yr, using the ETRF2000 offset from Figure 10 (15:45 entry). That is within about 0.3 mm/yr of EuVeM2022's own +0.08 mm/yr there.
+
+### Heads-up for 05: check 6 starts with a reference offset
+
+NISAR's up is tied to EuVeM2022, and EGMS's up to its own A-EPND model. On stable ground each keeps its model's level:
+
+| Level on stable ground | Up (mm/yr) |
+| --- | --- |
+| NISAR, tied to EuVeM2022 | about +0.1 |
+| EGMS, check-6 set | −0.4 |
+| EGMS, tie area | −0.6 |
+
+So **NISAR up − EGMS up should come out at about +0.5 to +0.7 mm/yr from the references alone**, before any NISAR error:
+- about 0.4 of it is the ETRF2000 vertical frame;
+- the rest is the two GNSS models disagreeing.
+
+That uses half of check 6's 1.5 mm/yr budget. A median near +0.6 mm/yr is therefore expected, not a NISAR bias. A value above +1.5 needs a look at NISAR itself.
+
+### T8: PASS WITH NOTE
+
+| Part | Result |
+| --- | --- |
+| Model swap (04, 15:45) | EuVeM2022 vs EGMS changes calibrated LOS rates by **0.72 (094D) and 0.70 (129A) mm/yr**, under 1 mm/yr |
+| EGMS on the stable ground (05) | Tie area at −0.6 mm/yr, 79 % within ±1.5 mm/yr; moving patches shift the level by 0.1 mm/yr |
+
+**Note:**
+- **Which stack:** the swap ran on the advisor's rehearsal NISAR stack (real data, not the team's processing). The swap depends on the look vectors and the tie mask, not on the phase, so the team stack should give nearly the same number. **Rerun `calibrate.py ocnele_mari` when 03 hands off `ts.npz` and record the number here.** If it reaches 1 mm/yr, T8 reopens.
+- **Check 6** (NISAR up − EGMS up) is a separate check, owned by 05, and waits on 03's `up_east.npz`.
+
+---
+
 ## Sat 14 Nov 2026, about 15:45 · EGMS GNSS model in, frame checked, first real model swap (T8, part 1)
 
 Branch `r04/egms-model`. Done with Claude Code (see the `AI-DISCLOSURE.md` log).
