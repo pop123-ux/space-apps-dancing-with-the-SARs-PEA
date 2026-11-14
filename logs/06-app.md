@@ -6,6 +6,16 @@ This is the running log for role 06, newest entry first, so the team can follow 
 
 ---
 
+## Sat 14 Nov 2026, about 16:25 · merged to `main`
+
+`r06/page` merged into `main` at Darius's request, without a PR (he asked for it directly, on condition that nothing breaks). `main` had two new 03 commits (PR #10: `.gitattributes` keeps `summary.json` bytes, a zone review in `docs/ui.md` and `TEAM_HANDOFF.md`); they were merged into `r06/page` first. The only conflict was two appended rows in `AI-DISCLOSURE.md`; both kept.
+
+Checked on the merged tree before pushing `main` (fast-forward to `da3a64c`): `pytest -q` 8 passed; `checkpoint.py` contract OK on `ocnele_mari` and `mock`; re-running `export.py ocnele_mari` changed nothing but the build time, so 03's rerun leaves the page's numbers as they were. `sentinel1/scripts/restore_grids.py` now works on Windows, so the CRLF proposal below is settled by 03's `.gitattributes`.
+
+Still open from 03's zone review (`docs/ui.md`, "Zone review and historical context"): label Zone 3 "Historically subsiding · 2026 trend inconclusive", show a local reference sensitivity note for 029A on Zones 1, 2 and 4, and keep the EGMS history layer pending until 05's products reach 06.
+
+---
+
 ## Sat 14 Nov 2026, about 16:15 · first push of `r06/page`
 
 Branch `r06/page`, not merged. `main` had nothing new when it was pulled before the push.
@@ -51,6 +61,6 @@ These are proposals only. The owners decide.
 | `docs/build-spec.md`, § 06 (01) | Mark steps 1 to 3 done except Pages; note the minimal layout (ui.md v3) | Keeps the plan in step with the build |
 | `README.md` (01) | In "Layout", add `index.html` and `app/` (the page), `logs/` (role logs), and the run line `python export.py ocnele_mari`; in "Quickstart", add `py -m http.server 8000` to open the page | New files and a new command |
 | `common.py` (shared, 01 reviews) | Fill `SITES["ocnele_mari"]["story"]` and the four zone names | The page hides the TODO story; zones show as "Zone 1" to "Zone 4" |
-| `sentinel1/scripts/restore_grids.py` (03) | Compare `summary.json` after normalising line endings, or add `sentinel1/analysis/*.json -text` to `.gitattributes` | On Windows git checks the file out with CRLF, the SHA-256 no longer matches, and the script refuses; `export.py` works around it by reading the chunks in memory |
+| `sentinel1/scripts/restore_grids.py` (03) | Settled: 03 added `sentinel1/analysis/summary.json -text` to `.gitattributes` (PR #10) | On Windows git checks the file out with CRLF, the SHA-256 no longer matches, and the script refuses; `export.py` works around it by reading the chunks in memory |
 | `.gitignore` (shared) | Add `.claude/` | Local Claude Code preview settings should not be committed |
 | `docs/overview.md` (01) | In "The page", say the measurements show as dots and the town boundary is drawn | Matches the build |
