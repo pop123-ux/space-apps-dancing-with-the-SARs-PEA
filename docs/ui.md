@@ -199,3 +199,7 @@ Sentinel-1 was acquired on IW2 VV bursts `029_060407_IW2` and `007_013694_IW2`, 
 The [group-aware rerun and four-zone review](../sentinel1/docs/TEAM_HANDOFF.md#14-november-2026--group-aware-refit-and-egms-cross-check) confirms the existing bundle's Sentinel-1 numbers. Zone 3 is **Historically subsiding · 2026 trend inconclusive** in the comparison narrative. For January–October show **Insufficient continuous coverage** on both tracks. For July–October show the descending estimate with its processing sensitivity and leave the ascending series empty. Show a local reference sensitivity note for 029A when interpreting Zones 1, 2 or 4. Preserve the exported values.
 
 [R05 PR #9](https://github.com/pop123-ux/space-apps-dancing-with-the-SARs-PEA/pull/9) reports the 2020–2025 historical cut and zone statistics. The current bundle still lacks the EGMS display assets. Keep the history layer pending until the validated products reach 06. Label dates, Up/East direction and cell count when publishing them.
+
+## Forecast and environmental controls
+
+See [the forecasting handoff](forecast.md) for the January endpoint, Paul’s inputs, and the checks required before publishing environmental or vertical scenarios.

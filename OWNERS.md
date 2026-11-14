@@ -118,3 +118,4 @@ Whoever creates these adds the owner line from this table.
 | File | Owner | What to do with it |
 | --- | --- | --- |
 | `sentinel1/` | 03 · InSAR analyst (Alexandru, Eric) | Sentinel-1 data manifest, fitted results, and team handoff |
+| `docs/forecast.md` | 03 · InSAR analyst (Alexandru, Eric) | Forecast results and environmental screening handoff |
