@@ -18,5 +18,5 @@ jobs:
       - name: Smoke test (standard library and pytest only)
         run: |
           python3 --version
-          python3 -m pip install --quiet pytest
+          python3 -m pip install --quiet pytest numpy
           python3 -m pytest -q
