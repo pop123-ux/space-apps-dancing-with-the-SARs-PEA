@@ -1,7 +1,9 @@
 # Owner: 05 · Validator (Paul)
 """05 · Validator: order Sentinel-1 interferograms on ASF HyP3 for the same months as NISAR (the second radar).
 
-Status: STUB (interfaces only). **Order at hour 0–1: HyP3 queues for hours.**
+Status: STUB (interfaces only). The main Sentinel-1 order is DONE: 58 HyP3 burst pairs on 029A and 007D, ordered and
+fitted by 02/03 (sentinel1/provenance/hyp3_jobs.json, sentinel1/analysis/). Use this only for extra pairs, for example
+January to June 2026 to cover NISAR's gap (Tier 3).
 
     python hyp3_order.py ocnele_mari --plan      # list the Sentinel-1 pairs that would be ordered (no login)
     python hyp3_order.py ocnele_mari --submit    # submit INSAR_GAMMA jobs (Earthdata login)

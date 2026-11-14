@@ -15,12 +15,15 @@ Updated Sat 14 Nov 2026, 14:30 Europe/Bucharest. Event: NASA Space Apps Cluj-Nap
 - **NISAR inventory.** NASA CMR on 14 Nov 2026, 10:40 UTC: 22 GUNW pairs over the town, written to `data/scenes/ocnele_mari_gunw.csv`.
   - 129A has 13 pairs: 4 BETA and 9 PROVISIONAL, from 7 Nov 2025 to 21 Oct 2026, with nothing between 18 Jan and 23 Jun 2026.
   - 094D has 9 pairs, all PROVISIONAL, from 20 Jun to 18 Oct 2026.
-- **Mock products.** `python mock_products.py` writes `products/mock/` (4 layers, 25 frames, 6 series points, 2 stations, all invented) in about 2 s, and `checkpoint.py mock` reports "contract OK".
+- **Sentinel-1 fitted** (02/03, Sat 14 Nov 13:37, `sentinel1/`). 58 HyP3 burst pairs, all succeeded. Tracks 029A (7 Jul to 5 Oct 2026) and 007D (6 Jul to 4 Oct), 16 dates each. 40 m grids, zone histories and sensitivity runs; see `sentinel1/docs/TEAM_HANDOFF.md`.
+- **Mock products, both radars (D-004).** `python mock_products.py` writes `products/mock/`: NISAR and Sentinel-1, 8 layers, 57 frames, 7 series points including the outer reference band, 2 stations, all invented. It runs in about 5 s, and `checkpoint.py mock` reports "contract OK".
 
 ## Waiting on a person
 
 - **01:** the 7-slide outline with one owner per slide (D-003, see `docs/overview.md`); hour 0 and `EVENT_TZ` (O-04); read the 13 Nov guide aloud (O-02); O-03 (adopt or rebuild); the hour-2 review of the proposed decisions in `docs/build-spec.md`.
-- **05:** order Sentinel-1 on HyP3 now. It queues for hours.
+- **05:** the Sentinel-1 jobs are done (02/03). Start the EGMS 2020 to 2025 tile E54N25, and review the Sentinel-1 sensitivity runs (T10).
+- **03 and 04:** O-19, the shared quantity for Compare and Agreement (`docs/build-spec.md`).
+- **06:** the satellite switch and views (`docs/ui.md`) on `products/mock/`.
 - **Everyone:** an Earthdata login, and `prompts/setup.md` run on their laptop.
 - **Repo owner:** set the Drive copy of the rehearsal kit back to Restricted, if it isn't already.
 
@@ -53,11 +56,13 @@ The tests are defined in [prompts/early-tests.md](prompts/early-tests.md). Each 
 | T7 Station hold-out | 05 | | |
 | T8 Model swap and EGMS | 04, 05 | | |
 | T9 Phones | 06 | | |
-| T10 HyP3 queue | 05 | | |
+| T10 Sentinel-1 holds up | 05, 03 | | |
 
 ## Notes
 
 - **D-003 (Sat 14 Nov):** the submission is a 7-slide PowerPoint, with no video. Every role supplies one or two slides.
+- **D-004 (Sat 14 Nov):** two radars, one switch. NISAR and Sentinel-1 are both fitted, and the page has a satellite switch and five views (`docs/ui.md`).
+- **Sentinel-1 covers NISAR's gap.** NASA CMR on 14 Nov 2026 shows Sentinel-1 acquisitions over the town every month from Nov 2025 to Nov 2026, on tracks 029A and 007D. Our current fit uses July to October only. Extending it to January to June 2026 is a Tier 3 option.
 - Every file names its owner role in its first lines; the full list is `OWNERS.md`.
 
 - Our copy of the deck says −250 mm/yr on slides 1, 5 and 6. The rehearsal corrects it to about −25 mm/yr. Never quote −250.

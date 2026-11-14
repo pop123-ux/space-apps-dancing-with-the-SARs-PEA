@@ -4,7 +4,12 @@
 
 Version 1, Sat 14 Nov 2026. Methods, file formats and done-criteria per role are in [build-spec.md](build-spec.md). The evidence behind the plan is in [rehearsal.md](rehearsal.md) and [data.md](data.md).
 
-We're building a web page that shows anyone how the ground moves above the salt-brine fields of Ocnele Mari, in Vâlcea county, Romania. The measurement is NISAR's L-band radar: 22 interferograms from November 2025 to October 2026, tied to open GNSS velocity models. Every number is checked against stations, the European Ground Motion Service (EGMS) and Sentinel-1. The page opens on the town and plays the ground through time. Where the radar cannot yet see the motion, it says so. Built by six people in the 48 hours of NASA Space Apps, 14 to 15 Nov 2026.
+We're building a web page that shows anyone how the ground moves above the salt-brine fields of Ocnele Mari, in Vâlcea county, Romania. We measure it with two radars (D-004):
+
+- **NISAR** (L-band): 22 interferograms from November 2025 to October 2026, tied to open GNSS velocity models.
+- **Sentinel-1** (C-band): 58 burst pairs from July to October 2026.
+
+Every number is checked against stations, the European Ground Motion Service (EGMS) and the other radar. The page opens on the town, plays the ground through time, and has a satellite switch: NISAR, Sentinel-1, or both side by side. Where the radar cannot yet see the motion, it says so. Built by six people in the 48 hours of NASA Space Apps, 14 to 15 Nov 2026.
 
 ## Why it matters
 
@@ -28,8 +33,10 @@ One page. The map fills the screen, and a card at the bottom (side on a laptop) 
 | Part | What you see | What it tells you | Behind it |
 | --- | --- | --- | --- |
 | **Opening view** | The town at zoom 13 (D-002). Zoom out and Romania appears, blurred | Where we are, and that only this place is data | `manifest.view` |
-| **The slider** | Cumulative change since the first date, one frame per pass, per track. A "no data" card from 18 Jan to 23 Jun 2026 | The ground moving, and the honest gap | `frames/` |
-| **The rates** | Vertical and east–west rates; pixels with \|rate\| < 2σ greyed out | Where the motion beats its error, and where it does not | `up.png`, `east.png`, `los_*.png` |
+| **Satellite switch** (D-004) | Three buttons: NISAR · Sentinel-1 · Compare (swipe, same months) | The same ground through two radars, L-band and C-band | `manifest.sensors` |
+| **View switch** (D-004) | Change · Rate · Zones · Agreement · Coverage | Several ways to look at the same trend, including when each satellite actually looked | `manifest.views`, `series.json` |
+| **The slider** | Cumulative change since the first date, one frame per pass, per track. A "no data" card from 18 Jan to 23 Jun 2026 | The ground moving, and the honest gap | `<sensor>/frames/` |
+| **The rates** | Vertical and east–west rates; pixels with \|rate\| < 2σ greyed out | Where the motion beats its error, and where it does not | `<sensor>/los_*.png` (up and east only behind the experimental toggle) |
 | **Honest pins** | Each station: what NISAR says, what GNSS says, the tolerance, and whether they agree. A red pin means they do not, with the reason | The satellite and the stations checking each other | `stations.geojson` |
 | **Story stops** | Three stops chosen by 01 (O-01) | The place, what the radar sees, the check | `manifest.story`, `series.json` |
 | **The checks** | Every check, pass, warn, fail or info, in plain words | What to believe and what not to | `checks.json` |
@@ -42,7 +49,7 @@ Which claim leads is decision O-01. Each candidate has a test that could come ou
 | --- | --- | --- |
 | **A. The frame holds.** NISAR, tied to EuVeM2022, agrees with EGMS on stable ground. | Median of NISAR up minus EGMS up on stable EGMS points outside the zones | The absolute median is 1.5 mm/yr or more. The rehearsal got +6.4 mm/yr, so this is a real test |
 | **B. The salt zones sink.** At zone level, NISAR sees the subsidence on both tracks. | Zone-median LOS rate with a 95 % bootstrap interval, per track | The interval includes zero, or the two tracks disagree in sign (the rehearsal had −4.6 on 129A against +27.5 mm/yr on 094D) |
-| **C. A second radar agrees.** Sentinel-1 over the same months gives the same zone rate. | Sentinel-1 HyP3 zone rate against NISAR's, same dates | They differ by more than their combined errors |
+| **C. Two radars agree.** NISAR (L-band) and Sentinel-1 (C-band) see the same zone change over the same months (D-004). | Per zone over the common window (7 Jul to 4 Oct 2026), zone minus outer reference band for each radar (O-19) | They differ by more than their combined errors, or a zone has too few pixels in one radar (as zone 3 on 029A), which counts as "not testable" |
 | **D. The stations agree.** Held-out GNSS stations match NISAR in each line of sight. | \|NISAR − GNSS\| ≤ max(2 mm/yr, 2σ combined), tolerance shown | Any station disagrees after screening. A huge tolerance counts as "not tested", not "agrees" |
 
 If B fails, the story becomes "the honest test": what NISAR's first months can and cannot see at a slow salt site. The page uses the same layers and states the numbers.
@@ -68,9 +75,9 @@ The submission is a **7-slide PowerPoint, with no video** (D-003, locked).
 | 1 | **Title and hook:** Dancing on Salt; the town, and what lies under it, in one sentence | 01 | 01's story stops (O-01) |
 | 2 | **The place and the problem:** Ocnele Mari, brine extraction, the collapses of 2001 and 2009, who lives there | 01 | `INFO.md`, local reports (Q6) |
 | 3 | **The data:** NISAR L-band, 22 pairs, the winter and summer-to-autumn windows, the January to June gap, beta/provisional | 02 | `docs/data.md`, `data/scenes/ocnele_mari_gunw.csv` |
-| 4 | **The method:** pairs to rates (03), tied to a GNSS frame the way EGMS does it (04), up and east | 03, 04 | `ts.npz`, `calib.json`, `up_east.npz` |
-| 5 | **The map:** screenshots of the live page, the opening view (D-002), the slider with the gap, a red pin; the demo link | 06 | the live page |
-| 6 | **What holds up, and what NISAR cannot see yet:** the checks, the honest pins, the zone rates with their intervals | 05, 03 | `checks.json`, `stations.geojson`, `series.json` |
+| 4 | **The method:** two radars (NISAR L-band, Sentinel-1 C-band), pairs to rates (03), tied to a GNSS frame the way EGMS does it (04) | 03, 04 | `ts.npz`, `calib.json`, `up_east.npz` |
+| 5 | **The map:** screenshots of the live page: the opening view (D-002), the satellite switch in Compare, the Coverage view with NISAR's gap, a red pin; the demo link | 06 | the live page |
+| 6 | **What holds up:** where NISAR and Sentinel-1 agree (the Agreement view), the honest pins, and what neither can see yet | 05, 03 | `checks.json`, `stations.geojson`, `series.json` |
 | 7 | **Team, credits, AI use, prior work, links** | 01 | `CITATIONS.md`, `AI-DISCLOSURE.md` |
 
 ## Why the results will hold up
@@ -103,13 +110,13 @@ Tier 1 alone is a complete submission. Everything after it raises the ceiling wi
 | Tier | What | Owner |
 | --- | --- | --- |
 | 1 | Both tracks streamed and QA'd | 02 |
-| 1 | Rates per track, sign checked | 03 |
+| 1 | Rates per track for both radars, sign checked | 03 |
 | 1 | The tie | 04 |
 | 1 | Every check written and explained | 05 |
-| 1 | The page on real files: view, slider, pins, labels | 06 |
+| 1 | The page on real files: view, the satellite switch, Change, Zones and Coverage views, slider, pins, labels | 06 |
 | 1 | Story, the 7 slides, page, AI use, credits | 01, with each slide's owner |
 | 2 | Up and east on the common window; zone intervals | 03 |
-| 2 | Sentinel-1 comparison | 05 |
+| 2 | Compare (swipe) and the Agreement view; check 8 | 05, 06 |
 | 2 | Model swap | 04 |
 | 2 | Story mode, phone polish | 06 |
 | 3 | GSLC closure; weather-model troposphere; an ML/AI component (O-08); a GCOV angle | 02, 03 |
@@ -126,8 +133,8 @@ Hour 0 is the kickoff, set by 01 in `STATUS.md`. **Hour by hour, per role: [sche
 | 02 Data | Token, T1, T2, both tracks on disk | DEM, synthetic stack, QA | GSLC pairs (Tier 3) | Frames with 06, slide 3 | Check slide 3 against the frozen build |
 | 03 InSAR | Method, first pairs | Rates, T3, T4, zones | Up and east | Grey-out, errors, freeze, slides 4 and 6 | Check slides 4 and 6 |
 | 04 Geodesist | `refs.py`, Table S3 | The tie | Model swap, T8 | Final tie, frame paragraph, slide 4 | Check slide 4 |
-| 05 Validator | HyP3 order (hour 0 to 1), EGMS, screening | Sentinel-1 rates | `validate.py`, every WARN | Agree flags, red team, slide 6 | Rerun on the frozen build; check slide 6 |
-| 06 App | Mock site, Pages, blur | Map, slider, `export.py` | Pins, story mode, phone | Accessibility, slide 5 screenshots | Polish (no numbers) |
+| 05 Validator | EGMS 2020 to 2025 tile, screening | Check 8: NISAR against Sentinel-1 | `validate.py`, every WARN | Agree flags, red team, slide 6 | Rerun on the frozen build; check slide 6 |
+| 06 App | Mock site (both radars), Pages, blur | Map, satellite and view switches, slider, `export.py` | Compare, Agreement, Coverage, pins, story mode, phone | Accessibility, slide 5 screenshots | Polish (no numbers) |
 
 **Gates:**
 
@@ -142,10 +149,10 @@ If a gate slips by more than an hour, cut from the top of this ladder:
 1. Tier 3, all of it.
 2. Story mode polish (keep the stops as cards).
 3. The model swap.
-4. Sentinel-1.
+4. Compare's swipe and the Agreement view (keep the satellite switch, one radar at a time).
 5. Up and east (keep LOS per track).
 
-Never cut the sign check, the honest pins, the gap label, the slides or the submission text.
+Never cut the sign check, the satellite switch (D-004), the honest pins, the gap label, the slides or the submission text.
 
 ## Risks and fallbacks
 
@@ -156,7 +163,8 @@ Never cut the sign check, the honest pins, the gap label, the slides or the subm
 | The time series does not run | Hour 14 | Show the cumulative sum of the 12-day pairs, labelled as such |
 | The tie fails | Hour 20 | One constant per track on EGMS stable ground; say so |
 | The zones do not beat their error | Hour 24 | "The honest test" framing (O-01 a) |
-| HyP3 is late | Hour 8 (T10) | Sentinel-1 moves to Tier 3 |
+| One radar's products are not ready | Hour 24 | Its button is disabled with the reason; the page runs on the other radar |
+| The radars disagree at zone level | Hour 28 (check 8) | Show it in the Agreement view with the reason; that is a result, not a failure |
 | The page does not work on a phone | Hour 30 (T9) | Map, slider and one card |
 | The interactive page fails | Hour 36 | Static story map plus screenshots on the slides |
 | Anything changes numbers after hour 40 | Hour 40 | Freeze; text, styling and slides only |
@@ -166,7 +174,7 @@ Never cut the sign check, the honest pins, the gap label, the slides or the subm
 - [ ] Everyone registered at the same local event, on the Members tab (teams are 1 to 6 people).
 - [ ] Everyone has an Earthdata login and has run [../prompts/setup.md](../prompts/setup.md).
 - [ ] 01 has read the 13 Nov submission and judging guides aloud (O-02), and asked the local lead whether the advisor kit counts as declared prior work.
-- [ ] 05 has ordered the Sentinel-1 jobs.
+- [x] Sentinel-1 is fitted: 58 HyP3 burst pairs, tracks 029A and 007D (`sentinel1/`, Sat 14 Nov, 13:37).
 - [ ] The hour-2 review is done, and the decisions and contract are frozen.
 
 ## After Space Apps

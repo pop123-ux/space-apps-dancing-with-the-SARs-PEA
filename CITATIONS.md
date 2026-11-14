@@ -11,7 +11,7 @@ These are the data, software, documents and prior work this project uses, with w
 | Product | Used for | Fetched from | Owner |
 | --- | --- | --- | --- |
 | NISAR L2 GUNW, beta (`NISAR_L2_GUNW_BETA_V1`) and provisional (`NISAR_L2_GUNW_PROVISIONAL_V1`), frequency A, HH | Every NISAR layer | ASF, `https://nisar.asf.earthdatacloud.nasa.gov/NISAR/<collection>/`. The 22 granules are in `data/scenes/ocnele_mari_gunw.csv` (CMR, 14 Nov 2026) | 02 |
-| Sentinel-1 interferograms, ASF HyP3 `INSAR_GAMMA` | The second-radar check | [HyP3](https://hyp3-docs.asf.alaska.edu/); jobs logged in `docs/validation-log.md` | 05 |
+| Sentinel-1C/D VV burst interferograms, ASF HyP3 `INSAR_ISCE_BURST` (10x2 looks), 58 pairs on tracks 029A and 007D, 6 Jul to 5 Oct 2026 | The second radar (D-004): its own view in the app, and check 8 | [HyP3](https://hyp3-docs.asf.alaska.edu/); jobs, product names and checksums in `sentinel1/provenance/`; earlier note: jobs logged in `docs/validation-log.md` | 05 |
 
 ## References and ancillary layers
 

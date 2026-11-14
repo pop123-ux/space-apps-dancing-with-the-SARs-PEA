@@ -59,6 +59,29 @@ SITES = {
 SITES["demo"] = dict(SITES["ocnele_mari"], name="Ocnele Mari · synthetic demo", synthetic=True,
                      story="Invented ground motion with a known answer. Simulated, not data.")
 
+# ---------------------------------------------------------------------------------------------------------- sensors
+# D-004 (locked): we fit both NISAR and Sentinel-1, and the page switches between them (docs/ui.md).
+# Tracks and dates checked on NASA CMR and in sentinel1/analysis/summary.json, 14 Nov 2026. The page's labels come from
+# here through export.py, so a sensor is described once. Keys are used in file names: products/<site>/<sensor>/…
+SENSORS = {
+    "nisar": dict(
+        label="NISAR", agency="NASA–ISRO", band="L-band", wavelength_cm=24.4, look="left",
+        product="NISAR L2 GUNW, frequency A, HH (beta and provisional)", status="beta/provisional",
+        tracks={"129A": "Ascending", "094D": "Descending"},
+        reference="tied to the EuVeM2022 velocity model (04; DRAFT until the tie exists)",
+        credit="NISAR L2 GUNW (NASA–ISRO, ASF DAAC); beta and provisional products, not intended for scientific research",
+        fitted_by="fetch.py (02) → stack.py (03) → calibrate.py (04)"),
+    "s1": dict(
+        label="Sentinel-1", agency="ESA / Copernicus", band="C-band", wavelength_cm=5.55, look="right",
+        product="Sentinel-1C/D VV burst InSAR, ASF HyP3 INSAR_ISCE_BURST, 10x2 looks", status="operational",
+        tracks={"029A": "Ascending", "007D": "Descending"},
+        reference="relative to surrounding terrain, a 3 to 6.5 km band (sentinel1/analysis/README.md)",
+        credit="Contains modified Copernicus Sentinel data 2026, processed by ASF HyP3",
+        fitted_by="sentinel1/scripts/fit.py (03)"),
+}
+COMMON_WINDOW = ("2026-07-07", "2026-10-04")   # dates both sensors cover: Sentinel-1 fit window inside NISAR's Jun to Oct
+VIEWS = ("change", "rate", "zones", "agreement", "coverage")   # the page's view switch (docs/ui.md)
+
 # Published station rates: Muntean et al. 2026, Solid Earth 17, 747–762, supplement Tables S1/S3, Eurasia-fixed.
 # station: (lat, lon, ve, vn, vu, se, sn, su) in mm/yr; NaN = not read yet. Owner 04 fills the vertical from Table S3.
 # Cite the paper; do not copy the table into the repository (open question Q4 on quoting it in the app).

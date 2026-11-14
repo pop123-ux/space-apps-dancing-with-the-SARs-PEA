@@ -6,7 +6,7 @@ Context for Claude Code sessions in this repo. Six people each run their own ses
 
 ## What this is
 
-This is the team repo for NASA Space Apps 2026 (14 to 15 Nov), challenge "Dancing with the SARs". The project, **Dancing on Salt**, uses NISAR L-band interferograms to show how the ground moves above the salt-brine fields of **Ocnele Mari**, Romania. It ties the radar to open GNSS velocity models, and checks it against held-out stations, EGMS Ortho, Sentinel-1 and a synthetic stack with a known answer. The output is a static web page: a map that opens on the town, a time slider with honest gaps, station pins that say whether satellite and ground agree, and story stops. We present it in a **7-slide PowerPoint, with no video** (D-003).
+This is the team repo for NASA Space Apps 2026 (14 to 15 Nov), challenge "Dancing with the SARs". The project, **Dancing on Salt**, uses two radars, **NISAR** (L-band) and **Sentinel-1** (C-band), to show how the ground moves above the salt-brine fields of **Ocnele Mari**, Romania (D-004). It ties the radar to open GNSS velocity models, and checks it against held-out stations, EGMS Ortho, the other radar and a synthetic stack with a known answer. The output is a static web page: a map that opens on the town, a **satellite switch** (NISAR, Sentinel-1, Compare), several views of the same trend, a time slider with honest gaps, station pins that say whether satellite and ground agree, and story stops. We present it in a **7-slide PowerPoint, with no video** (D-003).
 
 **Status:** skeleton. The plan, the rules, the pipeline interfaces (stubs) and the working tools are in place, and there is no page yet. The advisor's rehearsal showed that the signal (about −25 mm/yr at most) is below NISAR's first-months per-pixel noise (37 to 51 mm/yr), so the story framing is open (O-01). See `STATUS.md` for where things stand right now.
 
@@ -49,6 +49,7 @@ This is the team repo for NASA Space Apps 2026 (14 to 15 Nov), challenge "Dancin
 - **Scope is Ocnele Mari only (D-001).** `demo` and `mock` are test sites, not sites.
 - **The map opens on Ocnele Mari, with Romania blurred when zoomed out (D-002).**
 - **The submission is a 7-slide PowerPoint, with no video (D-003).** Each slide has an owner role; see `docs/overview.md`, "The slides".
+- **Two radars, one switch (D-004).** Both NISAR and Sentinel-1 are fitted. The page has a satellite switch and the views in `docs/ui.md`. Compare them only on the same months and reference, each in its own line of sight, on one shared legend (`docs/ui.md`, "Honest comparison rules"). Sentinel-1 lives in `sentinel1/` (03).
 - **Decisions in `docs/build-spec.md` are frozen after the hour-2 review.** Don't change cuts, thresholds, windows, tests or the file contracts. If one looks wrong, write a proposal with the evidence; the team decides, and 01 logs it in the change log.
 - **Honest numbers.**
   - Every number on the page, in the slides and in the submission comes from `products/ocnele_mari/`, written by the pipeline.
