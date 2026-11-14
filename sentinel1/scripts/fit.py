@@ -168,7 +168,7 @@ def stats(t, y, groups=None):
             'groups': groups.tolist()}
 
 
-def fit_track(root, out, track, geo):
+def fit_track(root, out, track, geo, tropo=None):
     files = sorted(root.glob(f'*-{track}-*.zip'))
     bad = [f.name for f in files if not zipfile.is_zipfile(f)]
     if not files or bad:
@@ -186,11 +186,18 @@ def fit_track(root, out, track, geo):
     t = (np.array([f'{d[:4]}-{d[4:6]}-{d[6:]}' for d in dates], dtype='datetime64[D]') -
          np.datetime64(f'{dates[0][:4]}-{dates[0][4:6]}-{dates[0][6:]}')).astype(float) / 365.25
     results = {}
-    for label, min_coh, ref_idx, tropo in [('baseline', .35, 0, False), ('strict_coherence', .55, 0, False),
-                                           ('west_reference', .35, 1, False), ('east_reference', .35, 2, False),
-                                           ('elevation_correction', .35, 0, True)]:
+    scenarios = [('baseline', .35, 0, None), ('strict_coherence', .55, 0, None), ('west_reference', .35, 1, None),
+                 ('east_reference', .35, 2, None), ('elevation_correction', .35, 0, 'dem_slope')]
+    if tropo is not None:   # sixth scenario: acquisition-time weather-model delay (tropo.py), stratified part
+        heights = np.array(tropo['heights_m'])
+        ztd = {d: np.array(v) for d, v in tropo['tracks'][track].items()}
+        missing = sorted(set(dates) - set(ztd))
+        if missing:
+            raise SystemExit(f'{track}: no weather-model delay for {missing[:3]}')
+        scenarios.append(('weather_model', .35, 0, 'weather_model'))
+    for label, min_coh, ref_idx, correction in scenarios:
         ds = []; ws = []
-        for p in rows:
+        for (a_date, b_date), p in zip(pairs, rows):
             valid = (p['coh'] >= min_coh) & (p['comp'] > 0) & (p['water'] == 1) & np.isfinite(p['phase'])
             reference = geo['refs'][ref_idx] & valid
             labels, counts = np.unique(p['comp'][reference], return_counts=True)
@@ -198,7 +205,12 @@ def fit_track(root, out, track, geo):
             valid &= p['comp'] == labels[np.argmax(counts)]
             reference = geo['refs'][ref_idx] & valid
             d = p['phase'] * FACTOR
-            if tropo:
+            if correction == 'weather_model':
+                # differential slant delay between the two dates at each pixel's height; a delay increase reads as
+                # motion away from the satellite (negative), so it is added back. u = sin(theta) = cos(incidence).
+                dz = np.interp(dem, heights, ztd[b_date]) - np.interp(dem, heights, ztd[a_date])
+                d = d + dz / np.sin(p['theta'])
+            if correction == 'dem_slope':
                 ref = reference & np.isfinite(dem)
                 b = np.polyfit(dem[ref], d[ref], 1)[0]
                 d = d - b * (dem - np.median(dem[ref]))
@@ -260,10 +272,12 @@ def main():
     ap.add_argument('zip_directory', type=Path)
     ap.add_argument('output_directory', type=Path)
     ap.add_argument('--tracks', nargs='+', default=['029A', '007D'])
+    ap.add_argument('--tropo', type=Path, help='tropo.json from tropo.py: adds the weather_model scenario')
     a = ap.parse_args()
     a.output_directory.mkdir(parents=True, exist_ok=True)
     geo = geometry()
-    summary = {track: fit_track(a.zip_directory, a.output_directory, track, geo) for track in a.tracks}
+    tropo = json.loads(a.tropo.read_text()) if a.tropo else None
+    summary = {track: fit_track(a.zip_directory, a.output_directory, track, geo, tropo) for track in a.tracks}
     (a.output_directory / 'summary.json').write_text(json.dumps(summary, indent=2) + '\n')
 
 

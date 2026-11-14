@@ -103,11 +103,80 @@ The app's nice-to-have controls ("tweak a parameter and the predicted change fol
 - Browser check (Playwright, Chromium, 1280 × 900): the four buttons render, the long-term button shows the −9.21 mm endpoint, and there are no console errors. **Layout:** with four buttons the model selector overflows its row ("Gaussian process" is cut off); wrap it or use a select on narrow panels.
 - If the team makes the long-term trend the default, change `model` in the export (one argument), not in the page.
 
+## Troposphere, the January to October fit, and Chronos-2 (14 Nov 2026, 19:30)
+
+### The January to October fit is in the repository (next step 2, done)
+
+- `sentinel1/analysis_jan_oct/`: Sol's fit (49 dates and 95 pairs per track, 47 closure triangles each; zone 4 029A −4.07 mm over the window at baseline, +4.48 mm with the DEM-slope correction; no descending zone series), with its grids packed in `sentinel1/assets_jan_oct/` (`python scripts/restore_grids.py` restores both windows).
+- `sentinel1/provenance/hyp3_jobs_jan_oct_status.json`: the 132 job names and IDs, all SUCCEEDED. **Limitation:** it has no granule names, download links or ZIP checksums, unlike the July to October provenance, so this fit cannot be re-run from the repository alone. The HyP3 job IDs can recover the links (Earthdata login) until the products expire.
+- It confirms that 1-day pairs from near-duplicate Sentinel-1A and 1D acquisitions were kept (for example 25 to 26 April on 029A).
+
+### Weather-model troposphere (next step 3, done for July to October)
+
+`sentinel1/scripts/tropo.py` computes, for every acquisition, the zenith delay versus height from the ECMWF IFS 0.25° pressure-level profile at the acquisition hour (029A 16:16 UTC, 007D 04:29 UTC; Open-Meteo historical-forecast API). `fit.py --tropo` adds a sixth scenario, **weather_model**, that removes each interferogram's differential slant delay at every pixel's DEM height. The delays are stored in `sentinel1/analysis/tropo.json`. Between 200 and 800 m the zenith delay differs by 166 to 204 mm depending on the date.
+
+| Summer 2026, stable ground 3 to 8 km from the zones | Baseline | DEM-slope (fitted) | Weather model (independent) |
+| --- | --- | --- | --- |
+| 029A rate leaking from elevation, mm/yr per 100 m | −19.2 | −8.9 | **−4.2** |
+| 007D, same | −15.3 | −1.9 | −7.8 |
+| 029A stable median drift, mm/yr | +10.1 | +3.8 | +4.7 |
+| 029A per-pixel scatter (MAD), mm/yr | 26.1 | 24.5 | 25.9 |
+| Zone 4 029A rate, mm/yr | −30.5 | −11.6 | **−23.6** |
+| Zone 4 007D rate, mm/yr | −14.2 | −8.1 | −11.2 |
+
+The weather model removes most of the elevation-correlated delay without fitting the data (so it cannot absorb real motion that happens to follow elevation). It does not reduce the per-pixel scatter: that is turbulent atmosphere, which one profile per date cannot model. Zone 4 029A stays far above the long-term −5.5 mm/yr, so stratified delay explains only part of the summer excess. The scenario is in `sentinel1/analysis/summary.json` and in the app's "Explore processing choices" (via `export.py`). It is not applied to the January to October fit, whose raw ZIPs are not in the repository.
+
+Forecasting the weather-corrected series (`forecast.py --tropo`): 30-day MAE persistence 4.01, Theil-Sen 5.21, GP 3.31, long-term 3.97, rain 4.25 mm; 1 January endpoints GP −9.74, long-term −7.28, Theil-Sen −10.83 mm. Correcting the atmosphere brings the summer models closer to the long-term anchor. (These MAEs use corrected truths too, so they compare within this scenario, not with the baseline.) The app still shows the baseline forecast, because `forecast.json` holds one scenario; a per-scenario forecast is a 06 option.
+
+### Chronos-2 (amazon/chronos-2), zero-shot on CPU
+
+`sentinel1/scripts/forecast_chronos.py` (after `forecast.py`, in a separate environment with `chronos-forecasting>=2` and CPU torch, about 1.4 GB) adds a fifth path, `chronos2`, with an 80 % interval, to `forecast.json`. It loads in 8 s and runs in about 7 s. Nothing in the page or the pipeline depends on torch.
+
+| Backtest, Zone 4 029A, MAE in mm | Chronos-2 | Persistence | Theil-Sen | GP | Long-term | Chronos-2 80 % interval holds the truth |
+| --- | --- | --- | --- | --- | --- | --- |
+| Summer, 30 days, 4 re-inverted cutoffs | **3.77** | 4.19 | 5.53 | 3.95 | 3.97 | 4 of 4 |
+| Summer weather-corrected, 30 days | 3.38 | 4.01 | 5.21 | **3.31** | 3.97 | 4 of 4 |
+| January to October, 30 days, 32 cutoffs | **3.49** | 5.00 | 5.13 | 4.80 | 5.04 | 78 % |
+| January to October, **88 days**, 22 cutoffs | **3.81** | 4.29 | 4.64 | 4.39 | 4.29 | 77 % |
+
+- This is the first real 88-day backtest (the January horizon). The January to October cutoffs read their truth off the final reconstruction (a small look-ahead) and overlap, so they are not independent, and they cover one zone on one track.
+- Chronos-2 is the only model here with an interval that behaves as calibrated (77 to 78 % of truths inside an 80 % band).
+- Its 1 January path is a partial rebound: **−3.87 mm** relative to 7 July (+4.0 mm from 5 October), 80 % interval −11.3 to +15.2 mm. From the January to October context it gives +3.6 mm from 5 October (80 %: −2.9 to +12.3). It extrapolates the shape of the series; it knows nothing about salt, weather or the mine.
+
+### Current 1 January 2027 paths in the app (baseline, relative to 7 July 2026)
+
+| Model | 30-day MAE (4 summer cutoffs) | 1 January |
+| --- | --- | --- |
+| Persistence | 4.19 | −7.89 |
+| Theil–Sen | 5.53 | −15.08 |
+| Gaussian process (default by the predeclared rule) | 3.95 | −13.78 |
+| Long-term trend (EGMS 2020–2025) | 3.97 | −9.21 |
+| Chronos-2 (zero-shot) | 3.77 | −3.87 (80 %: −11.27 to +15.17) |
+
+By the predeclared rule (lowest 30-day MAE) Chronos-2 would now be the default; the export keeps the GP until the team decides (`DECISIONS.md`, 19:30). On the 88-day evidence the candidates for the January default are Chronos-2 (best MAE, calibrated interval) and the long-term trend (independent physical anchor); the GP and Theil-Sen extrapolate the summer slope and score worst at 88 days.
+
+### Handoff to 06 (update)
+
+- `forecast.json` has a fifth path `chronos2`, `intervals.chronos2` (`q10`, `q90`, `level` 0.8) and a `chronos2` block with the backtests. `app/main.js` got the label "Chronos-2 (zero-shot)". The page does not draw the interval yet: shade it between `q10` and `q90` when Chronos-2 is selected, labelled "80 % interval (backtested)".
+- Five buttons overflow the model selector even more: use a select or wrapping chips.
+- `sensitivity.json` has a sixth scenario `weather_model` ("Weather-model troposphere (ECMWF IFS, acquisition time)"); the elevation scenario is relabelled "Elevation correction (fitted to the data)". `export.py` now treats explicit empty zones from `fit.py` as no series.
+
+### Next steps (updated)
+
+1. Process the six 029A acquisitions after 5 October (through 10 November): shortens the January horizon to 52 days.
+2. Commit the January to October raw provenance (granules, links, checksums) from the HyP3 job IDs.
+3. Apply the weather model to the January to October fit (needs its raw ZIPs) and recheck the long-term rate and Chronos-2 on it.
+4. Zone-level network inversion for Zone 3 and the descending January to October series.
+5. Team decision: the default January model.
+6. 04/02: Matei's NISAR file (uploading to Google Drive).
+
 ## References
 
 - [Hill et al., Sentinel-1 deformation forecasting](https://doi.org/10.1029/2020JB020176)
 - [EGMS 2020–2025 release](https://land.copernicus.eu/en/news/product-update-european-ground-motion-service-2025)
 - [ERA5 via the Open-Meteo archive API](https://open-meteo.com/en/docs/historical-weather-api)
+- [ECMWF IFS pressure levels via the Open-Meteo historical-forecast API](https://open-meteo.com/en/docs/historical-forecast-api)
+- [Chronos-2 model card](https://huggingface.co/amazon/chronos-2) and [chronos-forecasting](https://github.com/amazon-science/chronos-forecasting)
 - [NASA JPL OPERA TROPO](https://www.jpl.nasa.gov/go/opera/products/tropo-product/)
 - [Fattahi and Amelung, DEM error in InSAR time series](https://doi.org/10.1109/TGRS.2012.2227761)
 - [De Zan et al., soil moisture and interferometric phase](https://elib.dlr.de/80946/)

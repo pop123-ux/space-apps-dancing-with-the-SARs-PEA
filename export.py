@@ -50,7 +50,8 @@ SCENARIOS = {           # summary.json fit name → label on the page
     "strict_coherence": "Stricter coherence (≥ 0.55)",
     "west_reference": "West reference area only",
     "east_reference": "East reference area only",
-    "elevation_correction": "Elevation correction",
+    "elevation_correction": "Elevation correction (fitted to the data)",
+    "weather_model": "Weather-model troposphere (ECMWF IFS, acquisition time)",
 }
 WINDOW = "jul_oct"
 # What the page says when a zone has no series in a window (docs/ui.md, "Zone review and historical context"):
@@ -241,7 +242,9 @@ def export_series(summary: dict, site: dict) -> tuple[list[dict], dict]:
             variants[track][sc] = {}
             for p in pts:
                 fit = fits.get(sc, {}).get(p["key"])
-                variants[track][sc][p["id"]] = scenario_entry(fit, summary[track]["dates"]) if fit else None
+                # fit.py records an empty zone explicitly ({"pixels": 0, "status": ...}); that is no series here
+                variants[track][sc][p["id"]] = (scenario_entry(fit, summary[track]["dates"])
+                                                if fit and "displacement_mm" in fit else None)
     for p in pts:
         p["series"] = {}
         for track in C.SENSORS["s1"]["tracks"]:

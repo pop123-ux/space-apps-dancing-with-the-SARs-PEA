@@ -28,6 +28,7 @@ These are the data, software, documents and prior work this project uses, with w
 | ERA5 daily precipitation via the Open-Meteo archive API (7- and 30-day sums at 45.088 N, 24.290 E) | 05's rainfall screen; the forecast covariate test (`forecast.py --rain-csv`) | https://open-meteo.com/en/docs/historical-weather-api (05, PR #9) | 05 |
 | NISAR L3 SME2 soil moisture, provisional and beta, 200 m | 05's moisture screen | ASF, `NISAR_L3_SME2_PROVISIONAL_V1` (05, PR #9) | 05 |
 | EGMS Ortho L3 2020 to 2025, Zone 4 cell medians (Up −3.1, East +4.9 mm/yr, 10 cells) | The forecast's long-term trend model | [EGMS 2020–2025 release](https://land.copernicus.eu/en/news/product-update-european-ground-motion-service-2025); 05's cut (PR #9) | 05, 03 |
+| ECMWF IFS 0.25° pressure-level temperature, humidity and geopotential, hourly, via the Open-Meteo historical-forecast API | The weather-model troposphere scenario (`sentinel1/scripts/tropo.py`) | https://open-meteo.com/en/docs/historical-forecast-api (`models=ecmwf_ifs025`); delays stored in `sentinel1/analysis/tropo.json` | 03 |
 | Basemap, light (default): OpenFreeMap "positron" style, OpenMapTiles schema, OpenStreetMap data | The page's default map background | `https://tiles.openfreemap.org/styles/positron` ([openfreemap.org](https://openfreemap.org)); free, no API key; credited on the map and in About. Checked 14 Nov 2026 | 06 |
 | Basemap, satellite: Sentinel-2 cloudless 2020 by EOX IT Services GmbH (contains modified Copernicus Sentinel data 2020) | The page's optional "Satellite" background | `https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/…` ([s2maps.eu](https://s2maps.eu)); credited on the map and in About. The 2018 and later layers are licensed CC BY-NC-SA 4.0, as we understand it: 06 confirms on s2maps.eu before submitting | 06 |
 | Ocnele Mari town boundary: OpenStreetMap relation 9845422 (admin_level 8, the town with its villages) | The black outline on the map | Nominatim, `https://nominatim.openstreetmap.org/details?osmtype=R&osmid=9845422&polygon_geojson=1`, fetched 14 Nov 2026, saved as `app/ocnele_mari_boundary.geojson`; © OpenStreetMap contributors, ODbL 1.0, credited on the map | 06 |
@@ -37,6 +38,7 @@ These are the data, software, documents and prior work this project uses, with w
 | Software | Version | Source |
 | --- | --- | --- |
 | Python, NumPy, SciPy, pandas, h5py, pyproj, requests, asf_search, hyp3_sdk, rasterio, matplotlib, Pillow | Recorded at hour 2 by each owner | PyPI or conda-forge |
+| Chronos-2 (`amazon/chronos-2`), chronos-forecasting, PyTorch CPU | 2.3.2, torch 2.15 CPU | https://huggingface.co/amazon/chronos-2 (Apache-2.0); used zero-shot by `sentinel1/scripts/forecast_chronos.py` |
 | MintPy | If O-05 picks it | https://github.com/insarlab/MintPy |
 | MapLibre GL JS | 6.15.0 (loaded from unpkg) | https://maplibre.org |
 | Fonts: Instrument Serif and Inter (SIL Open Font License) | Loaded from Google Fonts | https://fonts.google.com |

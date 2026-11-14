@@ -765,7 +765,7 @@ function forecastPanel() {
   if (!obs || obs.dates.length !== f.training_dates.length ||
       !obs.dates.every((date, index) => date === f.training_dates[index] &&
         Number.isFinite(obs.mm[index]) && Math.abs(obs.mm[index] - f.observed_mm[index]) <= .011)) return '';
-  const labels = { persistence: 'Persistence', theil_sen: 'Theil–Sen trend', gaussian_process: 'Gaussian process', long_term: 'Long-term trend (EGMS 2020–2025)' };
+  const labels = { persistence: 'Persistence', theil_sen: 'Theil–Sen trend', gaussian_process: 'Gaussian process', long_term: 'Long-term trend (EGMS 2020–2025)', chronos2: 'Chronos-2 (zero-shot)' };
   const model = Object.hasOwn(f.model_paths_mm || {}, S.forecastModel) ? S.forecastModel : f.model;
   const path = f.model_paths_mm?.[model] || f.forecast_mm;
   const modelChoices = Object.keys(f.model_paths_mm || {}).map(key => `<button type="button" data-forecast-model="${esc(key)}" aria-pressed="${key === model}">${esc(labels[key])}</button>`).join('');
