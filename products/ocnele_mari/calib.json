@@ -1,5 +1,47 @@
 {
- "model": null,
- "tracks": [],
- "pending": "calibrate.py (04) has not tied NISAR to the GNSS model yet"
+ "model": "euvem",
+ "tracks": [
+  {
+   "sensor": "nisar",
+   "track": "129A",
+   "direction": "Ascending",
+   "method": "offset",
+   "offset_mm_yr": -5.8,
+   "slope_east_mm_yr_per_10km": 0.0,
+   "slope_north_mm_yr_per_10km": 0.0,
+   "n_tie_pixels": 347765,
+   "residual_std_mm_yr": 39.15,
+   "residual_mad_mm_yr": 37.07,
+   "model_los_mean_mm_yr": -0.63,
+   "swap_delta_mm_yr": 0.704,
+   "swap_model": "egms",
+   "swap_offset_mm_yr": -5.1,
+   "frame": "Eurasia-fixed (EuVeM2022: horizontals ETRF2000, up IGS14)",
+   "dates": [
+    "2025-11-07",
+    "2025-12-01",
+    "2025-12-13",
+    "2025-12-25",
+    "2026-01-18",
+    "2026-06-23",
+    "2026-07-05",
+    "2026-07-17",
+    "2026-08-10",
+    "2026-08-22",
+    "2026-09-03",
+    "2026-09-15",
+    "2026-09-27",
+    "2026-10-09",
+    "2026-10-21"
+   ],
+   "gaps": [
+    [
+     "2026-01-18",
+     "2026-06-23"
+    ]
+   ],
+   "ts_made_by": "04 stand-in r04_129a.py (stack.py real path is a stub)",
+   "phase_sign": -1
+  }
+ ]
 }
