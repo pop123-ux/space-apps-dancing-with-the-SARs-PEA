@@ -354,3 +354,69 @@ body.side-open.side-wide .layers-wrap { right: calc(var(--side-wide) + var(--gap
   background: var(--card); border-radius: 999px; padding: 0 9px; font-size: 12px; line-height: 18px; white-space: nowrap; }
 .tl .gap .gap-fill:hover { background: #F5F3FF; }
 .tl .gap.filled { background: rgba(124,58,237,.06); text-align: center; }
+
+/* ---------------------------------------------------------------- context strip, zones, runs (UI pass, 15 Nov 2026) */
+:root { --ctx-h: 76px; }
+#context { position: fixed; z-index: 19; top: var(--bar-h); left: 0; right: 0; background: var(--card); border-bottom: 1px solid var(--line);
+  padding: 6px var(--gap); display: grid; gap: 4px; font-size: 13px; }
+.ctx-what { color: var(--ink); line-height: 1.5; }
+.ctx-what .sep { color: var(--muted); }
+.ctx-what .neg { color: var(--muted); }
+.ctx-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; align-items: center; }
+.zones { display: flex; flex-wrap: wrap; gap: 4px; }
+.zones button, .chip { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 4px 10px; font-size: 13px; }
+.zones button[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+.zones .zn { font-weight: 600; }
+.chip.strong { background: var(--s1); color: #fff; border-color: var(--s1); }
+.ctx-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+#stage { top: calc(var(--bar-h) + var(--ctx-h)); }
+#sheet, #sheet.wide { top: calc(var(--bar-h) + var(--ctx-h)); }
+#flags, #cmp-tags { top: calc(var(--bar-h) + var(--ctx-h) + 10px); }
+.navs { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.seg.sub button { padding: 6px 12px; font-size: 14px; }
+.lead-finding { display: grid; gap: 2px; border-left: 4px solid var(--warn); background: #FFFBEB; border-radius: 10px; padding: 10px 12px; margin: 10px 0; }
+.lead-finding b { font-size: 15px; }
+.runs .runpick { display: flex; gap: 8px; align-items: center; font-size: 13px; margin: 6px 0; }
+.runs select { font: inherit; padding: 4px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }
+.runs-t td, .runs-t th { font-size: 12px; }
+tr.here td { background: var(--soft); }
+ul.missing { margin: 6px 0; padding-left: 18px; font-size: 13px; color: var(--muted); }
+.chart .cpt { cursor: pointer; }
+.checks li.here { outline: 2px solid var(--ink); border-radius: 8px; }
+.legend { font-size: 13px; width: 280px; }
+.legend-title { font-size: 14px; }
+.legend-keys { display: flex; gap: 12px; font-size: 12px; margin-top: 6px; color: var(--muted); }
+.legend-keys i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: -1px; }
+.legend-keys .k-pale { background: #F7F7F7; border: 1px solid #78716C; }
+.legend-keys .k-none { border: 1px dashed #A8A29E; }
+.legend.cov .ramp, .legend.cov .ticks, .legend.cov .caps { display: none; }
+tr.none td { color: var(--muted); }
+@media (max-width: 760px) {
+  #context { font-size: 12px; padding: 4px 10px; }
+  .ctx-what .neg { display: none; }
+  .zones button, .chip { padding: 3px 8px; font-size: 12px; }
+  #sheet, #sheet.wide { top: auto; }
+}
+.tscroll { overflow-x: auto; }
+.runs-t td:nth-child(n+2), .runs-t th { white-space: nowrap; }
+.chip .short { display: none; }
+@media (max-width: 760px) {
+  .ctx-what { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ctx-row { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .zones { flex-wrap: nowrap; }
+  .zones .zl { display: none; }
+  .zones button { min-width: 34px; }
+  .chip .long { display: none; } .chip .short { display: inline; }
+  .ctx-actions { flex-wrap: nowrap; }
+  #sheet, #sheet.wide { max-height: 42%; }
+}
+@media (max-width: 760px) {
+  /* one scrolling row of controls so the map stays visible above the drawer (15 Nov 2026) */
+  .dock-top { flex-direction: row; align-items: center; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 6px; }
+  .dock-top::-webkit-scrollbar { display: none; }
+  .navs { flex-wrap: nowrap; gap: 6px; }
+  .seg.views { width: auto; }
+  .seg button, .seg.sub button { padding: 7px 10px; font-size: 14px; }
+  .tracks { flex: none; }
+  #sheet, #sheet.wide { max-height: 36%; }
+}

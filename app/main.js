@@ -13,7 +13,13 @@ const SATS = {
   s1: { mark: '▲', cls: 'mk-s1', color: '#7C3AED', shape: 'tri', name: 'Sentinel-1' },
 };
 const ARROW = { Ascending: '↗', Descending: '↘' };
-const VIEW_LABEL = { change: 'Change', rate: 'Rate', zones: 'Zones', agreement: 'Agreement', coverage: 'Coverage' };
+const VIEW_LABEL = { change: 'Change', rate: 'Rate', zones: 'Zones', agreement: 'Compare', coverage: 'Coverage' };
+// Top-level navigation (15 Nov 2026): Motion (Change, Rate), Coverage, Compare. Internal view keys stay as before, so
+// old links with view=zones, view=agreement and view=coverage still open.
+const TABS = [{ key: 'motion', label: 'Motion', views: ['change', 'rate', 'zones'] }, { key: 'coverage', label: 'Coverage', views: ['coverage'] },
+  { key: 'compare', label: 'Compare', views: ['agreement'] }];
+const RUN_COLORS = ['#7C3AED', '#0E7490'];   // baseline, alternative run (never red against green)
+const NEG_TEXT = 'Negative means motion away from the satellite along its line of sight.';
 const MEASURED_VIEWS = ['change', 'rate', 'zones'];
 const SHEET_VIEWS = ['zones', 'agreement', 'coverage'];
 const STATUS_ICON = { pass: '✔', warn: '!', fail: '✘', info: '·' };
@@ -117,6 +123,7 @@ function writeHash() {
   p.set('exp', S.exp ? '1' : '0');
   if (S.window) p.set('window', S.window);
   if (S.sens) p.set('scenario', S.scenario);
+  if (S.selected?.kind === 'zone') p.set('zone', S.selected.id);
   history.replaceState(null, '', '#' + p.toString().replace(/%2C/g, ','));
 }
 function applyHash(h) {
@@ -128,7 +135,21 @@ function applyHash(h) {
   if (h.view && (S.man.views || []).includes(h.view)) S.view = h.view;
   if (h.date && /^\d{4}-\d{2}-\d{2}$/.test(h.date)) { S.date = h.date; S.dateUser = true; }
   if (h.exp) S.exp = h.exp === '1';
+  if (h.zone && zones().some(z => z.id === h.zone)) S.selected = { kind: 'zone', id: h.zone };
+  if (h.preset === 'zone4') applyPreset(false);
   if (!viewAllowed(S.view)) S.view = 'coverage';
+}
+// "Investigate Zone 4": Sentinel-1 029A, January to October 2026, baseline run, Zone 4 selected (a shareable preset)
+function applyPreset(render = true) {
+  const w = S.sens?.windows?.jan_oct ? 'jan_oct' : S.window;
+  S.sat = 's1'; S.track.s1 = tracksOf('s1').includes('029A') ? '029A' : S.track.s1; S.window = w; S.scenario = 'baseline';
+  S.view = 'change'; S.selected = { kind: 'zone', id: 'z4' }; S.note = null;
+  const ds = datesOf('s1', S.track.s1); S.date = ds[ds.length - 1] || null; S.dateUser = true;
+  if (render) { changed(); flyToZone('z4'); }
+}
+function flyToZone(id) {
+  const z = zones().find(p => p.id === id); if (!z || !mapA) return;
+  mapA.flyTo({ center: [z.lon, z.lat], zoom: Math.max(mapA.getZoom(), 13.5) });
 }
 
 // ------------------------------------------------------------------------------------------------ loading
@@ -203,6 +224,10 @@ function addOverlay(m) {
     'circle-color': '#F7F7F7',
   } }, firstLabel);
   m._pts = null;
+  // the selected zone's footprint (a circle of the zone's radius), drawn over the dots
+  m.addSource('zsel', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+  m.addLayer({ id: 'zsel-fill', type: 'fill', source: 'zsel', paint: { 'fill-color': '#1C1917', 'fill-opacity': 0.06 } });
+  m.addLayer({ id: 'zsel-line', type: 'line', source: 'zsel', paint: { 'line-color': '#1C1917', 'line-width': 2, 'line-dasharray': [2, 1] } });
   // the town's administrative boundary, a black line with a pale casing so it reads on both basemaps
   m.addSource('town', { type: 'geojson', data: 'app/ocnele_mari_boundary.geojson',
     attribution: 'Town boundary © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors' });
@@ -240,8 +265,9 @@ function setPoints(m, sat, L) {
   loadPoints(file).then(gj => {
     if (m._ptsWant !== want) return;            // the user moved on while the file loaded
     if (m._pts !== file) { m.getSource('pts').setData(gj); m._pts = file; S.spacing = gj.meta.spacing; renderLegend(); }
-    m.setPaintProperty('pts', 'circle-color', rdbuExpr(key, want.vmax));
-    m.setFilter('pts', ['has', key]);
+    const cov = S.view === 'coverage';   // Coverage: where a connected series exists, whatever its value
+    m.setPaintProperty('pts', 'circle-color', cov ? '#57534E' : rdbuExpr(key, want.vmax));
+    m.setFilter('pts', ['has', cov ? 'r' : key]);
     m.setLayoutProperty('pts', 'visibility', 'visible');
   }).catch(() => { m.setLayoutProperty('pts', 'visibility', 'none'); });
   return true;
@@ -334,6 +360,19 @@ function layerFor(sat) {
   return { png: i >= 0 ? f.pngs[i] : null, meta: f, kind: 'change', date: i >= 0 ? d : null, first: (i >= 0 && f.groups) ? f.dates[f.groups.indexOf(f.groups[i])] : f.dates[0] };   // grouped frames count from their group's first date
 }
 const hasUpLayer = () => sideSats().some(s => layers(s).some(l => l.id === 'up'));
+function zoneCircle(z, n = 64) {
+  const R = 6371008.8, lat = z.lat * Math.PI / 180, ring = [];
+  for (let i = 0; i <= n; i++) {
+    const a = 2 * Math.PI * i / n;
+    ring.push([z.lon + (z.r_m * Math.sin(a) / (R * Math.cos(lat))) * 180 / Math.PI, z.lat + (z.r_m * Math.cos(a) / R) * 180 / Math.PI]);
+  }
+  return { type: 'Feature', geometry: { type: 'Polygon', coordinates: [ring] }, properties: {} };
+}
+function renderFootprint() {
+  const z = S.selected?.kind === 'zone' ? zones().find(p => p.id === S.selected.id) : null;
+  for (const m of [mapA, mapB]) m?.getSource('zsel')?.setData({ type: 'FeatureCollection', features: z?.r_m ? [zoneCircle(z)] : [] });
+  document.querySelectorAll('.marker.zone').forEach(el => el.classList.toggle('on', !!z && el.dataset.id === z.id));
+}
 function renderOverlays() {
   if (!mapA) return;
   if (S.sat === 'compare') { drawSide(mapA, 'nisar'); if (mapB) drawSide(mapB, 's1'); }
@@ -410,7 +449,26 @@ function pickSat(k, keepDate = true) {
   if (keepDate && prevDate) { S.date = prevDate; S.dateUser = true; }
   changed();
 }
+// checks relevant to the active selection: the zone's comparison, the NISAR track's sign check, a station
+function relevantChecks() {
+  const out = [];
+  if (S.selected?.kind === 'zone') { const n = S.selected.id.replace(/\D/g, ''); out.push(...S.checks.filter(c => new RegExp(`^agree-z${n}-`).test(c.id))); }
+  if (S.selected?.kind === 'station') out.push(...S.checks.filter(c => c.id === `station-${S.selected.id}`));
+  if (S.sat === 'nisar' || S.view === 'agreement') out.push(...S.checks.filter(c => c.id === `sign-${S.track.nisar}`));
+  return out;
+}
 function renderChecksButton() {
+  const rel = relevantChecks();
+  const worst = ['fail', 'warn', 'pass', 'info'].find(k => rel.some(c => c.status === k));
+  if (rel.length) {
+    const c = rel.find(x => x.status === worst);
+    $('#checks-btn').innerHTML = `<span class="c-${worst}">${STATUS_ICON[worst]}</span> ${esc(c.title)}${rel.length > 1 ? ` <span class="sub">+${rel.length - 1}</span>` : ''}`;
+    $('#checks-btn').dataset.target = c.id;
+    $('#checks-btn').setAttribute('aria-label', `Check for this selection: ${c.title}, ${worst}. Open the evidence`);
+    return;
+  }
+  delete $('#checks-btn').dataset.target;
+  $('#checks-btn').setAttribute('aria-label', 'All checks');
   const n = S.man.checks || {};
   $('#checks-btn').innerHTML = `<span class="c-pass">✔ ${n.pass ?? 0}</span><span class="c-warn">! ${n.warn ?? 0}</span><span class="c-fail">✘ ${n.fail ?? 0}</span>${n.info ? `<span class="c-info">· ${n.info}</span>` : ''}`;
   $('#checks-btn').setAttribute('aria-label', `Checks: ${n.pass ?? 0} pass, ${n.warn ?? 0} warn, ${n.fail ?? 0} fail, ${n.info ?? 0} info. Open the list.`);
@@ -427,12 +485,48 @@ function renderLayersMenu() {
 }
 
 // ------------------------------------------------------------------------------------------------ dock: views, tracks, timeline
+const tabOf = (v) => (TABS.find(t => t.views.includes(v)) || TABS[0]).key;
 function renderViews() {
-  const views = S.man.views || ['change'];
-  pressGroup($('#view-group'), views.map(v => ({
-    key: v, html: esc(VIEW_LABEL[v] || v),
-    disabled: viewAllowed(v) ? null : (S.sat === 'compare' ? 'Needs measurements from both satellites' : pendingText(S.sat)),
-  })), k => k === S.view, (k) => { S.view = k; S.selected = null; S.note = null; changed(); });
+  const motionOk = viewAllowed('change');
+  pressGroup($('#view-group'), TABS.map(t => ({
+    key: t.key, html: esc(t.label),
+    disabled: t.key === 'motion' && !motionOk ? (S.sat === 'compare' ? 'Needs measurements from both satellites' : pendingText(S.sat)) : null,
+  })), k => k === tabOf(S.view), (k) => {
+    S.note = null;
+    S.view = k === 'motion' ? (['change', 'rate'].includes(S.view) ? S.view : 'change') : k === 'coverage' ? 'coverage' : 'agreement';
+    changed();   // the selected zone stays selected across views
+  });
+  const sub = $('#sub-group');
+  sub.hidden = tabOf(S.view) !== 'motion';
+  pressGroup(sub, ['change', 'rate'].map(v => ({ key: v, html: esc(VIEW_LABEL[v]), disabled: viewAllowed(v) ? null : pendingText(S.sat) })),
+    k => k === S.view || (k === 'change' && S.view === 'zones'), (k) => { S.view = k; changed(); });
+}
+// zone chips: every zone stays selectable even where markers overlap at the opening zoom (Zones 1 and 2)
+function renderZoneChips() {
+  const g = $('#zone-group');
+  pressGroup(g, zones().map(z => ({ key: z.id, html: `<span class="zn">${esc(zoneShort(z))}</span><span class="zl"> ${esc(zoneName(z))}</span>`, title: `${zoneName(z)}: select, or click again to clear` })),
+    k => S.selected?.kind === 'zone' && S.selected.id === k,
+    (k) => { const on = S.selected?.kind === 'zone' && S.selected.id === k; select(on ? null : { kind: 'zone', id: k }); if (!on) flyToZone(k); });
+}
+// what the map shows right now: satellite, track, date or fit window, metric, run, reference, sign
+function renderContext() {
+  const s = S.sat === 'compare' ? null : S.sat;
+  const parts = [];
+  if (S.view === 'agreement') parts.push(`<b>Compare</b> · each satellite in its own line of sight${S.man.common_window ? ` · common window ${esc(S.man.common_window[0])} to ${esc(S.man.common_window[1])}` : ''}`);
+  else if (s && measured(s)) {
+    const trk = S.track[s]; const sn = sensors()[s];
+    const head = `<b><span class="${SATS[s].cls}" aria-hidden="true">${SATS[s].mark}</span> ${esc(sn.label)} ${esc(trk)} ${ARROW[dirOf(s, trk)] || ''}</b>`;
+    const ds = datesOf(s, trk);
+    let metric;
+    if (S.view === 'rate') metric = `Annualized line-of-sight rate (mm/yr) · fit window ${esc(ds[0] || '')} to ${esc(ds[ds.length - 1] || '')}`;
+    else if (S.view === 'coverage') metric = `Usable measurements (a connected series) · ${esc(ds[0] || '')} to ${esc(ds[ds.length - 1] || '')}`;
+    else { const L = layerFor(s); metric = L?.date ? `Line-of-sight change (mm) at <b>${esc(L.date)}</b> since <b>${esc(L.first)}</b>` : `No acquisition on ${esc(S.date || '')}`; }
+    const run = s === 's1' && S.sens ? scenarioLabel(S.scenario) : 'Single run';
+    const ref = s === 's1' && /west|east/.test(S.scenario) ? `${S.scenario.startsWith('west') ? 'West' : 'East'} half of the terrain band` : cleanLabel(sn.reference).replace(/\s*\(.*\)\s*$/, '');
+    parts.push(head, metric, `Run: ${esc(run)}`, `Reference: ${esc(ref)}`);
+  } else parts.push(`<b>${esc(s ? sensors()[s].label : 'Compare')}</b> · ${esc(s ? pendingText(s) : 'side by side')}`);
+  parts.push(`<span class="neg">${esc(NEG_TEXT)}</span>`);
+  $('#ctx-what').innerHTML = parts.join('<span class="sep" aria-hidden="true"> · </span>');
 }
 function renderTracks() {
   const g = $('#track-group'); g.innerHTML = '';
@@ -597,7 +691,9 @@ function renderLegend() {
   $('#legend').hidden = !L;
   if (!L) return;
   const m = L.meta || {};
-  $('#legend-title').textContent = S.exp ? 'Vertical rate' : S.view === 'rate' ? 'Rate' : 'Change';
+  const cov = S.view === 'coverage';
+  $('#legend').classList.toggle('cov', cov);
+  $('#legend-title').textContent = cov ? 'Usable measurements' : S.exp ? 'Vertical rate' : S.view === 'rate' ? 'Annualized line-of-sight rate' : 'Line-of-sight change';
   $('#legend-units').textContent = m.units || '';
   $('#legend-min').textContent = fmt(m.vmin);
   $('#legend-max').textContent = fmt(m.vmax);
@@ -658,7 +754,7 @@ function renderCompare() {
 }
 
 // ------------------------------------------------------------------------------------------------ charts
-function chart({ lines, from, to, gaps = [], window = null, height = 130 }) {
+function chart({ lines, from, to, gaps = [], window = null, height = 130, on = null, fits = [] }) {
   const W = 400, H = height, pl = 30, pr = 6, pt = 8, pb = 20;
   const t0 = day(from), t1 = day(to);
   const X = (d) => pl + ((day(d) - t0) / (t1 - t0)) * (W - pl - pr);
@@ -676,6 +772,10 @@ function chart({ lines, from, to, gaps = [], window = null, height = 130 }) {
   o.push(`<line x1="${pl}" x2="${W - pr}" y1="${Y(0)}" y2="${Y(0)}" stroke="#D6D3D1"/>`);
   o.push(`<text x="${pl - 5}" y="${Y(ymax) + 8}" text-anchor="end">+${ymax}</text><text x="${pl - 5}" y="${Y(0) + 4}" text-anchor="end">0</text><text x="${pl - 5}" y="${Y(-ymax)}" text-anchor="end">−${ymax}</text>`);
   o.push(`<text x="${pl}" y="${H - 4}">${esc(human(from))}</text><text x="${W - pr}" y="${H - 4}" text-anchor="end">${esc(human(to))}</text>`);
+  if (on && day(on) >= t0 && day(on) <= t1) o.push(`<line class="on-date" x1="${X(on).toFixed(1)}" x2="${X(on).toFixed(1)}" y1="${pt}" y2="${H - pb}" stroke="#1C1917" stroke-width="1" stroke-dasharray="2 2"><title>Map date ${esc(on)}</title></line>`);
+  for (const f of fits) {   // fitted straight lines (a run's annualized slope over its window), drawn thin and dashed
+    o.push(`<line x1="${X(f.from).toFixed(1)}" x2="${X(f.to).toFixed(1)}" y1="${Y(f.y0).toFixed(1)}" y2="${Y(f.y1).toFixed(1)}" stroke="${f.color}" stroke-width="1.6" stroke-dasharray="6 3" opacity=".9"><title>${esc(f.label)}</title></line>`);
+  }
   for (const l of lines) {
     let seg = []; const segs = [];
     l.dates.forEach((d, i) => {
@@ -688,10 +788,11 @@ function chart({ lines, from, to, gaps = [], window = null, height = 130 }) {
     for (const s of segs) o.push(`<polyline points="${s.map(p => p.map(n => n.toFixed(1)).join(',')).join(' ')}" fill="none" stroke="${l.color}" stroke-width="${l.dash ? 1.5 : 2}" stroke-linejoin="round" ${l.dash ? 'stroke-dasharray="4 3"' : ''}/>`);
     if (!l.dash) l.dates.forEach((d, i) => {
       const v = l.mm[i]; if (v === null || v === undefined) return;
-      const x = X(d), y = Y(v); const tip = `<title>${esc(l.label)} ${d}: ${v} mm</title>`;
+      const x = X(d), y = Y(v); const tip = `<title>${esc(l.label)} ${d}: ${v} mm · click to show this date on the map</title>`;
+      const hit = d === on ? ' cpt on' : ' cpt';
       o.push(l.shape === 'tri'
-        ? `<path d="M${x.toFixed(1)},${(y - 4.5).toFixed(1)} l4.5,8 h-9z" fill="${l.color}" stroke="#fff" stroke-width=".8">${tip}</path>`
-        : `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="${l.color}" stroke="#fff" stroke-width=".8">${tip}</circle>`);
+        ? `<path class="${hit}" data-cdate="${esc(d)}" d="M${x.toFixed(1)},${(y - 4.5).toFixed(1)} l4.5,8 h-9z" fill="${l.color}" stroke="${d === on ? '#1C1917' : '#fff'}" stroke-width="${d === on ? 1.6 : 0.8}">${tip}</path>`
+        : `<circle class="${hit}" data-cdate="${esc(d)}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${d === on ? 4.5 : 3}" fill="${l.color}" stroke="${d === on ? '#1C1917' : '#fff'}" stroke-width="${d === on ? 1.6 : 0.8}">${tip}</circle>`);
     });
   }
   if (window) {   // veil outside the common window, drawn last so it dims the lines too
@@ -721,7 +822,7 @@ function block(id, title, right, lines, extra = {}) {
   const [from, to] = extra.range || rangeOf(lines);
   const open = S.tables.has(id);
   return `<div class="block"><h3><span>${title}</span>${right || ''}</h3>${extra.top || ''}
-    ${lines.length ? chart({ lines, from, to, gaps: lines.flatMap(l => l.dash ? [] : l.gaps), window: extra.window }) : ''}
+    ${lines.length ? chart({ lines, from, to, gaps: lines.flatMap(l => l.dash ? [] : l.gaps), window: extra.window, on: extra.on === undefined ? S.date : extra.on, fits: extra.fits || [] }) : ''}
     <div class="foot"><span>${extra.foot || ''}</span>${lines.length ? `<button type="button" class="linkbtn" data-table="${esc(id)}">${open ? 'Hide table' : 'Show as table'}</button>` : ''}</div>
     ${open && lines.length ? table(lines) : ''}</div>`;
 }
@@ -891,7 +992,7 @@ function egmsPanel() {
 function agreementSheet() {
   const w = S.man.common_window;
   const head = `<h2>Do the two radars agree?</h2><p class="lead">NISAR next to Sentinel-1 over the months both cover${w ? ` (${human(w[0], false)} to ${human(w[1])})` : ''}, each in its own line of sight. The verdict comes from the validator's checks, never from this page.</p>`;
-  if (!(measured('nisar') && measured('s1')) || S.man.compare?.ready === false) {
+  if (!(measured('nisar') && measured('s1'))) {
     const why = !measured('nisar') ? 'NISAR displacement fit pending' : !measured('s1') ? 'Sentinel-1 measurements pending' : (S.man.compare.reason || 'not ready');
     return `${head}<div class="verdict na">Not testable yet · ${esc(why)}. O-19 (the shared quantity and geometry) is also open.</div>
       <p class="reason">NISAR and Sentinel-1 look from different sides, so their line-of-sight values are different quantities until 03 and 04 settle O-19.</p>${egmsPanel()}`;
@@ -912,8 +1013,9 @@ function agreementSheet() {
     const foot = (c ? `${esc(cleanLabel(c.title))}${c.detail ? ': ' + esc(c.detail) : ''}` : 'The validator has not reported on this zone') + (lines.length < 2 ? ' · one satellite has no data here: not testable' : '');
     return block(`a-${z.id}`, esc(zoneName(z)), badge, lines, { range, window: w, foot });
   });
-  return `${head}<p class="sub small">Shown as the zone minus the outer comparison area, a proposed contrast until O-19 decides.</p>
-    ${keys(['nisar', 's1'].map(s => ({ label: `${sensors()[s].label} ${trk[s]}`, color: SATS[s].color })))}${blocks.join('')}${egmsPanel()}`;
+  const block_ = S.man.compare?.ready === false ? `<div class="verdict warn"><span>!</span> ${esc(S.man.compare.reason)}</div>` : '';
+  return `${head}${block_}<p class="sub small">Shown as the zone minus the outer comparison area, a proposed contrast until O-19 decides. Select a zone (chips above the map) for its parallel observations.</p>
+    ${keys(['nisar', 's1'].map(s => ({ label: `${sensors()[s].label} ${trk[s]}`, color: SATS[s].color })))}${blocks.join('')}<h3 class="sub-h">Historical context</h3>${egmsPanel()}`;
 }
 // every exported date of a track across Sentinel-1's windows (Jan to Oct and Jul to Oct), for the coverage overview
 function allDates(s, t) {
@@ -983,17 +1085,111 @@ function zoneSheet(id) {
     } else if (st) fillNote = `<p class="reason">Sentinel-1 ${esc(st)} has no continuous January to October series in this zone, so NISAR's gap stays empty here.</p>`;
   }
   html += fillNote;
-  html += block(`d-${z.id}`, 'Change over time, mm', '', lines, { foot: lines.filter(l => !l.dash).map(l => `${l.label}: ${l.n ?? 'n/a'} pixels`).join(' · ') });
+  html += block(`d-${z.id}`, 'Change over time, mm', '', lines, { foot: `${lines.filter(l => !l.dash).map(l => `${l.label}: ${l.n ?? 'n/a'} pixels`).join(' · ')} · click a point to show that date on the map` });
+  if (S.sat === 's1' && scenarios()) html += runsPanel(z, S.track.s1);
   if (scenarios() && S.sat === 's1') {
     const rows = Object.entries(scenarios()).map(([k, l]) => `<tr${k === S.scenario ? ' class="here"' : ''}><td>${esc(l)}</td>${tracksOf('s1').map(t => { const e = entry(z, 's1', t, k); return `<td>${e ? `${fmt(e.fitted_change_mm, 1)} mm · ${e.n_pixels} px` : '<span class="sub">no series</span>'}</td>`; }).join('')}</tr>`).join('');
     html += `<div class="block"><h3>Every processing run</h3><table class="data"><thead><tr><th>Run</th>${tracksOf('s1').map(t => `<th>${esc(t)} ${ARROW[dirOf('s1', t)] || ''}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>`;
   }
-  html += '<p class="reason">Line of sight, positive toward the satellite, relative to nearby terrain. A fitted change is the fitted line over the window, not the difference between the first and last dates.</p>';
+  html += `<p class="reason">${esc(NEG_TEXT)} Values are line-of-sight change in mm, relative to nearby terrain. A fitted change is the fitted line over the window, not the difference between the first and last dates. EGMS vertical rates (mm/yr, 2020 to 2025) are historical context, under Compare.</p>`;
   return html;
+}
+// a window's stored series for one zone, track and run (sensitivity.json), whatever window is selected
+const entryIn = (w, point, trk, sc) => S.sens?.windows?.[w]?.variants?.[trk]?.[sc]?.[point.id] ?? null;
+function fitOf(e) {   // the run's fitted line: slope = its annualized rate, through the mean of its observations
+  const pts = e.dates.map((d, i) => [d, e.mm[i]]).filter(([, v]) => v !== null && Number.isFinite(v));
+  if (pts.length < 2 || !Number.isFinite(e.rate)) return null;
+  const tm = pts.reduce((a, [d]) => a + day(d), 0) / pts.length, ym = pts.reduce((a, [, v]) => a + v, 0) / pts.length;
+  const at = (d) => ym + e.rate * (day(d) - tm) / 365.25;
+  return { from: pts[0][0], to: pts[pts.length - 1][0], y0: at(pts[0][0]), y1: at(pts[pts.length - 1][0]) };
+}
+function runRef(sc) {
+  if (sc === 'west_reference') return 'West half of the 3 to 6.5 km terrain band';
+  if (sc === 'east_reference') return 'East half of the 3 to 6.5 km terrain band';
+  return 'Terrain band 3 to 6.5 km from the zones';
+}
+// "Compare processing runs": the baseline and one alternative on shared axes, observed points and fitted lines
+function runsPanel(z, trk) {
+  const all = Object.keys(scenarios() || {});
+  const have = all.filter(sc => entry(z, 's1', trk, sc));
+  const base = entry(z, 's1', trk, 'baseline');
+  if (!base) return '';
+  const flips = have.filter(sc => sc !== 'baseline' && Math.sign(entry(z, 's1', trk, sc).fitted_change_mm) === -Math.sign(base.fitted_change_mm));
+  const alts = have.filter(sc => sc !== 'baseline');
+  if (!alts.includes(S.cmpRun)) S.cmpRun = flips.includes('elevation_correction') ? 'elevation_correction' : (flips[0] || alts[0]);
+  const alt = S.cmpRun && entry(z, 's1', trk, S.cmpRun);
+  const runs = [['baseline', base, RUN_COLORS[0]], ...(alt ? [[S.cmpRun, alt, RUN_COLORS[1]]] : [])];
+  const lines = runs.map(([sc, e, c], i) => ({ label: scenarioLabel(sc), color: c, shape: i ? 'dot' : 'tri', dates: e.dates, mm: e.mm, gaps: [], n: e.n_pixels }));
+  const fits = runs.map(([sc, e, c]) => { const f = fitOf(e); return f && { ...f, color: c, label: `${scenarioLabel(sc)}: fitted ${fmt(e.fitted_change_mm, 2)} mm` }; }).filter(Boolean);
+  const n = (e) => e.mm.filter(v => v !== null && Number.isFinite(v)).length;
+  const rows = have.map(sc => { const e = entry(z, 's1', trk, sc);
+    return `<tr${runs.some(r => r[0] === sc) ? ' class="here"' : ''}><td>${esc(scenarioLabel(sc))}</td><td><b>${fmt(e.fitted_change_mm, 2)} mm</b></td><td>${n(e)}</td><td>${e.n_pixels}${e.n_pixels < LIMITED_PX ? ` <span class="badge warn">only ${e.n_pixels} px</span>` : ''}</td><td>${esc(e.dates[0])} to ${esc(e.dates[e.dates.length - 1])}</td><td>${esc(runRef(sc))}</td></tr>`; }).join('');
+  const missing = all.filter(sc => !have.includes(sc)).map(sc => {
+    const elsewhere = Object.entries(S.sens.windows).filter(([w]) => w !== S.window && entryIn(w, z, trk, sc)).map(([, w]) => w.label);
+    const why = sc === 'weather_model' && S.window === 'jan_oct'
+      ? 'the acquisition-time weather correction needs each interferogram, and the January to October interferograms are not in the repository (job IDs only, sentinel1/analysis_jan_oct/README.md)'
+      : 'no series is stored for this zone, track and window';
+    return `<li><b>${esc(scenarioLabel(sc))}</b>: not available for ${esc(win()?.label || 'this window')}: ${esc(why)}.${elsewhere.length ? ` Available for ${esc(elsewhere.join(', '))}.` : ''}</li>`;
+  }).join('');
+  const lead = flips.length ? `<div class="lead-finding"><b>Fitted direction changes with processing</b><span>Baseline ${fmt(base.fitted_change_mm, 2)} mm; ${flips.map(sc => { const e = entry(z, 's1', trk, sc); return `${esc(scenarioLabel(sc))} ${fmt(e.fitted_change_mm, 2)} mm (${e.n_pixels} px)`; }).join('; ')}. The sign of this zone's result depends on how the data are processed, so it is not a settled finding.</span></div>` : '';
+  return `${lead}<div class="block runs"><h3><span>Compare processing runs</span><span class="badge">${esc(trk)} · ${esc(win()?.label || '')}</span></h3>
+    <label class="runpick">Overlay with <select id="cmp-run">${alts.map(sc => `<option value="${esc(sc)}"${sc === S.cmpRun ? ' selected' : ''}>${esc(scenarioLabel(sc))}</option>`).join('')}</select></label>
+    ${keys(lines.map(l => ({ ...l, label: `${l.label}: observed` })).concat(fits.map(f => ({ label: `${f.label.split(':')[0]}: fitted line`, color: f.color, dash: true }))))}
+    ${chart({ lines, ...(() => { const [a, b] = rangeOf(lines); return { from: a, to: b }; })(), fits, on: S.date })}
+    <div class="tscroll"><table class="data runs-t"><thead><tr><th>Run</th><th>Fitted change</th><th>Acquisitions</th><th>Usable pixels</th><th>Window</th><th>Reference</th></tr></thead><tbody>${rows}</tbody></table></div>
+    ${missing ? `<ul class="missing">${missing}</ul>` : ''}
+    <p class="sub small">Observed points are the zone median at each acquisition; dashed lines are each run's fitted annualized slope over its window. The elevation correction is fitted to the data, so it can absorb real motion that follows elevation. ${esc(NEG_TEXT)}</p></div>`;
+}
+// Coverage for one zone: a support row per satellite and track for the active window, or the reason it has none
+function zoneCoverage(id) {
+  const z = S.series.find(p => p.id === id); if (!z) return null;
+  const rows = [];
+  for (const s of sensorKeys()) {
+    const tracks = [...new Set([...tracksOf(s), ...Object.keys(covOf(s))])];
+    for (const t of tracks) {
+      const e = entry(z, s, t);
+      const head = `<span class="${SATS[s].cls}" aria-hidden="true">${SATS[s].mark}</span> ${esc(sensors()[s].label)} ${esc(t)} ${ARROW[dirOf(s, t)] || ''}`;
+      if (e) { rows.push(`<tr><td>${head}</td><td><b>${e.n_pixels}</b> px${e.n_pixels < LIMITED_PX ? ' <span class="badge warn">limited</span>' : ''}</td><td>${e.mm.filter(v => v !== null).length} acquisitions, ${esc(e.dates[0])} to ${esc(e.dates[e.dates.length - 1])}</td></tr>`); continue; }
+      let why = s === 'nisar' && !tracksOf('nisar').includes(t) ? (sensors().nisar.pending || 'not on the page') : emptyZoneLabel(s);
+      const other = tracksOf(s).find(o => o !== t && entry(z, s, o));
+      const elsewhere = s === 's1' ? Object.entries(S.sens?.windows || {}).filter(([w]) => w !== S.window && entryIn(w, z, t, 'baseline')).map(([k, w]) => [k, w.label]) : [];
+      rows.push(`<tr class="none"><td>${head}</td><td>none</td><td>${esc(why)}${other ? ` <button type="button" class="linkbtn" data-trk="${esc(s)}|${esc(other)}">Show ${esc(other)} for this zone</button>` : ''}${elsewhere.map(([k, l]) => ` <button type="button" class="linkbtn" data-win="${esc(k)}">${esc(l)} has a series</button>`).join('')}</td></tr>`);
+    }
+  }
+  return `<h2>${esc(zoneName(z))}: coverage</h2><div class="kicker">${esc(win()?.label || '')} · usable pixels with a connected series</div>
+    <p class="reason">The map shows every pixel with a connected series on the active track and window (grey dots, whatever their value). The timeline shows catalog acquisitions, which exist even where the ground is not coherent enough to measure.</p>
+    <table class="data"><thead><tr><th>Track</th><th>Zone pixels</th><th>Support or reason</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
+}
+// Compare for one zone: parallel observations over the common window, each in its own line of sight
+function zoneCompare(id) {
+  const z = S.series.find(p => p.id === id); if (!z) return null;
+  const w = S.man.common_window; const ctl = control();
+  const look = (s) => sensors()[s]?.look ? `looks ${sensors()[s].look}` : '';
+  const minus = (s, t, sel) => {
+    const a = sel(z), b = ctl && sel(ctl);
+    if (!a) return null;
+    const mm = a.dates.map((d, i) => { if (!b) return a.mm[i]; const j = b.dates.indexOf(d); return j < 0 || a.mm[i] === null || b.mm[j] === null ? null : Math.round((a.mm[i] - b.mm[j]) * 10) / 10; });
+    return { label: `${sensors()[s].label} ${t} (${(dirOf(s, t) || '').toLowerCase()}, ${look(s)})`, color: s === 'nisar' ? SATS.nisar.color : (dirOf(s, t) === 'Ascending' ? SATS.s1.color : '#A78BFA'), shape: SATS[s].shape, dates: a.dates, mm, gaps: gapsOf(s, t), n: a.n_pixels, dash: false };
+  };
+  const lines = [];
+  for (const t of tracksOf('nisar')) { const l = minus('nisar', t, (p) => p.series?.[`nisar:${t}`]); if (l) lines.push(l); }
+  for (const t of tracksOf('s1')) { const l = minus('s1', t, (p) => entryIn(S.sens?.default_window || 'jul_oct', p, t, 'baseline') || p.series?.[`s1:${t}`]); if (l) lines.push(l); }
+  const c = checkForZone(z);
+  const word = c ? (c.status === 'pass' ? 'Agree' : c.status === 'fail' ? 'Disagree' : c.status === 'warn' ? 'Inconclusive' : 'Not testable') : 'Not tested yet';
+  const blockers = [S.man.compare?.ready === false ? S.man.compare.reason : null, sensors().nisar?.pending,
+    'The two satellites look from opposite sides, so their line-of-sight values are different quantities until O-19 sets a shared quantity and geometry.'].filter(Boolean);
+  return `<h2>${esc(zoneName(z))}: compare</h2><div class="kicker">Zone minus the outer comparison area (6.5 to 8 km), each track in its own line of sight${w ? ` · common window ${esc(w[0])} to ${esc(w[1])}` : ''}</div>
+    <div class="verdict ${c ? esc(c.status) : 'na'}"><span>${c ? STATUS_ICON[c.status] : '?'}</span> ${esc(word)} <span class="sub">(validator)</span></div>
+    ${c ? `<p class="reason">${esc(c.detail)} <button type="button" class="linkbtn" data-chk="${esc(c.id)}">Evidence</button></p>` : '<p class="reason">The validator has not reported on this zone.</p>'}
+    ${block(`c-${z.id}`, 'Parallel observations, mm', '', lines, { window: w, range: w ? [iso(day(w[0]) - 20), iso(day(w[1]) + 20)] : undefined, foot: lines.map(l => `${l.label}: ${l.n ?? 'n/a'} px`).join(' · ') })}
+    <div class="block"><h3>Still inconclusive</h3><ul class="missing">${blockers.map(b => `<li>${esc(b)}</li>`).join('')}</ul></div>
+    <h3 class="sub-h">Historical context</h3>${egmsPanel()}`;
 }
 function renderSheet() {
   const sh = $('#sheet'); let html = null;
-  if (S.selected) html = S.selected.kind === 'station' ? stationSheet(S.selected.id) : zoneSheet(S.selected.id);
+  if (S.selected?.kind === 'zone' && S.view === 'coverage') html = zoneCoverage(S.selected.id);
+  else if (S.selected?.kind === 'zone' && S.view === 'agreement') html = zoneCompare(S.selected.id);
+  else if (S.selected) html = S.selected.kind === 'station' ? stationSheet(S.selected.id) : zoneSheet(S.selected.id);
   else if (S.view === 'zones') html = zonesSheet();
   else if (S.view === 'agreement') html = agreementSheet();
   else if (S.view === 'coverage') html = coverageSheet();
@@ -1005,6 +1201,11 @@ function renderSheet() {
   sh.querySelectorAll('[data-go]').forEach(b => b.onclick = () => goSentinel());
   sh.querySelectorAll('[data-fill]').forEach(b => b.onclick = () => { const [a, c] = b.dataset.fill.split('|'); fillGap(a, c); });
   wireChoices(sh);
+  sh.querySelectorAll('[data-cdate]').forEach(p => p.addEventListener('click', () => { stopPlay(); setDate(p.dataset.cdate); }));
+  sh.querySelector('#cmp-run')?.addEventListener('change', (e) => { S.cmpRun = e.target.value; renderSheet(); });
+  sh.querySelectorAll('[data-trk]').forEach(b => b.onclick = () => { const [s, t] = b.dataset.trk.split('|'); S.track[s] = t; changed(); });
+  sh.querySelectorAll('[data-win]').forEach(b => b.onclick = () => { S.window = b.dataset.win; S.date = null; S.dateUser = false; changed(); });
+  sh.querySelectorAll('[data-chk]').forEach(b => b.onclick = () => { $('#checks-btn').dataset.target = b.dataset.chk; $('#checks-btn').click(); });
   const fr = sh.querySelector('#fc-range');
   if (fr) fr.oninput = () => {
     const f = S.forecast; const i = +fr.value; S.fcIdx = i;
@@ -1016,7 +1217,7 @@ function renderSheet() {
 }
 function select(sel) {
   S.selected = sel; closeMenus(); renderSheet(); $('#sheet').scrollTop = 0;
-  document.querySelectorAll('.marker.zone').forEach(el => el.classList.toggle('on', sel?.kind === 'zone' && el.dataset.id === sel.id));
+  renderFootprint(); renderZoneChips(); renderChecksButton(); renderContext(); writeHash();
 }
 function closeSheet() {
   if (S.selected) return select(null);
@@ -1035,7 +1236,7 @@ function renderAbout() {
     <h3>What this map can and cannot tell you</h3>
     <p>It shows ground motion measured by radar satellites, along each satellite's line of sight and relative to nearby terrain, over the months they observed. It is not a hazard forecast, an evacuation guide or a building safety assessment. For official notices, follow the Vâlcea emergency inspectorate (ISU Vâlcea) and the Ocnele Mari town hall.</p>
     <h3 id="checks-h">Checks · ${n.pass ?? 0} pass, ${n.warn ?? 0} warn, ${n.fail ?? 0} fail, ${n.info ?? 0} info</h3>
-    <ul class="checks">${S.checks.map(c => `<li class="${esc(c.status)}"><span class="ic" title="${esc(c.status)}">${STATUS_ICON[c.status] || '·'}</span><div><div>${esc(c.title)}</div><div class="detail">${esc(c.detail)}${c.value !== null && c.value !== undefined ? ` · value ${esc(c.value)}` : ''}</div></div></li>`).join('') || '<li>No checks yet.</li>'}</ul>
+    <ul class="checks">${S.checks.map(c => `<li id="chk-${esc(c.id)}" class="${esc(c.status)}"><span class="ic" title="${esc(c.status)}">${STATUS_ICON[c.status] || '·'}</span><div><div>${esc(c.title)}</div><div class="detail">${esc(c.detail)}${c.value !== null && c.value !== undefined ? ` · value ${esc(c.value)}` : ''}</div></div></li>`).join('') || '<li>No checks yet.</li>'}</ul>
     <h3>The two radars</h3>
     ${sn.map(x => `<p><b>${esc(x.label)}</b> · ${esc(x.agency)} · ${esc(x.band)}, ${esc(x.wavelength_cm)} cm · ${esc(x.status)}${x.look ? ` · looks ${esc(x.look)}` : ''}<br><span class="sub">${esc(x.product || '')}${x.product ? '. ' : ''}Reference: ${esc(x.reference)}</span>${x.pending ? `<br><span class="sub">${esc(x.pending)}</span>` : ''}</p>`).join('')}
     ${Object.keys(m).length ? `<h3>Methods</h3>${['s1', 'sign', 'rate', 'zones'].filter(k => m[k]).map(k => `<p class="sub">${esc(m[k])}</p>`).join('')}
@@ -1056,11 +1257,13 @@ function changed(full = true) {
   renderLayersMenu();
   renderCompare(); renderOverlays();
   renderTimeline(); renderStatus(); renderLegend(); renderFlags(); renderSheet();
+  renderContext(); renderZoneChips(); renderFootprint(); renderChecksButton();
   writeHash();
   requestAnimationFrame(measure);
 }
 function measure() {
   document.documentElement.style.setProperty('--dock-h', `${Math.round($('#dock').getBoundingClientRect().height)}px`);
+  document.documentElement.style.setProperty('--ctx-h', `${Math.round($('#context').getBoundingClientRect().height)}px`);
 }
 
 async function main() {
@@ -1111,7 +1314,23 @@ async function main() {
   document.addEventListener('keydown', (e) => { if (e.key !== 'Escape') return; closeMenus(); if (!$('#sheet').hidden && !$('#about').open) closeSheet(); });
   $('#sheet-close').addEventListener('click', closeSheet);
   $('#about-btn').addEventListener('click', () => { $('#about').showModal(); $('#about').scrollTop = 0; });
-  $('#checks-btn').addEventListener('click', () => { $('#about').showModal(); $('#checks-h').scrollIntoView(); });
+  $('#checks-btn').addEventListener('click', () => {
+    $('#about').showModal();
+    const id = $('#checks-btn').dataset.target; const li = id && document.getElementById(`chk-${id}`);
+    document.querySelectorAll('.checks li.here').forEach(e => e.classList.remove('here'));
+    if (li) { li.classList.add('here'); li.scrollIntoView({ block: 'center' }); } else $('#checks-h').scrollIntoView();
+  });
+  $('#preset-z4').addEventListener('click', () => applyPreset());
+  $('#reset-site').addEventListener('click', () => {
+    select(null); const v = S.man.view; mapA?.flyTo({ center: [v.center[1], v.center[0]], zoom: v.zoom - ZOOM_OFFSET });
+  });
+  $('#copy-link').addEventListener('click', async () => {
+    writeHash();
+    const b = $('#copy-link'); const was = b.textContent;
+    try { await navigator.clipboard.writeText(location.href); b.textContent = 'Link copied'; }
+    catch (e) { window.prompt('Copy this link', location.href); }
+    setTimeout(() => { b.textContent = was; }, 1600);
+  });
   $('#about').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.close(); });
   $('#exp').addEventListener('change', (e) => { S.exp = e.target.checked; changed(); });
   $('#opacity').addEventListener('input', (e) => {

@@ -38,6 +38,18 @@
     </div>
   </header>
 
+  <section id="context" aria-label="What the map shows">
+    <div id="ctx-what" class="ctx-what"></div>
+    <div class="ctx-row">
+      <div id="zone-group" class="zones" role="group" aria-label="Zone"></div>
+      <div class="ctx-actions">
+        <button id="preset-z4" type="button" class="chip strong"><span class="long">Investigate Zone 4</span><span class="short">Zone 4</span></button>
+        <button id="copy-link" type="button" class="chip"><span class="long">Copy view link</span><span class="short">Link</span></button>
+        <button id="reset-site" type="button" class="chip"><span class="long">Reset to site</span><span class="short">Reset</span></button>
+      </div>
+    </div>
+  </section>
+
   <div id="flags">
     <div id="sim" class="flag sim" hidden role="status"><b>Simulated, not data</b> · every value here is invented</div>
     <div id="notice" class="flag" hidden role="status"></div>
@@ -50,6 +62,7 @@
     <div class="ticks"><span id="legend-min"></span><span>0</span><span id="legend-max"></span></div>
     <div class="caps"><span id="legend-neg"></span><span id="legend-pos"></span></div>
     <div class="legend-town"><i aria-hidden="true"></i>Ocnele Mari town boundary</div>
+    <div class="legend-keys"><span><i class="k-pale" aria-hidden="true"></i>near 0 (pale dot)</span><span><i class="k-none" aria-hidden="true"></i>no dot = no data</span></div>
     <div id="legend-note" class="legend-note"></div>
   </div>
 
@@ -74,7 +87,8 @@
 
   <section id="dock" aria-label="Time and view">
     <div class="dock-top">
-      <div id="view-group" class="seg views" role="group" aria-label="View"></div>
+      <div class="navs"><div id="view-group" class="seg views" role="group" aria-label="View"></div>
+      <div id="sub-group" class="seg sub" role="group" aria-label="Motion measure"></div></div>
       <div id="track-group" class="tracks" role="group" aria-label="Track"></div>
     </div>
     <div class="dock-mid">
