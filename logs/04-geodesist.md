@@ -6,6 +6,18 @@ This is the running log for role 04, newest entry first, so the team can follow 
 
 ---
 
+## Sat 14 Nov 2026, about 16:40 · merged `r04/egms-model` to `main`
+
+`r04/egms-model` (commits 5c9adff and 0bd8ce8) merged into `main` with `--no-ff` at Matei's request.
+
+- **What `main` had gained meanwhile:** 17 commits from 03, 06 and the verifier (PRs #10 to #12).
+- **Conflicts:** two, both in append-only logs (`AI-DISCLOSURE.md`, `DECISIONS.md`). Resolved by keeping every row from both sides, `main`'s rows first. No code conflicted.
+- **Tests:** `pytest -q` on the merged tree: 8 passed.
+- **No PR:** the merge was pushed directly.
+- **How it was done:** in a temporary worktree, because another Claude Code session (03's 129A series) had this checkout on `r04/129a-series`. That session's checkout was not touched.
+
+---
+
 ## Sat 14 Nov 2026, about 16:10 · 05's EGMS stable-ground check is in: T8 PASS WITH NOTE
 
 Source: `docs/validation-log.md` on 05's branch `r05/egms-and-witnesses` (PR #9), section "EGMS on the stable ground", read 14 Nov 2026. These are 05's numbers, not ours.
