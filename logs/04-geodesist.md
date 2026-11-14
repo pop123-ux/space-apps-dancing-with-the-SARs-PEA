@@ -6,6 +6,12 @@ This is the running log for role 04, newest entry first, so the team can follow 
 
 ---
 
+## Sat 14 Nov 2026, about 15:35 · merged to `main`
+
+`r04/station-check` (commit 56b5e96) merged into `main` with `--no-ff` at Matei's request. `main` had not moved since the branch was cut; `pytest -q` on the merge: 8 passed. No PR was opened: the merge was pushed directly.
+
+---
+
 ## Sat 14 Nov 2026, about 15:20 · station check against the original tables, real `refs.py` run, swap hook tested
 
 Branch `r04/station-check`. Done with Claude Code (see the `AI-DISCLOSURE.md` log).
