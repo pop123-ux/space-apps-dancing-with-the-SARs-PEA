@@ -141,11 +141,11 @@ async function load() {
   S.index = index;
   S.dir = `${S.base}${S.site}/`;
   const opt = (f) => getJSON(S.dir + f).catch(() => null);
-  const [man, series, stations, checks, cov, sens] = await Promise.all([
+  const [man, series, stations, checks, cov, sens, forecast] = await Promise.all([
     getJSON(S.dir + 'manifest.json'), getJSON(S.dir + 'series.json'),
-    opt('stations.geojson'), opt('checks.json'), opt('coverage.json'), opt('sensitivity.json'),
+    opt('stations.geojson'), opt('checks.json'), opt('coverage.json'), opt('sensitivity.json'), opt('forecast.json'),
   ]);
-  Object.assign(S, { man, series, stations, checks: checks || [], cov, sens });
+  Object.assign(S, { man, series, stations, checks: checks || [], cov, sens, forecast });
   S.window = sens ? (sens.default_window || Object.keys(sens.windows || {})[0]) : null;
   const d = man.default || {};
   S.sat = sensors()[d.sat] ? d.sat : sensorKeys()[0];
@@ -755,6 +755,31 @@ function wireChoices(root) {
 }
 
 // ------------------------------------------------------------------------------------------------ sheet contents
+function forecastPanel() {
+  const f = S.forecast;
+  if (!f || S.man.synthetic || S.sat !== f.sensor || S.track[f.sensor] !== f.track ||
+      S.window !== f.window || S.scenario !== f.scenario) return '';
+  const supported = zones().find(z => z.id === f.zone);
+  if (!supported) return '';
+  const obs = entry(supported, f.sensor, f.track);
+  if (!obs || obs.dates.length !== f.training_dates.length ||
+      !obs.dates.every((date, index) => date === f.training_dates[index] &&
+        Number.isFinite(obs.mm[index]) && Math.abs(obs.mm[index] - f.observed_mm[index]) <= .011)) return '';
+  const labels = { persistence: 'Persistence', theil_sen: 'Theil–Sen trend', gaussian_process: 'Gaussian process' };
+  const lines = [
+    { label: 'Radar estimate', color: SATS.s1.color, shape: SATS.s1.shape, dates: f.training_dates, mm: f.observed_mm, gaps: [] },
+    { label: 'Model extrapolation', color: '#7C3AED', dates: [f.last_observation, ...f.dates],
+      mm: [f.observed_mm.at(-1), ...f.forecast_mm], dash: true, gaps: [] },
+  ];
+  const scores = Object.entries(f.metrics).map(([k, v]) => `${esc(labels[k])} ${fmt(v.mae_mm, 2)} mm`).join(' · ');
+  const retro = f.status === 'retrospective' || f.end_date <= new Date().toISOString().slice(0, 10);
+  return block('zone-forecast', `Zone 4 · ${retro ? 'Retrospective forecast' : 'Experimental forecast'}`,
+    '<span class="badge">30 days · 029A LOS</span>', lines, {
+      top: `<p class="reason">${esc(labels[f.model])} through ${esc(f.end_date)}. Displacement in mm relative to the first radar date. The dashed segment is a model estimate.</p>${keys(lines)}`,
+      foot: `30-day backtest MAE from ${f.folds.length} overlapping historical cutoffs: ${scores}. ${esc(f.interval_reason)}`,
+    });
+}
+
 function zonesSheet() {
   const sat = S.sat === 'compare' ? null : S.sat;
   const ctl = control();
@@ -775,7 +800,7 @@ function zonesSheet() {
   });
   const ex = zs.length ? linesFor(zs.find(z => linesFor(z).length) || zs[0]) : [];
   return `<h2>Where did the ground move?</h2><p class="lead">Median line-of-sight change in each salt zone, in mm since the first date${win() ? `, ${esc(win().label)}` : ''}. Negative means away from the satellite, which is what sinking ground looks like. It is relative to nearby terrain, not an absolute or vertical value.</p>
-    ${choicesPanel()}${ex.length ? keys(ex) : ''}${blocks.join('') || '<p class="sub">No zone series in this products set.</p>'}`;
+    ${choicesPanel()}${forecastPanel()}${ex.length ? keys(ex) : ''}${blocks.join('') || '<p class="sub">No zone series in this products set.</p>'}`;
 }
 function checkForZone(z) {
   const num = (z.id.match(/\d+/) || [])[0];

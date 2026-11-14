@@ -29,3 +29,15 @@ Rebuilt in about 10 s by `python export.py ocnele_mari` (needs `numpy`, `pyproj`
 | `stations.geojson`, `calib.json`, `checks.json` | Explicit "pending" files: no stations, no tie, one info check "Validation not run yet" | Written only if missing; `validate.py` (05) and `calibrate.py` (04) replace them |
 
 Values beyond a layer's scale are drawn at full colour and the legend says so. A pixel with no data has no dot and is transparent in the PNGs.
+
+## Zone 4 retrospective predictor
+
+`ocnele_mari/forecast.json` is an optional sidecar for the Zones view, tied to Sentinel-1 029A, July–October baseline and Zone 4. The UI checks that the exported observation dates and values match the active series. The dashed forecast stops 30 days after the final acquisition, on 4 November 2026 for this build. The interval is unavailable because the four overlapping backtest windows are insufficient to calibrate it.
+
+Rebuild on CPU using NumPy, SciPy, pyproj and GDAL:
+
+```sh
+python sentinel1/scripts/forecast.py RAW_HYP3_ZIP_DIRECTORY products/ocnele_mari/forecast.json --as-of 2026-11-14
+```
+
+The script reconstructs training observations from pairs ending at each cutoff and scores against changes reconstructed from pairs wholly within the later evaluation window. Each fold scores on pixels supported on both sides. It ranks persistence, Theil–Sen and a Matérn Gaussian process by 30-day MAE. The same four overlapping windows rank the models and report their errors. Treat the ranking as exploratory. See [Hill et al.](https://doi.org/10.1029/2020JB020176) and [rolling-origin evaluation](https://otexts.com/fpp3/tscv.html).
