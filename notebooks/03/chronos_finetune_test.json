@@ -1,0 +1,41 @@
+{
+ "rule": "adopt only if MAE drops at 30 and 88 days and 80 % coverage stays within 0.7 to 0.9",
+ "train": {
+  "series": 3000,
+  "tracks": [
+   "029A",
+   "007D"
+  ],
+  "dates_until": "20260630",
+  "zone4_excluded": true,
+  "mode": "lora",
+  "steps": 300,
+  "learning_rate": 0.0001
+ },
+ "test": "Zone 4 029A, cutoffs after the training end",
+ "zero_shot": {
+  "30d": {
+   "n": 11,
+   "mae_mm": 4.581,
+   "interval80_coverage": 0.818
+  },
+  "88d": {
+   "n": 1,
+   "mae_mm": 6.522,
+   "interval80_coverage": 0.0
+  }
+ },
+ "fine_tuned": {
+  "30d": {
+   "n": 11,
+   "mae_mm": 7.113,
+   "interval80_coverage": 0.545
+  },
+  "88d": {
+   "n": 1,
+   "mae_mm": 6.716,
+   "interval80_coverage": 1.0
+  }
+ },
+ "adopt": false
+}

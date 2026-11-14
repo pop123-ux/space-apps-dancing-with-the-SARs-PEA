@@ -47,17 +47,18 @@ def load_pairs(site: str, track: str):
     files = sorted(p for p in d.glob("????????_????????.npz"))
     if not files:
         raise C.todo("02", f"no pair files under {d}: run fetch.py first")
-    pairs, phase, coh, qa = [], [], [], []
+    pairs, phase, coh, qa, corr = [], [], [], [], []
     for f in files:
         z = np.load(f)
         pairs.append(tuple(f.stem.split("_")))
         phase.append(z["phase"]); coh.append(z["coh"])
         qa.append({k: z[k].item() for k in ("iono_used", "iono_std", "valid_share", "main_share", "iono_interp")})
+        corr.append(z["tropo_rad"] + z["set_rad"] if "tropo_rad" in z.files else None)
     dem = None
     if (d / "dem.npz").exists():                     # fetch.py writes "dem"; older stand-ins wrote "height"
         z = np.load(d / "dem.npz")
         dem = z["dem"] if "dem" in z.files else z["height"]
-    return meta, pairs, dict(phase=np.stack(phase), coh=np.stack(coh), qa=qa), dem
+    return meta, pairs, dict(phase=np.stack(phase), coh=np.stack(coh), qa=qa, corr=corr), dem
 
 
 def stable_mask(site: str, meta: dict):
@@ -220,9 +221,13 @@ def closure(pairs, dates, data):
     return len(trip)
 
 
-def run(site: str, track: str, sign: int = PHASE_SIGN, out_name: str = "ts.npz") -> dict:
+def run(site: str, track: str, sign: int = PHASE_SIGN, out_name: str = "ts.npz", gunw_corr: bool = False) -> dict:
     import numpy as np
     meta, pairs, data, dem = load_pairs(site, track)
+    if gunw_corr:                                     # NASA's troposphere + solid-earth-tide screens (fetch.py --corrections)
+        if any(c is None for c in data["corr"]):
+            raise SystemExit(f"{track}: run fetch.py --corrections first")
+        data["phase"] = data["phase"] - np.stack(data["corr"])
     mm, slopes = to_mm_and_clean(site, meta, data, dem, sign)
     dates = sorted({d for p in pairs for d in p})
     groups = groups_of(pairs, dates)
@@ -244,7 +249,7 @@ def run(site: str, track: str, sign: int = PHASE_SIGN, out_name: str = "ts.npz")
         tropo_mm_per_100m=slopes.astype("f4"), group=np.array(groups),
         iono_used=np.array([q["iono_used"] for q in data["qa"]]), phase_sign=sign,
         reference="terrain-relative: stable ground outside the zones + C.EXCLUDE_KM is 0 in every pair",
-        made_by="stack.py (03)", synthetic=bool(meta.get("synthetic", False)))
+        made_by="stack.py (03)", synthetic=bool(meta.get("synthetic", False)), gunw_corrections=gunw_corr)
     fin = np.isfinite(vel)
     stable = stable_mask(site, meta) & fin
     summary = dict(track=track, dates=len(dates), pairs=len(pairs), groups=len(set(groups)), triplets=ntrip,
@@ -263,12 +268,14 @@ def main() -> None:
     ap.add_argument("site", choices=C.SITES)
     ap.add_argument("--track", help="only this track")
     ap.add_argument("--sign", type=int, choices=(-1, 1), default=PHASE_SIGN, help="phase sign (T3 tests both)")
+    ap.add_argument("--gunw-corrections", action="store_true", help="subtract the product's troposphere and tide screens")
+    ap.add_argument("--out", help="output name (default ts.npz)")
     a = ap.parse_args()
     trs = [a.track] if a.track else C.tracks(a.site)
     if not trs:
         raise C.todo("02", f"no tracks under data/work/{a.site}/: run fetch.py first")
     for tr in trs:
-        run(a.site, tr, a.sign, "ts.npz" if a.sign == PHASE_SIGN else f"ts_sign{a.sign:+d}.npz")
+        run(a.site, tr, a.sign, a.out or ("ts.npz" if a.sign == PHASE_SIGN else f"ts_sign{a.sign:+d}.npz"), a.gunw_corrections)
 
 
 if __name__ == "__main__":

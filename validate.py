@@ -126,7 +126,7 @@ def check_sign(site, add):
         add(f"sign-{t}", "pass" if r < SIGN_MAX else "fail", f"Salt zones sink on NISAR {t}",
             f"Median line-of-sight rate over the zone pixels: {r:+.1f} mm/yr from {v.size} pixels "
             f"(needs < {SIGN_MAX:+.0f}; phase sign {int(ts['phase_sign']):+d}). "
-            + ("" if r < SIGN_MAX else "Not a global sign error: see notebooks/03/t3_094d_checks.json; the track is held off the page. ")
+            + ("" if r < SIGN_MAX else "Not a global sign error: unwrapping, the ECMWF weather model and NASA's own troposphere screens were all tested and none removes it (notebooks/03/t3_094d_checks.json); the track is shown flagged, for inspection only. ")
             + local, round(r, 2))
 
 
@@ -136,7 +136,8 @@ def same_height(site, track, vel, masks) -> str:
     f = C.WORK / site / track / "dem.npz"
     if not f.exists():
         return "No dem.npz for this track: the height-matched reading is not available."
-    h = np.load(f)["height"]
+    z = np.load(f)
+    h = z["dem"] if "dem" in z.files else z["height"]   # fetch.py writes "dem"; the 04 stand-in wrote "height"
     anyzone = np.zeros(vel.shape, bool)
     for z in ZONES:
         anyzone |= masks[z]
@@ -158,15 +159,55 @@ def same_height(site, track, vel, masks) -> str:
 
 
 def read_stations(site):
+    """Every station source with a full ENU rate, plus one inverse-variance mean per station name when it has several
+    sources at the same monument (VLC1 NGL 2012-2018 and VLC2 Muntean 2019-2025 sit 0 m apart: "VLC (combined)")."""
     rows = list(csv.DictReader((C.WORK / site / "refs" / "stations.csv").open(encoding="utf-8")))
+    full = [r for r in rows if not any(math.isnan(float(r[k])) for k in ("ve", "vn", "vu"))]
     keep = {}
-    for r in rows:                                  # one entry per station: a full ENU source, newest first
-        if any(math.isnan(float(r[k])) for k in ("ve", "vn", "vu")):
+    for r in full:                                   # one entry per station name: the newest full source
+        if r["station"] not in keep or str(r["t_end"]) > str(keep[r["station"]]["t_end"]):
+            keep[r["station"]] = r
+    out = list(keep.values())
+    groups = {}
+    for r in out:
+        groups.setdefault((round(float(r["lat"]), 3), round(float(r["lon"]), 3)), []).append(r)
+    for g in groups.values():
+        if len(g) < 2:
             continue
-        name = r["station"]
-        if name not in keep or str(r["t_end"]) > str(keep[name]["t_end"]):
-            keep[name] = r
-    return list(keep.values())
+        m = dict(station=g[0]["station"][:3] + " (combined)", lat=g[0]["lat"], lon=g[0]["lon"],
+                 source="Inverse-variance mean of " + " and ".join(f"{r['station']} ({r['source']}, to {str(r['t_end'])[:4]})" for r in g),
+                 t_start=min(str(r["t_start"])[:4] for r in g), t_end=max(str(r["t_end"]) for r in g), combined=True)
+        for c, sc in (("ve", "se"), ("vn", "sn"), ("vu", "su")):
+            w = [1 / float(r[sc]) ** 2 for r in g]
+            m[c] = sum(wi * float(r[c]) for wi, r in zip(w, g)) / sum(w)
+            m[sc] = 1 / math.sqrt(sum(w))
+        out.append(m)
+    return out
+
+
+def nearest_pick(meta, arr, lon, lat, r0=STATION_R_PX, r_max=12, need=10):
+    """pick() with the box grown until it holds `need` coherent pixels (up to r_max pixels, about 1 km at 80 m)."""
+    for r in range(r0, r_max + 1):
+        v, sig, n = pick(meta, arr, lon, lat, r)
+        if n >= need or (r == r0 and n):
+            return v, sig, n, r
+    return v, sig, n, r_max
+
+
+def s1_grids():
+    """Sentinel-1 July to October rate grids (029A, 007D) with their grid metadata and station-box σ."""
+    import numpy as np
+    import export
+    out = {}
+    for trk in ("029A", "007D"):
+        z = export.load_grid(trk, "jul_oct")
+        rate = z["rate_mm_yr"]
+        xmin, ymin, xmax, ymax = z["bounds_utm"]
+        ny, nx = rate.shape
+        dx, dy = (xmax - xmin) / nx, (ymax - ymin) / ny
+        meta = dict(epsg=32635, x0=xmin + dx / 2, y0=ymax - dy / 2, dx=dx, dy=-dy, nx=nx, ny=ny)
+        out[trk] = dict(meta=meta, rate=rate, sig=box_sigma(dict(vel_cal=rate, tie=np.isfinite(rate)), r_px=5, step=11))
+    return out
 
 
 def check_stations(site, add):
@@ -174,6 +215,13 @@ def check_stations(site, add):
     tracks = [t for t in on_page(site) if t in fitted_tracks(site)]
     feats, box_sig = [], {}
     s = C.SITES[site]
+    try:
+        s1 = s1_grids()
+    except Exception:          # the Sentinel-1 grid chunks are not on this machine
+        s1 = {}
+    import refs
+    band = refs.load_model(site, "euvem")(s["lon"], s["lat"])     # GNSS model at the town: Sentinel-1's terrain reference
+    band = np.asarray(band, float).reshape(-1)[:3]
     for r in read_stations(site):
         lat, lon = float(r["lat"]), float(r["lon"])
         ve, vn, vu, se, sn, su = (float(r[k]) for k in ("ve", "vn", "vu", "se", "sn", "su"))
@@ -184,33 +232,52 @@ def check_stations(site, add):
                 continue
             if t not in box_sig:
                 box_sig[t] = box_sigma(cal)
-            v, sig, n = pick(meta, cal["vel_cal"], lon, lat, STATION_R_PX)
+            v, sig, n, rpx = nearest_pick(meta, cal["vel_cal"], lon, lat)
             e, nn, u = (pick(meta, geom[k], lon, lat, 0)[0] for k in ("los_e", "los_n", "los_u"))
             if not n or not np.isfinite(e):
-                reasons.append(f"{t}: no coherent pixel within {STATION_R_PX * 80} m")
+                reasons.append(f"NISAR {t}: no coherent pixel within {12 * 80} m")
                 continue
             g = C.enu_to_los(e, nn, u, ve, vn, vu)
             sg = math.sqrt((e * se) ** 2 + (nn * sn) ** 2 + (u * su) ** 2)
             sn_ = box_sig[t] if math.isfinite(box_sig[t]) else sig / math.sqrt(n)
             tol = max(C.TOL_FLOOR, 2 * math.sqrt(sn_ ** 2 + sg ** 2))
             ok = abs(v - g) <= tol
-            per[f"nisar:{t}"] = dict(nisar=round(v, 2), gnss=round(g, 2), diff=round(v - g, 2), tol=round(tol, 1), n_px=n)
+            per[f"nisar:{t}"] = dict(nisar=round(v, 2), gnss=round(g, 2), diff=round(v - g, 2), tol=round(tol, 1), n_px=n,
+                                     radius_m=int((2 * rpx + 1) * 40))
             agree_all.append(ok)
             decisive.append(tol <= TOL_DECISIVE)
-            reasons.append(f"{t}: NISAR {v:+.1f} vs GNSS {g:+.1f} mm/yr (±{tol:.1f}, {n} px)")
+            reasons.append(f"NISAR {t}: {v:+.1f} vs GNSS {g:+.1f} mm/yr (±{tol:.1f}, {n} px within {int((2 * rpx + 1) * 40)} m)")
+        for trk, gr in s1.items():                   # Sentinel-1 is terrain-relative: compare with GNSS minus the model at the reference
+            v, sig, n, rpx = nearest_pick(gr["meta"], gr["rate"], lon, lat, r0=5, r_max=25, need=15)
+            if not n:
+                continue
+            lk = S1_LOOK[trk]
+            g = C.enu_to_los(lk["e"], 0.0, lk["u"], ve - band[0], vn - band[1], vu - band[2])
+            sg = math.sqrt((lk["e"] * se) ** 2 + (lk["u"] * su) ** 2)
+            tol = max(C.TOL_FLOOR, 2 * math.sqrt((gr["sig"] if math.isfinite(gr["sig"]) else sig) ** 2 + sg ** 2))
+            ok = abs(v - g) <= tol
+            per[f"s1:{trk}"] = dict(radar=round(v, 2), gnss=round(g, 2), diff=round(v - g, 2), tol=round(tol, 1), n_px=n,
+                                    radius_m=int((2 * rpx + 1) * 20))
+            agree_all.append(ok)
+            decisive.append(tol <= TOL_DECISIVE)
+            reasons.append(f"Sentinel-1 {trk}: {v:+.1f} vs GNSS {g:+.1f} mm/yr relative to the terrain reference "
+                           f"(±{tol:.1f}, {n} px within {int((2 * rpx + 1) * 20)} m)")
         agree = None if not agree_all else all(agree_all)
         dist = C.haversine_km(s["lat"], s["lon"], lat, lon)
         old = str(r["t_end"])[:4] < "2026"
-        feats.append(dict(type="Feature", geometry=dict(type="Point", coordinates=[round(lon, 5), round(lat, 5)]),
-                          properties=dict(station=r["station"], source=r["source"], dist_km=round(dist, 1),
-                                          tracks=per, agree=agree, reason="; ".join(reasons) or "No NISAR track on the page",
-                                          nisar_up=None, gnss_up=vu, t_end=str(r["t_end"])[:4] if old else None)))
         st = "info" if agree is None else ("warn" if not all(decisive) else "pass" if agree else "fail")
-        add(f"station-{r['station']}", st, f"Held-out station {r['station']} against NISAR",
-            ("; ".join(reasons) or "No NISAR track on the page")
-            + (f". The tolerance is wider than {TOL_DECISIVE:.0f} mm/yr (a station-sized box of NISAR scatters by that "
-               "much on stable ground), so this neither confirms nor rejects the tie" if st == "warn" else "")
-            + (f". The GNSS series ends in {str(r['t_end'])[:4]}: it assumes steady motion since." if old else "")
+        period = f"{str(r.get('t_start', ''))[:4]} to {str(r['t_end'])[:4]}"
+        feats.append(dict(type="Feature", geometry=dict(type="Point", coordinates=[round(lon, 5), round(lat, 5)]),
+                          properties=dict(station=r["station"], source=r["source"], dist_km=round(dist, 1), period=period,
+                                          combined=bool(r.get("combined")), tracks=per, agree=agree, status=st,
+                                          reason="; ".join(reasons) or "No radar track covers this station",
+                                          nisar_up=None, gnss_up=round(vu, 2), t_end=str(r["t_end"])[:4] if old else None)))
+        add(f"station-{r['station'].replace(' ', '-').replace('(', '').replace(')', '')}", st,
+            f"Held-out station {r['station']} against the radars",
+            ("; ".join(reasons) or "No radar track covers this station")
+            + (f". At least one tolerance is wider than {TOL_DECISIVE:.0f} mm/yr (a station-sized box of radar pixels "
+               "scatters by that much on stable ground), so this neither confirms nor rejects the radar" if st == "warn" else "")
+            + f". GNSS observation period {period}" + (": it assumes steady motion since." if old else ".")
             + f" Source: {r['source']}.", None if not per else round(max(abs(p['diff']) for p in per.values()), 2))
     C.save_json(C.PRODUCTS / site / "stations.geojson", dict(type="FeatureCollection", features=feats))
 

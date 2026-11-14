@@ -309,9 +309,13 @@ def nisar_coverage() -> dict:
 # ------------------------------------------------------------------------------------------------ NISAR displacement
 NISAR_POINT_BOX_M = 8200
 # Tracks held off the page until a check clears them (DECISIONS.md, 14 Nov 2026, 23:00). The reason is shown on the page.
-NISAR_HOLD = {
-    "094D": "094D is under review: phase-sign test T3 not passed (the zones read +23.5 mm/yr against far stable ground). "
-            "Unwrapping is ruled out; the signal covers the whole valley, not only the zones "
+NISAR_HOLD = {}            # tracks kept off the page entirely (none since 15 Nov 2026)
+# Tracks shown but flagged: they failed a predeclared check and stay visible for inspection, never for interpretation
+# (Alexandru, 15 Nov 2026: keep every source, filter at the end). The reason is shown on the page.
+NISAR_FLAG = {
+    "094D": "Failed the phase-sign test T3: the zones read +23.5 mm/yr against far stable ground, where they should "
+            "sink. Unwrapping is ruled out, and neither the ECMWF weather model nor NASA's own troposphere screens "
+            "(in the product) remove it; the signal covers the whole valley. Shown for inspection, not interpretation "
             "(notebooks/03/t3_094d_checks.json).",
 }    # dots only within this half-size of the site centre (the Sentinel-1 window)
 
@@ -393,7 +397,7 @@ def export_nisar(out: pathlib.Path, site_key: str, series: list[dict]):
         gaps = [list(g) for g in ts["gap_ranges"]]
         frames[track] = dict(dates=dates, pngs=pngs, vmin=-CHANGE_VMAX, vmax=CHANGE_VMAX,
                              units="mm since the first date of its acquisition group", direction=meta_s["tracks"][track],
-                             gaps=gaps, window="nisar", saturates=True, groups=groups)
+                             gaps=gaps, window="nisar", saturates=True, groups=groups, flag=NISAR_FLAG.get(track))
         png = f"nisar/los_{track}.png"
         overlay_png(grid.sample(vel), out / png, RATE_VMAX)
         layers.append(dict(id=f"los_{track}", label=f"NISAR {track}: line-of-sight rate through the dates"
@@ -505,7 +509,7 @@ def run(site_key: str) -> None:
     nmeta = C.SENSORS["nisar"]
     nisar = {k: nmeta[k] for k in ("label", "agency", "band", "wavelength_cm", "status", "reference", "credit")}
     nisar.update(layers=n_layers, frames=n_frames_, points=n_points, look=nmeta["look"], product=nmeta["product"],
-                 fit=n_notes)
+                 fit=n_notes, flags={t: r for t, r in NISAR_FLAG.items() if t in n_frames_})
     missing = [t for t in nmeta["tracks"] if t not in n_frames_]
     if missing:
         nisar["pending"] = (" ".join(NISAR_HOLD.get(t, f"{t}: displacement fit pending.") for t in missing) if n_frames_ else
@@ -519,8 +523,11 @@ def run(site_key: str) -> None:
         bounds=bounds, center=[site["lat"], site["lon"]], view=dict(site["view"], min_zoom=6, context="romania-blurred"),
         sensors=dict(nisar=nisar, s1=s1), views=list(C.VIEWS), common_window=list(C.COMMON_WINDOW),
         default=dict(sat="nisar", view="coverage", track="129A"),
-        compare=dict(ready=False, reason="Compare waits for both NISAR tracks to pass T3 and a shared window and "
-                                          "reference (O-19); NISAR 094D is under review."),
+        compare=dict(ready=bool(n_frames_),
+                     pairs={"129A": "007D", "094D": "029A"},   # same east sensitivity: NISAR looks left, Sentinel-1 right
+                     reason=("Side by side, each satellite in its own line of sight. Tracks are paired by geometry (NISAR "
+                             "129A with Sentinel-1 007D: both see east-west motion the same way). The verdict per zone "
+                             "comes from the validator; a shared quantity (O-19) is still open.")),
         windows={k: v["label"] for k, v in windows.items()}, default_window=WINDOW,
         checks={k: sum(c.get("status") == k for c in checks) for k in ("pass", "warn", "fail", "info")},
         zone_notes=ZONE_NOTES, track_notes=TRACK_NOTES,

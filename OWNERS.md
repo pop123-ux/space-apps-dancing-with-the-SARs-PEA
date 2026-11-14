@@ -30,6 +30,7 @@ Every file in this repository has an owner role, 01 to 06, or is shared. The own
 
 | File | Owner | What to do with it |
 | --- | --- | --- |
+| `update.py` | 02 · NISAR data (Alexandru, Eric) | Find new Sentinel-1 and NISAR acquisitions (updates.json), order HyP3 jobs, refit |
 | `fetch.py` | 02 · NISAR data (Alexandru, Eric) | Search ASF, stream the site window from each GUNW, mask, ionosphere, DEM, synthetic stack |
 | `data/scenes/ocnele_mari_gunw.csv` | 02 · NISAR data (Alexandru, Eric) | The 22 pairs from CMR; check it in T2. No owner line (it is a CSV) |
 | `data/README.md` | 02 · NISAR data (Alexandru, Eric) | The layout of the local data folders |
@@ -84,6 +85,7 @@ Every file in this repository has an owner role, 01 to 06, or is shared. The own
 | `.gitattributes` | shared · announce changes; 01 reviews | Preserves exact bytes for checksum-tracked files |
 | `.env.example` | shared · announce changes; 01 reviews | Template for the Earthdata token; the real .env is never committed |
 | `.github/workflows/tests.yml` | shared · announce changes; 01 reviews | Runs pytest on every push |
+| `.github/workflows/update.yml` | shared · announce changes; 01 reviews | Weekly data check; opens a pull request when new acquisitions exist |
 | `.github/pull_request_template.md` | shared · announce changes; 01 reviews | The checklist on every PR |
 
 ## Everyone
