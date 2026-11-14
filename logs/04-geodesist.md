@@ -6,6 +6,132 @@ This is the running log for role 04, newest entry first, so the team can follow 
 
 ---
 
+## Sat 14 Nov 2026, about 17:40 · 129A on the team's own stream: HDF5 verified, 13 pairs, real tie
+
+Branch `r04/129a-series`. Done with Claude Code (see the `AI-DISCLOSURE.md` log). Earthdata: Matei signed in himself; the token sits in `.env` (git-ignored) and was never printed or copied.
+
+**Why 04 ran the stream.** On `main` the real-data paths of `fetch.py` (02) and `stack.py` (03) are still stubs. To tie 129A, 04 used a **local, git-ignored stand-in**, `data/work/ocnele_mari/r04/r04_129a.py`. It is the advisor's rehearsal code, changed to the build-spec rules. Nothing in 02's or 03's files was edited. The proposal for them is in section 5.
+
+### 1. First pair verified on the full HDF5 (2026-06-23 → 2026-07-05)
+
+Downloaded through Chrome: `NISAR_L2_PR_GUNW_023_129_A_024_024_2000_SH_20260623T032016_..._P05023_N_F_J_001.h5`, 2,399,141,888 bytes (the size CMR lists, 14 Nov). Kept in `data/raw/nisar/` (git-ignored). Full report: `data/work/ocnele_mari/r04/verify_129A.json`.
+
+| Item | Found in the file | Consequence |
+| --- | --- | --- |
+| Product | spec 1.5.0, product 1.0.11, PROVISIONAL, track 129, frame 24, Ascending, **Left**-looking, HH, `Nominal` | as cataloged |
+| `unwrappedPhase`, `ionospherePhaseScreen` | float32, radians, NaN fill, 512² chunks | window reads work |
+| `coherenceMagnitude` | float32, unit 1 | — |
+| `connectedComponents` | uint16, fill 65535 | — |
+| `mask` | uint32, contiguous; the description matches the build-spec rule (bits 0 to 7 subswath code, 8 to 23 anomaly flags, bit 24 ionosphere interpolated) | rule confirmed |
+| Mask in the window | 99.1 % land in both subswaths, 0 % anomaly flags, bit 24 on 98.3 %, one connected component | **88 % kept** with coherence ≥ 0.35 |
+| Grid | EPSG:32635, 80 m, 4437 × 4383; the 50 × 50 km window lies inside the frame | window x0 261720, y0 5021320, 625 × 625 px |
+| Look vectors | `losUnitVectorX/Y` described as "from the target to the sensor, ENU". At the site (500 m cube level): e +0.624, n +0.206, u +0.754 | incidence 41.07°, equal to the product's `incidenceAngle` to 10⁻⁶° |
+| LOS sign | east > 0 is right: ascending (flying about north) and looking left (west) puts the satellite east of the ground | `C.enu_to_los` (positive = towards the satellite) is consistent with the product |
+| Wavelength | 0.24393 m (from `centerFrequency`) | — |
+
+My script's first sanity check of the LOS sign printed "false". The check's expected sign was wrong, not the product; it is fixed and the fix is recorded in `verify_129A.json`.
+
+**T3 (phase sign): still open, for 03 and 05.** No field in the file states the interferogram convention, so the file cannot settle T3. `PHASE_SIGN = −1` stays the draft. What the file does settle is the look-vector half of the sign chain: target to sensor, positive towards the satellite. The zone test below cannot decide it either: zones 1 and 2 read −14.7 and −12.4 mm/yr against a pixel σ of about 16 mm/yr and a stable-ground scatter of 39 mm/yr.
+
+**Cross-check.** My window of this pair equals the advisor's 12 Nov rehearsal file wherever both have data (maximum difference 0.0 rad, same grid). The look vectors agree to 1.3 × 10⁻⁴.
+
+### 2. All 13 cataloged 129A pairs, streamed (window only)
+
+0.78 GB in total, about 60 MB and 90 to 190 s per pair. The per-pair QA is in `129A/qa_pairs.jsonl`.
+
+| Pair | Collection | Kept | Iono σ (rad) | Bit 24 | Mask dtype |
+| --- | --- | --- | --- | --- | --- |
+| 2025-11-07 → 2025-12-01 (24 d) | BETA | 71 % | 0.48 | 0 % | uint8 |
+| 2025-12-01 → 2025-12-13 | BETA | 77 % | 0.54 | 0 % | uint8 |
+| 2025-12-13 → 2025-12-25 | BETA | 66 % | 0.56 | 0 % | uint8 |
+| 2025-12-25 → 2026-01-18 (24 d) | BETA | **24 %** | 0.29 | 0 % | uint8 |
+| 2026-06-23 → 2026-07-05 | PROVISIONAL | 88 % | **1.83** | 99 % | uint32 |
+| 2026-07-05 → 2026-07-17 | PROVISIONAL | 96 % | 0.59 | 100 % | uint32 |
+| 2026-07-17 → 2026-08-10 (24 d) | PROVISIONAL | 82 % | 0.69 | 99 % | uint32 |
+| 2026-08-10 → 2026-08-22 | PROVISIONAL | 96 % | 0.63 | 100 % | uint32 |
+| 2026-08-22 → 2026-09-03 | PROVISIONAL | 96 % | 0.31 | 100 % | uint32 |
+| 2026-09-03 → 2026-09-15 | PROVISIONAL | 97 % | 0.30 | 100 % | uint32 |
+| 2026-09-15 → 2026-09-27 | PROVISIONAL | 98 % | 0.35 | 100 % | uint32 |
+| 2026-09-27 → 2026-10-09 | PROVISIONAL | 97 % | 0.25 | 100 % | uint32 |
+| 2026-10-09 → 2026-10-21 | PROVISIONAL | 88 % | 0.68 | 99 % | uint32 |
+
+The ionosphere layer was present and subtracted on all 13 pairs. The BETA pairs store the mask as uint8 with no bit 24, as the rehearsal found. Mid-winter 2025-12-25 → 2026-01-18 keeps only 24 % of pixels.
+
+### 3. Time series (`129A/ts.npz`, written by the 04 stand-in)
+
+- **Pairs and dates.** 13 pairs, 15 dates, 2025-11-07 to 2026-10-21, pair lengths 12 and 24 days, 0 triplets.
+- **Groups.** **Two acquisition groups, referenced separately:**
+  - group 0 (January group): 2025-11-07 to 2026-01-18;
+  - group 1 (June group): 2026-06-23 to 2026-10-21.
+  - **Gap:** 2026-01-18 to 2026-06-23. No pair spans it, nothing is interpolated across it, and `cum` is 0 at each group's first date.
+- **Rate.** One line through the dates with one offset per group, and no annual term.
+- **Coverage and corrections.** 94 % of pixels have a series. The elevation slope removed per pair has a median absolute value of 1.5 mm per 100 m and a maximum of 3.4.
+- **New fields** (additions to the contract, for 03 to keep or drop): `group` (one per date), `gap_ranges`, `pairs`, `iono_used`, `phase_sign`, `reference`, `made_by`.
+- **Rate equal to the rehearsal.** r = 1.000 on 369,010 pixels, median difference 0.00 mm/yr. Referencing the groups separately changes `cum`, not `vel`.
+
+**Terrain-relative** (before the tie; stable ground around the site = 0), LOS, mm/yr:
+- stable-ground median −6.7, robust scatter 38.0;
+- zones: z1 −20.5, z2 −18.2, z3 −1.6, z4 −8.3;
+- median σ about 16 per pixel, a lower bound.
+
+### 4. The real tie (`calibrate.py ocnele_mari --track 129A --plot`)
+
+| Item | 129A |
+| --- | --- |
+| Model | EuVeM2022 (Eurasia-fixed; horizontals ETRF2000, up IGS14) |
+| Method | offset (a plane cut the scatter only from 39.2 to 38.9 mm/yr, under 10 %) |
+| Offset | **−5.80 mm/yr** (rehearsal: −6.01) |
+| Tie pixels | 347,765 (removed: 25,915 low coherence, 8,184 zones + 3 km, 983 near stations) |
+| Residual | std 39.15, MAD 37.07 mm/yr |
+| Model in LOS | −0.63 mm/yr mean |
+| **Swap vs EGMS A-EPND 2023** | **0.704 mm/yr**: equal to the 16:10 preliminary figure on the rehearsal stack, so **T8 stays PASS WITH NOTE**; the note's "rerun on the team stack" condition is met for 129A |
+| Tied zone medians (LOS) | z1 −14.7, z2 −12.4, z3 +4.2, z4 −2.5; all zones −4.8 mm/yr |
+
+The tie residual map (`129A/tie.png`) is centred and symmetric. Its pattern follows slopes and valleys, which is the atmosphere and DEM noise floor, not ground motion.
+
+**Changes to `calibrate.py`:**
+- `--track` ties one track and keeps the other tracks' entries in `calib.json`. This stops a run from re-tying the rehearsal's copied 094D files.
+- `cum_cal` subtracts the correction from each group's own first date.
+- Each `calib.json` entry now carries:
+  - `sensor` (named in the contract but missing before);
+  - `frame`, `dates`, `gaps`, `ts_made_by` and `phase_sign`, for provenance.
+
+`pytest -q`: 8 passed. `checkpoint.py ocnele_mari`: contract OK.
+
+**`products/ocnele_mari/calib.json` now holds 129A only.** 094D is not tied: its files in `data/work/` are still the rehearsal copies from 15:41.
+
+### 5. Hand-off
+
+**To 02 and 03 (proposal; their files, their call).** `r04_129a.py` `window` and `stack` meet the build spec and could fill the stubs in `fetch.read_pair`, `fetch.write_geometry`, `fetch.write_dem` and the `stack.py` functions:
+- **Valid pixels:** the mask read as uint32, the largest connected component, coherence ≥ 0.35.
+- **Ionosphere:** subtracted, with its use recorded per pair.
+- **Grid:** the run stops if the grid shifts.
+- **Groups:** each referenced to its own first date.
+
+When 03's own `ts.npz` lands, rerun `calibrate.py ocnele_mari --track 129A` and compare with the numbers above.
+
+**To Darius (06).**
+
+| What | Value |
+| --- | --- |
+| Dates (129A) | 2025-11-07, 2025-12-01, 2025-12-13, 2025-12-25, 2026-01-18, 2026-06-23, 2026-07-05, 2026-07-17, 2026-08-10, 2026-08-22, 2026-09-03, 2026-09-15, 2026-09-27, 2026-10-09, 2026-10-21 (verified against the 13 cataloged pairs) |
+| Gap | 2026-01-18 to 2026-06-23: no frames, a "no data" label |
+| Groups | January group (Nov to Jan) and June group (Jun to Oct), each starting at 0 mm. Never draw a line across the gap. |
+| LOS sign | positive = towards the satellite. Look vector target to sensor: e +0.62, n +0.21, u +0.75 at the town; incidence 41°. **Phase sign still draft (T3 open).** |
+| Units | LOS rate mm/yr, cumulative LOS mm |
+| Reference | `ts.npz`: **terrain-relative** (stable ground outside the zones + 3 km = 0). `cal.npz` `vel_cal` / `cum_cal`: **tied to EuVeM2022, Eurasia-fixed** (offset −5.80 mm/yr). |
+| Overlays | `data/work/ocnele_mari/129A/overlays/`: `129A_rate_terrain.png` (labelled terrain-relative, not tied) and `129A_rate_tied.png`, RdBu, symmetric ±105 mm/yr, red = away. `129A_overlays.json` gives the UTM bounds, lon/lat corners, dates, gaps, groups, units and sign. They are on the UTM grid, so `export.py` resamples them. |
+| Labels | "NISAR beta/provisional products": the January group is BETA, the June group PROVISIONAL. |
+
+### Still open for 04
+
+1. 094D: stream and tie it the same way.
+2. T3 with 03 and 05 (see above).
+3. The frame paragraph for the page.
+4. Delete `data/raw/nisar/*.h5` (2.4 GB) once 02 has checked it.
+
+---
+
 ## Sat 14 Nov 2026, about 16:40 · merged `r04/egms-model` to `main`
 
 `r04/egms-model` (commits 5c9adff and 0bd8ce8) merged into `main` with `--no-ff` at Matei's request.
