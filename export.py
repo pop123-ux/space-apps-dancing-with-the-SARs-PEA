@@ -277,7 +277,13 @@ def nisar_coverage() -> dict:
 
 
 # ------------------------------------------------------------------------------------------------ NISAR displacement
-NISAR_POINT_BOX_M = 8200    # dots only within this half-size of the site centre (the Sentinel-1 window)
+NISAR_POINT_BOX_M = 8200
+# Tracks held off the page until a check clears them (DECISIONS.md, 14 Nov 2026, 23:00). The reason is shown on the page.
+NISAR_HOLD = {
+    "094D": "094D is under review: phase-sign test T3 not passed (the zones read +23.5 mm/yr against far stable ground). "
+            "Unwrapping is ruled out; the signal covers the whole valley, not only the zones "
+            "(notebooks/03/t3_094d_checks.json).",
+}    # dots only within this half-size of the site centre (the Sentinel-1 window)
 
 
 def load_nisar(site_key: str, track: str):
@@ -341,7 +347,7 @@ def export_nisar(out: pathlib.Path, site_key: str, series: list[dict]):
     meta_s = C.SENSORS["nisar"]
     layers, frames, points, notes = [], {}, {}, {}
     for track in meta_s["tracks"]:
-        got = load_nisar(site_key, track)
+        got = None if track in NISAR_HOLD else load_nisar(site_key, track)
         if not got:
             continue
         meta, ts, v = got
@@ -460,7 +466,7 @@ def run(site_key: str) -> None:
                  fit=n_notes)
     missing = [t for t in nmeta["tracks"] if t not in n_frames_]
     if missing:
-        nisar["pending"] = (f"Displacement fit pending for {' and '.join(missing)}." if n_frames_ else
+        nisar["pending"] = (" ".join(NISAR_HOLD.get(t, f"{t}: displacement fit pending.") for t in missing) if n_frames_ else
                             "Displacement fit pending: authenticated download, independent fit and line-of-sight sign "
                             "check are not done yet. Catalog coverage only.")
     C.save_json(out / "manifest.json", dict(
@@ -471,6 +477,8 @@ def run(site_key: str) -> None:
         bounds=bounds, center=[site["lat"], site["lon"]], view=dict(site["view"], min_zoom=6, context="romania-blurred"),
         sensors=dict(nisar=nisar, s1=s1), views=list(C.VIEWS), common_window=list(C.COMMON_WINDOW),
         default=dict(sat="nisar", view="coverage", track="129A"),
+        compare=dict(ready=False, reason="Compare waits for both NISAR tracks to pass T3 and a shared window and "
+                                          "reference (O-19); NISAR 094D is under review."),
         windows={WINDOW: windows[WINDOW]["label"]}, default_window=WINDOW,
         checks={k: sum(c.get("status") == k for c in checks) for k in ("pass", "warn", "fail", "info")},
         zone_notes=ZONE_NOTES, track_notes=TRACK_NOTES,

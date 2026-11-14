@@ -715,5 +715,18 @@
     },
     "note": "Chronos-2 is a pretrained time-series model: it extrapolates the shape of this one series and knows nothing about salt, weather or the mine. Its interval is the only calibrated-looking one here (about 77 to 78 % of truths inside the 80 % band on the Jan-Oct backtests), still from one zone, one track and overlapping cutoffs."
   },
+  "nisar_check": {
+    "dates": [
+      "2026-10-09",
+      "2026-10-21"
+    ],
+    "nisar_change_mm": -5.91,
+    "nisar_change_own_los_mm": -5.81,
+    "chronos2_change_mm": 1.21,
+    "scale_vertical_only": 1.017,
+    "nisar_step_scatter_mm": 6.94,
+    "n_pixels": 20,
+    "note": "NISAR 129A looks left and Sentinel-1 029A right; the scaling assumes vertical motion only. NISAR date-to-date scatter at 20 pixels is larger than the change, so this is a consistency check, not a validation."
+  },
   "model_reason": "Team decision, 14 Nov 2026: lowest MAE on every backtest that reaches the January horizon (30-day summer and January to October, 88-day January to October), and the only interval with near-nominal coverage."
 }

@@ -1,0 +1,162 @@
+{
+ "baseline": {
+  "zones": 23.51,
+  "z4": 18.42,
+  "outer": -7.56,
+  "n_zone_px": 79
+ },
+ "per_pair_zone_minus_stable_mm": {
+  "20260620_20260702": {
+   "zone_minus_stable": -2.46,
+   "zone_minus_local": 1.21,
+   "zone_px": 90,
+   "coh_zone": 0.42,
+   "iono_std": 2.13
+  },
+  "20260702_20260714": {
+   "zone_minus_stable": 0.85,
+   "zone_minus_local": 1.31,
+   "zone_px": 109,
+   "coh_zone": 0.47,
+   "iono_std": 2.37
+  },
+  "20260714_20260726": {
+   "zone_minus_stable": -3.21,
+   "zone_minus_local": -1.07,
+   "zone_px": 123,
+   "coh_zone": 0.57,
+   "iono_std": 1.23
+  },
+  "20260726_20260819": {
+   "zone_minus_stable": 12.03,
+   "zone_minus_local": -1.11,
+   "zone_px": 97,
+   "coh_zone": 0.42,
+   "iono_std": 0.9
+  },
+  "20260819_20260831": {
+   "zone_minus_stable": -6.47,
+   "zone_minus_local": -0.31,
+   "zone_px": 124,
+   "coh_zone": 0.58,
+   "iono_std": 0.7
+  },
+  "20260831_20260912": {
+   "zone_minus_stable": -2.41,
+   "zone_minus_local": -0.3,
+   "zone_px": 125,
+   "coh_zone": 0.55,
+   "iono_std": 0.74
+  },
+  "20260912_20260924": {
+   "zone_minus_stable": 12.43,
+   "zone_minus_local": 2.9,
+   "zone_px": 125,
+   "coh_zone": 0.52,
+   "iono_std": 0.5
+  },
+  "20260924_20261006": {
+   "zone_minus_stable": -2.22,
+   "zone_minus_local": -0.82,
+   "zone_px": 127,
+   "coh_zone": 0.63,
+   "iono_std": 1.31
+  },
+  "20261006_20261018": {
+   "zone_minus_stable": -5.5,
+   "zone_minus_local": -1.64,
+   "zone_px": 108,
+   "coh_zone": 0.42,
+   "iono_std": 0.3
+  }
+ },
+ "drop_one_pair": {
+  "20260620_20260702": {
+   "zones": 27.31,
+   "z4": 23.06,
+   "outer": -8.09,
+   "n_zone_px": 92
+  },
+  "20260702_20260714": {
+   "zones": 29.16,
+   "z4": 15.34,
+   "outer": -11.48,
+   "n_zone_px": 81
+  },
+  "20260714_20260726": {
+   "zones": 25.72,
+   "z4": 13.36,
+   "outer": -3.09,
+   "n_zone_px": 79
+  },
+  "20260726_20260819": {
+   "zones": -4.4,
+   "z4": -40.21,
+   "outer": -31.66,
+   "n_zone_px": 88
+  },
+  "20260819_20260831": {
+   "zones": 41.41,
+   "z4": 32.89,
+   "outer": 9.17,
+   "n_zone_px": 79
+  },
+  "20260831_20260912": {
+   "zones": 30.3,
+   "z4": 27.78,
+   "outer": 2.85,
+   "n_zone_px": 80
+  },
+  "20260912_20260924": {
+   "zones": 9.97,
+   "z4": 9.97,
+   "outer": -14.05,
+   "n_zone_px": 81
+  },
+  "20260924_20261006": {
+   "zones": 34.83,
+   "z4": 30.36,
+   "outer": -5.8,
+   "n_zone_px": 79
+  },
+  "20261006_20261018": {
+   "zones": 36.74,
+   "z4": 33.42,
+   "outer": -1.63,
+   "n_zone_px": 86
+  }
+ },
+ "local_reference_1_to_3_km": {
+  "zones": -5.07,
+  "z4": -10.16,
+  "outer": -36.14,
+  "n_zone_px": 79
+ },
+ "weather_model_no_fitted_slope": {
+  "zones": 43.04,
+  "z4": 36.94,
+  "outer": 12.04,
+  "n_zone_px": 79
+ },
+ "weather_model_plus_fitted_slope": {
+  "zones": 22.72,
+  "z4": 17.08,
+  "outer": -9.37,
+  "n_zone_px": 79
+ },
+ "elevation": {
+  "zone_median_m": 333.2,
+  "stable_median_m": 434.8,
+  "fitted_slopes_mm_per_100m": [
+   0.81,
+   -0.59,
+   -3.73,
+   0.91,
+   -1.23,
+   -0.58,
+   0.23,
+   -0.81,
+   2.46
+  ]
+ }
+}

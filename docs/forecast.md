@@ -184,7 +184,15 @@ By the predeclared rule (lowest 30-day MAE) Chronos-2 would now be the default; 
 
 Not adopted. Past weather adds nothing. Knowing the actual future weather would help at 88 days but hurts at 30, which points at a weak seasonal link at most. This agrees with 05's rain and moisture screen (PR #9). The test cannot tell whether moisture matters at 200 m scale inside the bowls: ERA5-Land is about 9 km, one cell for the whole window.
 
-## References
+## Chronos-2 is the only forecast; slider; NISAR check (14 Nov 2026, 23:30)
+
+**Decision (team, via Alexandru):** the page shows **Chronos-2 only**. Persistence, Theil–Sen, the Gaussian process and the EGMS long-term trend are no longer forecasts on the page; they stay in `forecast.json` as **backtest baselines**, named in the panel's footnote as what Chronos-2 is measured against (30-day MAE, summer: Chronos-2 3.77 mm; persistence 4.19, Theil–Sen 5.53, Gaussian process 3.95, long-term 3.97). They were never an ensemble: the page let the reader pick one at a time. (The "4 models" of the NISAR plan, displacement, OLS, Theil–Sen and up/east, are fitting methods for the radar series, not forecasters; they are unchanged.)
+
+**Forecast slider.** The Zones panel (029A, July to October, baseline) has a "Forecast date" slider from the last radar date (5 Oct 2026) to 1 Jan 2027 in 6-day steps. It reads the Chronos-2 median and its 80 % range at that date, relative to 7 July 2026 (for example 23 Oct: −5.5 mm, 80 % range −10.1 to +5.0 mm; 1 Jan: −3.9 mm, −11.3 to +15.2 mm). Every value comes from `forecast.json`.
+
+**Out-of-sample check against NISAR** (`forecast_chronos.py --nisar`, block `nisar_check`). NISAR 129A has two Zone 4 dates after Sentinel-1's cutoff. From 9 to 21 Oct 2026 NISAR shows **−5.9 mm** (scaled into 029A's line of sight, assuming vertical motion only: × 1.017), Chronos-2 **+1.2 mm**. NISAR's own date-to-date scatter at 20 pixels is 6.9 mm, so the two agree within noise; it is a consistency check, not a validation. NISAR leans towards continued sinking, Chronos-2 towards a small rebound.
+
+
 
 - [Hill et al., Sentinel-1 deformation forecasting](https://doi.org/10.1029/2020JB020176)
 - [EGMS 2020–2025 release](https://land.copernicus.eu/en/news/product-update-european-ground-motion-service-2025)

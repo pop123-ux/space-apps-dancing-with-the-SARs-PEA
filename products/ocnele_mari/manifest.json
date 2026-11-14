@@ -3,8 +3,8 @@
  "name": "Ocnele Mari, Vâlcea",
  "story": "TODO(01): one sentence, written by the Lead",
  "synthetic": false,
- "note": "Sentinel-1 measurements (Jul to Oct 2026) and NISAR catalog coverage. NISAR displacement is pending.",
- "built": "2026-11-14T15:53:04+00:00",
+ "note": "Sentinel-1 measurements (Jul to Oct 2026) and NISAR measurements (129A).",
+ "built": "2026-11-14T17:00:31+00:00",
  "bounds": [
   [
    45.016685,
@@ -37,11 +37,103 @@
    "status": "beta/provisional",
    "reference": "tied to the EuVeM2022 velocity model (04; DRAFT until the tie exists)",
    "credit": "NISAR L2 GUNW (NASA–ISRO, ASF DAAC); beta and provisional products, not intended for scientific research",
-   "layers": [],
-   "frames": {},
+   "layers": [
+    {
+     "id": "los_129A",
+     "label": "NISAR 129A: line-of-sight rate through the dates, tied to EuVeM2022",
+     "png": "nisar/los_129A.png",
+     "units": "mm/yr",
+     "vmin": -40.0,
+     "vmax": 40.0,
+     "track": "129A",
+     "experimental": false,
+     "window": "nisar",
+     "scenario": "baseline",
+     "saturates": true
+    }
+   ],
+   "frames": {
+    "129A": {
+     "dates": [
+      "2025-11-07",
+      "2025-12-01",
+      "2025-12-13",
+      "2025-12-25",
+      "2026-01-18",
+      "2026-06-23",
+      "2026-07-05",
+      "2026-07-17",
+      "2026-08-10",
+      "2026-08-22",
+      "2026-09-03",
+      "2026-09-15",
+      "2026-09-27",
+      "2026-10-09",
+      "2026-10-21"
+     ],
+     "pngs": [
+      "nisar/frames/129A/2025-11-07.png",
+      "nisar/frames/129A/2025-12-01.png",
+      "nisar/frames/129A/2025-12-13.png",
+      "nisar/frames/129A/2025-12-25.png",
+      "nisar/frames/129A/2026-01-18.png",
+      "nisar/frames/129A/2026-06-23.png",
+      "nisar/frames/129A/2026-07-05.png",
+      "nisar/frames/129A/2026-07-17.png",
+      "nisar/frames/129A/2026-08-10.png",
+      "nisar/frames/129A/2026-08-22.png",
+      "nisar/frames/129A/2026-09-03.png",
+      "nisar/frames/129A/2026-09-15.png",
+      "nisar/frames/129A/2026-09-27.png",
+      "nisar/frames/129A/2026-10-09.png",
+      "nisar/frames/129A/2026-10-21.png"
+     ],
+     "vmin": -20.0,
+     "vmax": 20.0,
+     "units": "mm since the first date of its acquisition group",
+     "direction": "Ascending",
+     "gaps": [
+      [
+       "2026-01-18",
+       "2026-06-23"
+      ]
+     ],
+     "window": "nisar",
+     "saturates": true,
+     "groups": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+     ]
+    }
+   },
+   "points": {
+    "129A": "nisar/points_129A.json"
+   },
    "look": "left",
    "product": "NISAR L2 GUNW, frequency A, HH (beta and provisional)",
-   "pending": "Displacement fit pending: authenticated download, independent fit and line-of-sight sign check are not done yet. Catalog coverage only."
+   "fit": {
+    "129A": {
+     "tied": true,
+     "pairs": 13,
+     "groups": 2,
+     "phase_sign": -1,
+     "iono_used": 13
+    }
+   },
+   "pending": "094D is under review: phase-sign test T3 not passed (the zones read +23.5 mm/yr against far stable ground). Unwrapping is ruled out; the signal covers the whole valley, not only the zones (notebooks/03/t3_094d_checks.json)."
   },
   "s1": {
    "label": "Sentinel-1",
@@ -195,6 +287,10 @@
   "view": "coverage",
   "track": "129A"
  },
+ "compare": {
+  "ready": false,
+  "reason": "Compare waits for both NISAR tracks to pass T3 and a shared window and reference (O-19); NISAR 094D is under review."
+ },
  "windows": {
   "jul_oct": "July to October 2026"
  },
@@ -266,6 +362,7 @@
   "s1": "Sentinel-1 IW2 VV bursts 029_060407_IW2 and 007_013694_IW2, processed by ASF HyP3 (10×2 looks, water mask) and inverted on a 40 m grid with coherence-squared weights. Each pair is zeroed on a terrain reference band 3 to 6.5 km from the zone edges; the outer comparison area is 6.5 to 8 km. Not GNSS-calibrated.",
   "sign": "Line of sight, positive toward the satellite. Red is away from the satellite, blue is toward.",
   "rate": "A rate is a fitted annualized slope over the window, not a long-term velocity. No per-pixel uncertainty layer is validated yet.",
+  "nisar": "NISAR L2 GUNW (frequency A, HH, 80 m) streamed over the 50 km window by fetch.py: mask decoded as a bitfield, largest connected component, ionosphere screen subtracted. stack.py: coherence ≥ 0.35, elevation slope and stable-ground reference removed per pair, small-baseline inversion with one group per side of the January to June gap, rate through the dates. calibrate.py ties each track to EuVeM2022 on stable ground. Beta and provisional products, not intended for scientific research.",
   "zones": "Four zone circles from the advisor's starter kit (permission to publish them is still to be confirmed).",
   "links": [
    {

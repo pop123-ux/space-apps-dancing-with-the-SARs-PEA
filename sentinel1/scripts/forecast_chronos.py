@@ -18,6 +18,10 @@ Writes into forecast.json, leaving every existing path and metric unchanged:
   --default                     also makes chronos2 the default `model` (team decision, 14 Nov 2026, 20:30): sets
                                 `model`, `forecast_mm`, `interval` and `model_reason`.
   --weather                     copies chronos_weather.py's predeclared covariate backtest into covariate_tests.
+  --nisar SERIES_JSON           out-of-sample check against NISAR 129A Zone 4 (products/<site>/series.json): the
+                                change between NISAR's last two dates (9 and 21 Oct 2026, after Sentinel-1's 5 Oct
+                                cutoff) scaled into 029A's line of sight assuming vertical motion only, next to the
+                                Chronos-2 median change over the same days. A consistency check, not a pass rule.
 """
 import argparse
 import json
@@ -31,12 +35,49 @@ Q = [0.1, 0.5, 0.9]
 STEP = 6.0
 
 
+def nisar_check(f, series_path):
+    """NISAR 129A Zone 4 change between its last two dates vs the Chronos-2 median change over the same days."""
+    s = json.loads(series_path.read_text())
+    z = next(p for p in s if p['id'] == f['zone'].lower())
+    n = z['series'].get('nisar:129A')
+    if not n:
+        return None
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    import common as C
+    import numpy as np
+    meta = C.load_json(C.WORK / 'ocnele_mari' / '129A' / 'meta.json')
+    g = np.load(C.WORK / 'ocnele_mari' / '129A' / 'geom.npz')
+    import export
+    m = export.nisar_zone_masks(C.SITES['ocnele_mari'], meta)[f['zone'].lower()]
+    u_n = float(g['los_u'][m].mean())
+    after = [(d, v) for d, v in zip(n['dates'], n['mm']) if d > f['last_observation']]
+    if len(after) < 2:
+        return None
+    (d0, v0), (d1, v1) = after[-2], after[-1]
+    scale = f['long_term']['look_u'] / u_n          # 029A up component at Zone 4, from forecast.py
+    summer = [(d, v) for d, v in zip(n['dates'], n['mm']) if d >= '2026-06-01']
+    steps = np.diff([v for _, v in summer])
+    last = date.fromisoformat(f['last_observation'])
+    x = [0] + [(date.fromisoformat(d) - last).days for d in f['dates']]
+    path = [f['observed_mm'][-1]] + f['model_paths_mm']['chronos2']
+    at = lambda d: float(np.interp((date.fromisoformat(d) - last).days, x, path))
+    return dict(dates=[d0, d1], nisar_change_mm=round((v1 - v0) * scale, 2), nisar_change_own_los_mm=round(v1 - v0, 2),
+                chronos2_change_mm=round(at(d1) - at(d0), 2), scale_vertical_only=round(scale, 3),
+                nisar_step_scatter_mm=round(float(1.4826 * np.median(np.abs(steps - np.median(steps)))) * scale, 2),
+                n_pixels=n['n_pixels'],
+                note='NISAR 129A looks left and Sentinel-1 029A right; the scaling assumes vertical motion only. '
+                     'NISAR date-to-date scatter at 20 pixels is larger than the change, so this is a consistency '
+                     'check, not a validation.')
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('forecast', type=Path)
     ap.add_argument('--janoct', type=Path, help='sentinel1/analysis_jan_oct/summary.json for the longer backtest')
     ap.add_argument('--default', action='store_true', help='make chronos2 the default model (team decision)')
     ap.add_argument('--weather', type=Path, help='chronos_weather.py report to record under covariate_tests')
+    ap.add_argument('--nisar', type=Path, help='products/<site>/series.json with nisar:129A, for the October check')
     a = ap.parse_args()
     import chronos
     from chronos import Chronos2Pipeline
@@ -101,6 +142,8 @@ def main():
             source=w['covariates'], target=w['target'], rule=w['rule'], results=w['results'], adopted=w['adopt_past'],
             note='Past-only rain and soil-moisture covariates did not lower the error, so the export uses Chronos-2 '
                  'without covariates. Known-future weather (not available for a real forecast) helped only at 88 days.')
+    if a.nisar:
+        f['nisar_check'] = nisar_check(f, a.nisar)
     if a.default:
         f['model'] = 'chronos2'
         f['forecast_mm'] = f['model_paths_mm']['chronos2']

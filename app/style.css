@@ -340,3 +340,10 @@ body.side-open.side-wide .layers-wrap { right: calc(var(--side-wide) + var(--gap
   .legend .caps { display: flex; font-size: 11px; }
   .status { white-space: normal; overflow: visible; text-overflow: clip; }
 }
+
+/* forecast date slider (Chronos-2 only, 14 Nov 2026) */
+.fc-slider { display: grid; gap: 6px; margin: 10px 0; padding: 10px 12px; background: var(--soft); border-radius: 12px; }
+.fc-slider label { font-size: 13px; font-weight: 600; }
+.fc-slider input[type="range"] { width: 100%; accent-color: #7C3AED; }
+.fc-slider output { font-size: 14px; }
+.tracks button.held { opacity: .55; cursor: help; font-size: 13px; }

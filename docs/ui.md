@@ -62,6 +62,13 @@ The team's sketch ([docs/figures/02_ui_sketch_v4.jpg](figures/02_ui_sketch_v4.jp
 - Phone: the menu is a drawer above the timeline (at most 55 % of the height); the toolbar and its satellite menu stay above it. This fixes the audit's first high finding (the sheet covered the dock and the satellite menu). The legend's "away from / toward satellite" caps and the full status line now show on phones (audit finding 2, honest-comparison rule 5).
 - Checked with Playwright at 1440 × 900 and on an iPhone 13: zone click opens the column, the satellite menu stays clickable, no console errors.
 
+## NISAR on the page and the Chronos-2 panel (14 Nov 2026, 23:30)
+
+- NISAR 129A is measured: change frames (each counted from the first date of its acquisition group, so summer frames read "since 2026-06-23"), a rate map and dots inside the Sentinel-1 box. On first load each satellite opens on its own last date.
+- 094D appears as a disabled chip, "094D · under review", whose tooltip gives the T3 reason (`manifest.sensors.nisar.pending`).
+- Compare and Agreement stay off with the manifest's `compare.reason` until both NISAR tracks pass T3.
+- The forecast block shows Chronos-2 only, with its 80 % range as two light dashed lines, a "Forecast date" slider (keyboard accessible, `aria-valuetext` is the date), the NISAR October check and the baselines in the footnote.
+
 ## Implementation status (r06/page, 14 Nov 2026, 16:15)
 
 | Part | Status | Notes |
