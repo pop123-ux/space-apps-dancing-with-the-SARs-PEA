@@ -1,0 +1,9 @@
+[
+ {
+  "id": "validation-pending",
+  "status": "info",
+  "title": "Validation not run yet",
+  "detail": "validate.py (05) has not written checks for this build",
+  "value": null
+ }
+]

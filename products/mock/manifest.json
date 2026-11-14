@@ -1,0 +1,325 @@
+{
+ "site": "mock",
+ "name": "Ocnele Mari · MOCK (invented values)",
+ "story": "Invented values to build the page on. Simulated, not data.",
+ "synthetic": true,
+ "note": "mock_products.py: every number is made up",
+ "built": "2026-11-14T13:31:50+00:00",
+ "bounds": [
+  [
+   44.86317985611511,
+   23.971566849821777
+  ],
+  [
+   45.31282014388489,
+   24.60843315017822
+  ]
+ ],
+ "center": [
+  45.088,
+  24.29
+ ],
+ "view": {
+  "center": [
+   45.086281,
+   24.2704806
+  ],
+  "zoom": 13,
+  "min_zoom": 6,
+  "context": "romania-blurred"
+ },
+ "sensors": {
+  "nisar": {
+   "label": "NISAR",
+   "agency": "NASA–ISRO",
+   "band": "L-band",
+   "wavelength_cm": 24.4,
+   "status": "beta/provisional",
+   "reference": "tied to the EuVeM2022 velocity model (04; DRAFT until the tie exists)",
+   "credit": "NISAR L2 GUNW (NASA–ISRO, ASF DAAC); beta and provisional products, not intended for scientific research",
+   "layers": [
+    {
+     "id": "los_129A",
+     "label": "NISAR 129A: line-of-sight rate (+ = towards the satellite) · MOCK",
+     "png": "nisar/los_129A.png",
+     "units": "mm/yr",
+     "vmin": -20,
+     "vmax": 20,
+     "track": "129A",
+     "experimental": false
+    },
+    {
+     "id": "los_094D",
+     "label": "NISAR 094D: line-of-sight rate (+ = towards the satellite) · MOCK",
+     "png": "nisar/los_094D.png",
+     "units": "mm/yr",
+     "vmin": -20,
+     "vmax": 20,
+     "track": "094D",
+     "experimental": false
+    },
+    {
+     "id": "up",
+     "label": "NISAR: vertical rate (− = sinking), experimental · MOCK",
+     "png": "nisar/up.png",
+     "units": "mm/yr",
+     "vmin": -20,
+     "vmax": 20,
+     "track": null,
+     "experimental": true
+    },
+    {
+     "id": "east",
+     "label": "NISAR: east–west rate (+ = east), experimental · MOCK",
+     "png": "nisar/east.png",
+     "units": "mm/yr",
+     "vmin": -10,
+     "vmax": 10,
+     "track": null,
+     "experimental": true
+    }
+   ],
+   "frames": {
+    "129A": {
+     "dates": [
+      "2025-11-07",
+      "2025-12-01",
+      "2025-12-13",
+      "2025-12-25",
+      "2026-01-18",
+      "2026-06-23",
+      "2026-07-05",
+      "2026-07-17",
+      "2026-08-10",
+      "2026-08-22",
+      "2026-09-03",
+      "2026-09-15",
+      "2026-09-27",
+      "2026-10-09",
+      "2026-10-21"
+     ],
+     "pngs": [
+      "nisar/frames/129A/2025-11-07.png",
+      "nisar/frames/129A/2025-12-01.png",
+      "nisar/frames/129A/2025-12-13.png",
+      "nisar/frames/129A/2025-12-25.png",
+      "nisar/frames/129A/2026-01-18.png",
+      "nisar/frames/129A/2026-06-23.png",
+      "nisar/frames/129A/2026-07-05.png",
+      "nisar/frames/129A/2026-07-17.png",
+      "nisar/frames/129A/2026-08-10.png",
+      "nisar/frames/129A/2026-08-22.png",
+      "nisar/frames/129A/2026-09-03.png",
+      "nisar/frames/129A/2026-09-15.png",
+      "nisar/frames/129A/2026-09-27.png",
+      "nisar/frames/129A/2026-10-09.png",
+      "nisar/frames/129A/2026-10-21.png"
+     ],
+     "vmin": -20,
+     "vmax": 20,
+     "units": "mm since first date",
+     "direction": "Ascending",
+     "gaps": [
+      [
+       "2026-01-18",
+       "2026-06-23"
+      ]
+     ]
+    },
+    "094D": {
+     "dates": [
+      "2026-06-20",
+      "2026-07-02",
+      "2026-07-14",
+      "2026-07-26",
+      "2026-08-19",
+      "2026-08-31",
+      "2026-09-12",
+      "2026-09-24",
+      "2026-10-06",
+      "2026-10-18"
+     ],
+     "pngs": [
+      "nisar/frames/094D/2026-06-20.png",
+      "nisar/frames/094D/2026-07-02.png",
+      "nisar/frames/094D/2026-07-14.png",
+      "nisar/frames/094D/2026-07-26.png",
+      "nisar/frames/094D/2026-08-19.png",
+      "nisar/frames/094D/2026-08-31.png",
+      "nisar/frames/094D/2026-09-12.png",
+      "nisar/frames/094D/2026-09-24.png",
+      "nisar/frames/094D/2026-10-06.png",
+      "nisar/frames/094D/2026-10-18.png"
+     ],
+     "vmin": -20,
+     "vmax": 20,
+     "units": "mm since first date",
+     "direction": "Descending",
+     "gaps": []
+    }
+   }
+  },
+  "s1": {
+   "label": "Sentinel-1",
+   "agency": "ESA / Copernicus",
+   "band": "C-band",
+   "wavelength_cm": 5.55,
+   "status": "operational",
+   "reference": "relative to surrounding terrain, a 3 to 6.5 km band (sentinel1/analysis/README.md)",
+   "credit": "Contains modified Copernicus Sentinel data 2026, processed by ASF HyP3",
+   "layers": [
+    {
+     "id": "los_029A",
+     "label": "Sentinel-1 029A: line-of-sight rate (+ = towards the satellite) · MOCK",
+     "png": "s1/los_029A.png",
+     "units": "mm/yr",
+     "vmin": -20,
+     "vmax": 20,
+     "track": "029A",
+     "experimental": false
+    },
+    {
+     "id": "los_007D",
+     "label": "Sentinel-1 007D: line-of-sight rate (+ = towards the satellite) · MOCK",
+     "png": "s1/los_007D.png",
+     "units": "mm/yr",
+     "vmin": -20,
+     "vmax": 20,
+     "track": "007D",
+     "experimental": false
+    },
+    {
+     "id": "up",
+     "label": "Sentinel-1: vertical rate (− = sinking), experimental · MOCK",
+     "png": "s1/up.png",
+     "units": "mm/yr",
+     "vmin": -20,
+     "vmax": 20,
+     "track": null,
+     "experimental": true
+    },
+    {
+     "id": "east",
+     "label": "Sentinel-1: east–west rate (+ = east), experimental · MOCK",
+     "png": "s1/east.png",
+     "units": "mm/yr",
+     "vmin": -10,
+     "vmax": 10,
+     "track": null,
+     "experimental": true
+    }
+   ],
+   "frames": {
+    "029A": {
+     "dates": [
+      "2026-07-07",
+      "2026-07-13",
+      "2026-07-19",
+      "2026-07-25",
+      "2026-07-31",
+      "2026-08-06",
+      "2026-08-12",
+      "2026-08-18",
+      "2026-08-24",
+      "2026-08-30",
+      "2026-09-05",
+      "2026-09-11",
+      "2026-09-17",
+      "2026-09-23",
+      "2026-09-29",
+      "2026-10-05"
+     ],
+     "pngs": [
+      "s1/frames/029A/2026-07-07.png",
+      "s1/frames/029A/2026-07-13.png",
+      "s1/frames/029A/2026-07-19.png",
+      "s1/frames/029A/2026-07-25.png",
+      "s1/frames/029A/2026-07-31.png",
+      "s1/frames/029A/2026-08-06.png",
+      "s1/frames/029A/2026-08-12.png",
+      "s1/frames/029A/2026-08-18.png",
+      "s1/frames/029A/2026-08-24.png",
+      "s1/frames/029A/2026-08-30.png",
+      "s1/frames/029A/2026-09-05.png",
+      "s1/frames/029A/2026-09-11.png",
+      "s1/frames/029A/2026-09-17.png",
+      "s1/frames/029A/2026-09-23.png",
+      "s1/frames/029A/2026-09-29.png",
+      "s1/frames/029A/2026-10-05.png"
+     ],
+     "vmin": -20,
+     "vmax": 20,
+     "units": "mm since first date",
+     "direction": "Ascending",
+     "gaps": []
+    },
+    "007D": {
+     "dates": [
+      "2026-07-06",
+      "2026-07-12",
+      "2026-07-18",
+      "2026-07-24",
+      "2026-07-30",
+      "2026-08-05",
+      "2026-08-11",
+      "2026-08-17",
+      "2026-08-23",
+      "2026-08-29",
+      "2026-09-04",
+      "2026-09-10",
+      "2026-09-16",
+      "2026-09-22",
+      "2026-09-28",
+      "2026-10-04"
+     ],
+     "pngs": [
+      "s1/frames/007D/2026-07-06.png",
+      "s1/frames/007D/2026-07-12.png",
+      "s1/frames/007D/2026-07-18.png",
+      "s1/frames/007D/2026-07-24.png",
+      "s1/frames/007D/2026-07-30.png",
+      "s1/frames/007D/2026-08-05.png",
+      "s1/frames/007D/2026-08-11.png",
+      "s1/frames/007D/2026-08-17.png",
+      "s1/frames/007D/2026-08-23.png",
+      "s1/frames/007D/2026-08-29.png",
+      "s1/frames/007D/2026-09-04.png",
+      "s1/frames/007D/2026-09-10.png",
+      "s1/frames/007D/2026-09-16.png",
+      "s1/frames/007D/2026-09-22.png",
+      "s1/frames/007D/2026-09-28.png",
+      "s1/frames/007D/2026-10-04.png"
+     ],
+     "vmin": -20,
+     "vmax": 20,
+     "units": "mm since first date",
+     "direction": "Descending",
+     "gaps": []
+    }
+   }
+  }
+ },
+ "views": [
+  "change",
+  "rate",
+  "zones",
+  "agreement",
+  "coverage"
+ ],
+ "common_window": [
+  "2026-07-07",
+  "2026-10-04"
+ ],
+ "default": {
+  "sat": "nisar",
+  "view": "change",
+  "track": "129A"
+ },
+ "checks": {
+  "pass": 1,
+  "warn": 2,
+  "fail": 1,
+  "info": 1
+ },
+ "credits": "MOCK: no data. Real credits come from export.py (CITATIONS.md)."
+}

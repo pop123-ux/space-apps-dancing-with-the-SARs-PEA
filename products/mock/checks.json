@@ -1,0 +1,37 @@
+[
+ {
+  "id": "sign-nisar-129A",
+  "status": "pass",
+  "title": "Salt zones sink, NISAR 129A (MOCK)",
+  "detail": "invented",
+  "value": -8.0
+ },
+ {
+  "id": "sign-nisar-094D",
+  "status": "fail",
+  "title": "Salt zones sink, NISAR 094D (MOCK)",
+  "detail": "invented",
+  "value": 3.0
+ },
+ {
+  "id": "agree-zone4",
+  "status": "warn",
+  "title": "NISAR and Sentinel-1 agree in zone 4, common window (MOCK)",
+  "detail": "invented",
+  "value": 4.2
+ },
+ {
+  "id": "gaps-nisar-129A",
+  "status": "warn",
+  "title": "Chain gaps, NISAR 129A (MOCK)",
+  "detail": "no pair spans 2026-01-18 → 2026-06-23",
+  "value": null
+ },
+ {
+  "id": "pairs-nisar-129A",
+  "status": "info",
+  "title": "Closure, 12- vs 24-day pairs (MOCK)",
+  "detail": "no triplets",
+  "value": null
+ }
+]

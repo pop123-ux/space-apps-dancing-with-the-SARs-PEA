@@ -1,0 +1,96 @@
+<!doctype html>
+<!-- Owner: 06 · App developer (Darius) -->
+<!-- The page. It reads products/<site>/ only (contracts: docs/build-spec.md; design: docs/ui.md). -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Dancing on Salt · Ocnele Mari</title>
+  <meta name="description" content="How the ground moves above the salt-brine fields of Ocnele Mari, Romania, seen by two radar satellites, NISAR and Sentinel-1.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.15.0/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="app/style.css">
+</head>
+<body>
+  <div id="stage">
+    <div id="map" aria-label="Map of Ocnele Mari"></div>
+    <div id="mapB" hidden aria-hidden="true"></div>
+    <div id="divider" hidden><button id="divider-handle" type="button" aria-label="Move the comparison divider (left and right arrow keys)">⇆</button></div>
+    <div id="cmp-tags" hidden><span id="cmp-left" class="tag"></span><span id="cmp-right" class="tag"></span></div>
+  </div>
+
+  <header id="bar">
+    <div class="brand">
+      <h1>Dancing on Salt</h1>
+      <span id="site-name" class="sub"></span>
+    </div>
+    <div class="bar-right">
+      <div class="menu-wrap">
+        <button id="sat-btn" type="button" class="pill" aria-haspopup="true" aria-expanded="false" aria-controls="sat-menu"></button>
+        <div id="sat-menu" class="menu" role="group" aria-label="Satellite" hidden></div>
+      </div>
+      <button id="checks-btn" type="button" class="pill quiet" aria-label="Checks"></button>
+      <button id="about-btn" type="button" class="round" aria-label="About this page">i</button>
+    </div>
+  </header>
+
+  <div id="flags">
+    <div id="sim" class="flag sim" hidden role="status"><b>Simulated, not data</b> · every value here is invented</div>
+    <div id="notice" class="flag" hidden role="status"></div>
+    <div id="exp-note" class="flag warn" hidden role="status">Experimental: up and east assume no north motion; reference and atmosphere not resolved.</div>
+  </div>
+
+  <div id="legend" class="legend">
+    <div class="legend-title"><span id="legend-title"></span> <span id="legend-units" class="sub"></span></div>
+    <div class="ramp" aria-hidden="true"></div>
+    <div class="ticks"><span id="legend-min"></span><span>0</span><span id="legend-max"></span></div>
+    <div class="caps"><span id="legend-neg"></span><span id="legend-pos"></span></div>
+    <div class="legend-town"><i aria-hidden="true"></i>Ocnele Mari town boundary</div>
+    <div id="legend-note" class="legend-note"></div>
+  </div>
+
+  <div class="menu-wrap layers-wrap">
+    <button id="layers-btn" type="button" class="round big" aria-haspopup="true" aria-expanded="false" aria-controls="layers" title="Map settings">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 3 2 8l10 5 10-5-10-5Zm-8.2 9L2 13l10 5 10-5-1.8-1L12 16l-8.2-4Zm0 4L2 17l10 5 10-5-1.8-1L12 20l-8.2-4Z" fill="currentColor"/></svg>
+    </button>
+    <div id="layers" class="menu up" hidden>
+      <div class="menu-label">Map</div>
+      <div id="base-group" class="seg" role="group" aria-label="Basemap"></div>
+      <div class="menu-label">Colour overlay <span id="opacity-val" class="sub"></span></div>
+      <input id="opacity" type="range" min="0" max="100" step="5" value="70" aria-label="Overlay opacity">
+      <label class="check"><input id="exp" type="checkbox"> Up and east <span class="sub">experimental</span></label>
+      <p id="exp-why" class="sub small" hidden>No supported up/east export yet (O-19).</p>
+    </div>
+  </div>
+
+  <aside id="sheet" hidden aria-live="polite">
+    <button id="sheet-close" type="button" class="round small close" aria-label="Close">✕</button>
+    <div id="sheet-body"></div>
+  </aside>
+
+  <section id="dock" aria-label="Time and view">
+    <div class="dock-top">
+      <div id="view-group" class="seg views" role="group" aria-label="View"></div>
+      <div id="track-group" class="tracks" role="group" aria-label="Track"></div>
+    </div>
+    <div class="dock-mid">
+      <button id="play" type="button" class="round play" aria-label="Play through the acquisitions">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path id="play-icon" d="M8 5v14l11-7z" fill="currentColor"/></svg>
+      </button>
+      <div id="tl" class="tl" role="slider" tabindex="0" aria-label="Acquisition date"></div>
+    </div>
+    <div id="status" class="status"></div>
+  </section>
+
+  <dialog id="about">
+    <button type="button" class="round small close" aria-label="Close" onclick="this.closest('dialog').close()">✕</button>
+    <div id="about-body"></div>
+  </dialog>
+
+  <div id="fatal" hidden role="alert"></div>
+
+  <script type="module" src="app/main.js"></script>
+</body>
+</html>

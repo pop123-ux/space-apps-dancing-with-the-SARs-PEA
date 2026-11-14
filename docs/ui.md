@@ -2,9 +2,9 @@
 
 **Owner:** 06 · App developer (Darius)
 
-Version 2, Sat 14 Nov 2026. This design implements **D-004** (locked): we fit both NISAR and Sentinel-1, and the page lets anyone switch between the two satellites and examine ground motion in several ways. It also keeps D-002 (the map opens on Ocnele Mari; Romania is blurred context).
+Version 3, Sat 14 Nov 2026, 16:15. This design implements **D-004** (locked): we fit both NISAR and Sentinel-1, and the page lets anyone switch between the two satellites and examine ground motion in several ways. It also keeps D-002 (the map opens on Ocnele Mari; Romania is blurred context).
 
-The layout below shows the intended product. The current real-data build starts on NISAR Coverage and offers a direct switch to Sentinel-1 measurements. Use the [file contracts](build-spec.md#file-contracts) and the implementation handoff below.
+The page is built: `index.html` and `app/` on branch `r06/page`. Its real data comes from `python export.py ocnele_mari` (see [products/README.md](../products/README.md)). Version 3 replaces version 2's dark, multi-panel sketch with a minimal, light layout at Darius's request; the controls, views and comparison rules are the same. What is built and what is not is in "Implementation status" below; the running log is [logs/06-app.md](../logs/06-app.md).
 
 ## The idea in one sentence
 
@@ -12,47 +12,71 @@ The layout below shows the intended product. The current real-data build starts 
 
 ## Layout
 
+One title pill and one satellite menu at the top, one dock at the bottom, the map everywhere else. Everything else opens on demand: the legend, the map settings, a sheet on the right for Zones, Agreement, Coverage or a clicked zone or station.
+
 **Laptop:**
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────────┐
-│ Dancing on Salt · Ocnele Mari                                    [About] [Checks ✔ 4] │
-│                                                                                      │
-│ Satellite  ( ● NISAR  L-band 24 cm ) ( Sentinel-1  C-band 5.5 cm ) ( ⇆ Compare )      │
-│ Track      ( ● 129A ↗ ascending ) ( 094D ↘ descending )                               │
-│ View       [ Change ] [ Rate ] [ Zones ] [ Agreement ] [ Coverage ]   ☐ Up/east (exp.) │
-├──────────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                      │
-│                    MAP · opens on Ocnele Mari (D-002), Romania blurred                │
-│                    salt zones outlined · station pins · reference band                │
-│                                                                                      │
-│   ┌ legend ────────────────────────┐                                                 │
-│   │ −20 ■■■■■□□□□□■■■■■ +20 mm      │  shared by both satellites                      │
-│   │ red: away from the satellite   │                                                 │
-│   └────────────────────────────────┘                                                 │
-├──────────────────────────────────────────────────────────────────────────────────────┤
-│ ▶  Nov 2025 ●─●─●─●─● ░░░░░░░ no NISAR data 18 Jan to 23 Jun 2026 ░░░░░ ●─●─●─●─●─● Oct │
-│    NISAR 129A ↗ · 2026-08-22 · since 2025-11-07 · beta/provisional · positive = toward │
+│ ( Dancing on Salt · Ocnele Mari )                 ( ▲ Sentinel-1 C-band ▼ ) (✔0 !0 ✘0) (i) │
+│ ( Simulated, not data )  ← only on mock or demo                                      │
+│                                                              ┌ sheet (on demand) ───┐ │
+│        MAP · opens on Ocnele Mari (D-002), Romania blurred    │ Where did the ground │ │
+│        black line = town boundary · ● 1–4 = salt zones        │ move? zone facts,    │ │
+│        dots = Sentinel-1 measurements, one every 80 m         │ charts, processing   │ │
+│                                                              │ choices              │ │
+│  ┌ legend ──────────────────┐                                 └──────────────────────┘ │
+│  │ Change mm since first date│                                                  (layers)│
+│  │ −20 ■■■■□□□□■■■■ +20      │                                                         │
+│  │ — Ocnele Mari boundary    │                                                         │
+│  └───────────────────────────┘                                                         │
+│  ┌ dock ──────────────────────────────────────────────────────────────────────────────┐│
+│  │ [Change][Rate][Zones][Agreement][Coverage]                          029A ↗  007D ↘  ││
+│  │ (▶) Nov 2025 ○ ○ ○ ░░ No NISAR data 18 Jan to 23 Jun 2026 ░░ ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ Oct    ││
+│  │ ▲ Sentinel-1 029A ↗ · 2026-10-05 · change since 2026-07-07 · positive = toward      ││
+│  └────────────────────────────────────────────────────────────────────────────────────┘│
 └──────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Phone:** the satellite switch stays pinned at the top as one three-part control. The view switch is a row of chips above the slider. Track, legend and labels sit in a pull-up sheet.
+**Phone:** the same pieces stacked. The title and the satellite menu stay at the top; the dock holds the view chips (they scroll), the track chips, the timeline and the status line; the sheet opens from the bottom over the map.
 
 ```
 ┌────────────────────────────┐
-│ ( NISAR )(Sentinel-1)( ⇆ ) │
+│ (Dancing on Salt) (▲ S-1 ▼)(i)│
 │                            │
 │          MAP               │
 │                            │
-│ [Change][Rate][Zones][ › ] │
-│ ▶ ●─●─●░░░░░●─●─●─●  Oct   │
-│ ︿ NISAR 129A · 2026-08-22  │
+│ ┌ legend ┐          (layers)│
+│ [Change][Rate][Zones][Agr…]│
+│ 029A ↗  007D ↘             │
+│ (▶) ○○○░░No data░░▲▲▲▲▲ Oct │
+│ ▲ Sentinel-1 029A · 10-05  │
 └────────────────────────────┘
 ```
 
+## Implementation status (r06/page, 14 Nov 2026, 16:15)
+
+| Part | Status | Notes |
+| --- | --- | --- |
+| Opening view, Romania blurred (D-002) | Built | Opens at the manifest view; below MapLibre zoom 10 the map blurs and a town label flies back |
+| Town boundary | Built | Black line from OpenStreetMap relation 9845422 (`app/ocnele_mari_boundary.geojson`), display only |
+| Satellite menu: NISAR, Sentinel-1, Compare | Built | One button that opens a menu instead of three always-visible buttons (v3 layout). NISAR stays selectable with "Displacement fit pending"; Compare is disabled with its reason until NISAR is measured |
+| Change, Rate (Sentinel-1) | Built | Dots, one every 80 m, coloured RdBu on one fixed scale (±20 mm, ±40 mm/yr); a click shows the value. PNG overlays are the fallback (mock site) |
+| Zones | Built | Per zone: fitted change and pixel count per track, "Limited coverage" under 10 pixels, "Direction changes with processing" or "… in all 5 runs", chart with the outer comparison area |
+| Processing choices | Built | Window and run selectors over `sensitivity.json`; the map stays the baseline run and says so. Only the July to October window is in the repository |
+| Agreement | Built, pending data | "Not testable yet" while NISAR is unmeasured and O-19 is open; EGMS 2020 to 2025 panel in its empty state |
+| Coverage | Built | NISAR catalog pairs (hollow marks), Sentinel-1 dates, the January to June gap, the common window, usable pixels per zone |
+| Up and east (experimental) | Disabled | No supported export (O-19) |
+| Station pins | Built, no data | `stations.geojson` is an empty pending file until `validate.py` (05) runs |
+| URL state | Built | `#site=…&sat=…&track=…&view=…&date=…&exp=…&window=…&scenario=…` |
+| Phone layout | Built | Checked at 375 × 812 in a browser; T9 on two real phones is still to do |
+| GitHub Pages deploy | Not yet | Needs `.github/workflows/pages.yml` (06) and Pages turned on by the repo owner |
+| NISAR measured layers | Waiting on 02, 03, 04 | `export.py` adds them when `ts.npz` exists |
+| January to October Sentinel-1 window | Waiting on 03 | Its fit is not in the repository; the page shows it as soon as a products set carries it |
+
 ## Control 1: the satellite switch
 
-A segmented button group with three options. It is always visible, and exactly one option is pressed.
+Three options; exactly one is chosen. In version 3 they sit in one menu button at the top right, which always shows the chosen satellite (it was a three-part segmented control in version 2).
 
 | Button | Shows | Label under the button |
 | --- | --- | --- |

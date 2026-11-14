@@ -1,0 +1,61 @@
+{
+ "model": "MOCK",
+ "tracks": [
+  {
+   "sensor": "nisar",
+   "track": "129A",
+   "direction": "Ascending",
+   "method": "offset",
+   "offset_mm_yr": -7.38,
+   "slope_east_mm_yr_per_10km": 0.0,
+   "slope_north_mm_yr_per_10km": 0.0,
+   "n_tie_pixels": 0,
+   "residual_std_mm_yr": null,
+   "residual_mad_mm_yr": null,
+   "model_los_mean_mm_yr": null,
+   "swap_delta_mm_yr": null
+  },
+  {
+   "sensor": "nisar",
+   "track": "094D",
+   "direction": "Descending",
+   "method": "offset",
+   "offset_mm_yr": -8.22,
+   "slope_east_mm_yr_per_10km": 0.0,
+   "slope_north_mm_yr_per_10km": 0.0,
+   "n_tie_pixels": 0,
+   "residual_std_mm_yr": null,
+   "residual_mad_mm_yr": null,
+   "model_los_mean_mm_yr": null,
+   "swap_delta_mm_yr": null
+  },
+  {
+   "sensor": "s1",
+   "track": "029A",
+   "direction": "Ascending",
+   "method": "offset",
+   "offset_mm_yr": -8.34,
+   "slope_east_mm_yr_per_10km": 0.0,
+   "slope_north_mm_yr_per_10km": 0.0,
+   "n_tie_pixels": 0,
+   "residual_std_mm_yr": null,
+   "residual_mad_mm_yr": null,
+   "model_los_mean_mm_yr": null,
+   "swap_delta_mm_yr": null
+  },
+  {
+   "sensor": "s1",
+   "track": "007D",
+   "direction": "Descending",
+   "method": "offset",
+   "offset_mm_yr": -6.95,
+   "slope_east_mm_yr_per_10km": 0.0,
+   "slope_north_mm_yr_per_10km": 0.0,
+   "n_tie_pixels": 0,
+   "residual_std_mm_yr": null,
+   "residual_mad_mm_yr": null,
+   "model_los_mean_mm_yr": null,
+   "swap_delta_mm_yr": null
+  }
+ ]
+}
