@@ -119,6 +119,8 @@ Whoever creates these adds the owner line from this table.
 
 | File | Owner | What to do with it |
 | --- | --- | --- |
-| `vercel.json`, `.vercelignore`, `docs/deploy.md` | 06 · App developer (Darius) | Static hosting of the page on Vercel (no build step) |
+| `vercel.json` | 06 · App developer (Darius) | Vercel config: static site, no build step (JSON has no owner line) |
+| `.vercelignore` | 06 · App developer (Darius) | Files Vercel does not serve |
+| `docs/deploy.md` | 06 · App developer (Darius) | How to host the page on Vercel |
 | `sentinel1/` | 03 · InSAR analyst (Alexandru, Eric) | Sentinel-1 data manifest, fitted results, and team handoff |
 | `docs/forecast.md` | 03 · InSAR analyst (Alexandru, Eric) | Forecast results and environmental screening handoff |
