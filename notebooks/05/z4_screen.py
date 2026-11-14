@@ -202,6 +202,20 @@ def main():
         report["forecast_test"] = dict(source=str(fc_path), folds=folds, mae_30d_mm=mae,
                                        export_mae_30d_mm={k: round(v["mae_mm"], 2) for k, v in fc["metrics"].items()})
     C.save_json(SM / "z4_screen.json", report)
+
+    # handoff for 03 (docs/forecast.md, "Paul / 05 handoff"): small derived tables, committed next to this script
+    here = pathlib.Path(__file__).resolve().parent
+    cols = ["date", "track", "area", "los_mm", "s1_pixels", "nisar_date", "nisar_track",
+            "moist_rec", "moist_rec_px", "moist_all", "moist_all_px", "lag1_rec", "lag1_all", "rain7_mm", "rain30_mm"]
+    with open(here / "z4_screen_inputs.csv", "w", newline="", encoding="utf-8") as fh:
+        w = csv.DictWriter(fh, fieldnames=cols, extrasaction="ignore")
+        w.writeheader()
+        for k, v in report.items():
+            if "rows" in v:
+                w.writerows({c: ("" if r.get(c) is None else r.get(c)) for c in cols} for r in v["rows"])
+    slim = {k: (v["screen"] if "screen" in v else {kk: vv for kk, vv in v.items() if kk != "source"})
+            for k, v in report.items()}
+    (here / "z4_screen_results.json").write_text(json.dumps(slim, indent=1, default=str) + "\n", encoding="utf-8")
     print(json.dumps({k: (v["screen"] if "screen" in v else {kk: vv for kk, vv in v.items() if kk != "source"})
                       for k, v in report.items()}, indent=1, default=str))
 

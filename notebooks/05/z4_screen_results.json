@@ -1,0 +1,326 @@
+{
+ "029A z4": [
+  {
+   "feature": "moist_rec",
+   "n": 1,
+   "note": "fewer than 5 dates with both values"
+  },
+  {
+   "feature": "moist_all",
+   "n": 14,
+   "r_raw": 0.39,
+   "r_detrended": 0.42,
+   "r_needed": 0.53,
+   "loo_min": -0.04,
+   "loo_max": 0.58,
+   "verdict": "no flag"
+  },
+  {
+   "feature": "lag1_rec",
+   "n": 0,
+   "note": "fewer than 5 dates with both values"
+  },
+  {
+   "feature": "lag1_all",
+   "n": 14,
+   "r_raw": -0.31,
+   "r_detrended": -0.23,
+   "r_needed": 0.53,
+   "loo_min": -0.33,
+   "loo_max": -0.02,
+   "verdict": "no flag"
+  },
+  {
+   "feature": "rain7_mm",
+   "n": 16,
+   "r_raw": -0.01,
+   "r_detrended": -0.19,
+   "r_needed": 0.5,
+   "loo_min": -0.43,
+   "loo_max": 0.02,
+   "verdict": "no flag"
+  },
+  {
+   "feature": "rain30_mm",
+   "n": 16,
+   "r_raw": 0.46,
+   "r_detrended": 0.16,
+   "r_needed": 0.5,
+   "loo_min": 0.07,
+   "loo_max": 0.21,
+   "verdict": "no flag"
+  }
+ ],
+ "029A control": [
+  {
+   "feature": "moist_rec",
+   "n": 14,
+   "r_raw": 0.21,
+   "r_detrended": 0.08,
+   "r_needed": 0.53,
+   "loo_min": -0.04,
+   "loo_max": 0.15,
+   "verdict": "no flag"
+  },
+  {
+   "feature": "moist_all",
+   "n": 14,
+   "r_raw": 0.45,
+   "r_detrended": 0.43,
+   "r_needed": 0.53,
+   "loo_min": -0.07,
+   "loo_max": 0.57,
+   "verdict": "no flag"
+  },
+  {
+   "feature": "lag1_rec",
+   "n": 14,
+   "r_raw": 0.06,
+   "r_detrended": -0.08,
+   "r_needed": 0.53,
+   "loo_min": -0.29,
+   "loo_max": 0.23,
+   "verdict": "no flag"
+  },
+  {
+   "feature": "lag1_all",
+   "n": 14,
+   "r_raw": -0.21,
+   "r_detrended": -0.2,
+   "r_needed": 0.53,
+   "loo_min": -0.39,
+   "loo_max": -0.07,
+   "verdict": "no flag"
+  },
+  {
+   "feature": "rain7_mm",
+   "n": 16,
+   "r_raw": -0.12,
+   "r_detrended": 0.02,
+   "r_needed": 0.5,
+   "loo_min": -0.23,
+   "loo_max": 0.16,
+   "verdict": "no flag"
+  },
+  {
+   "feature": "rain30_mm",
+   "n": 16,
+   "r_raw": -0.36,
+   "r_detrended": -0.1,
+   "r_needed": 0.5,
+   "loo_min": -0.14,
+   "loo_max": -0.04,
+   "verdict": "no flag"
+  }
+ ],
+ "007D z4": [
+  {
+   "feature": "moist_rec",
+   "n": 1,
+   "note": "fewer than 5 dates with both values"
+  },
+  {
+   "feature": "moist_all",
+   "n": 14,
+   "r_raw": -0.32,
+   "r_detrended": -0.34,
+   "r_needed": 0.53,
+   "loo_min": -0.55,
+   "loo_max": -0.1,
+   "verdict": "no flag"
+  },
+  {
+   "feature": "lag1_rec",
+   "n": 0,
+   "note": "fewer than 5 dates with both values"
+  },
+  {
+   "feature": "lag1_all",
+   "n": 14,
+   "r_raw": 0.1,
+   "r_detrended": 0.2,
+   "r_needed": 0.53,
+   "loo_min": -0.02,
+   "loo_max": 0.36,
+   "verdict": "no flag"
+  },
+  {
+   "feature": "rain7_mm",
+   "n": 16,
+   "r_raw": 0.14,
+   "r_detrended": -0.01,
+   "r_needed": 0.5,
+   "loo_min": -0.4,
+   "loo_max": 0.37,
+   "verdict": "no flag"
+  },
+  {
+   "feature": "rain30_mm",
+   "n": 16,
+   "r_raw": 0.52,
+   "r_detrended": 0.2,
+   "r_needed": 0.5,
+   "loo_min": 0.02,
+   "loo_max": 0.27,
+   "verdict": "no flag"
+  }
+ ],
+ "007D control": [
+  {
+   "feature": "moist_rec",
+   "n": 14,
+   "r_raw": 0.05,
+   "r_detrended": -0.18,
+   "r_needed": 0.53,
+   "loo_min": -0.34,
+   "loo_max": -0.06,
+   "verdict": "no flag"
+  },
+  {
+   "feature": "moist_all",
+   "n": 14,
+   "r_raw": -0.06,
+   "r_detrended": -0.13,
+   "r_needed": 0.53,
+   "loo_min": -0.26,
+   "loo_max": 0.04,
+   "verdict": "no flag"
+  },
+  {
+   "feature": "lag1_rec",
+   "n": 14,
+   "r_raw": 0.0,
+   "r_detrended": -0.24,
+   "r_needed": 0.53,
+   "loo_min": -0.37,
+   "loo_max": -0.15,
+   "verdict": "no flag"
+  },
+  {
+   "feature": "lag1_all",
+   "n": 14,
+   "r_raw": -0.41,
+   "r_detrended": -0.44,
+   "r_needed": 0.53,
+   "loo_min": -0.62,
+   "loo_max": -0.34,
+   "verdict": "no flag"
+  },
+  {
+   "feature": "rain7_mm",
+   "n": 16,
+   "r_raw": 0.01,
+   "r_detrended": 0.18,
+   "r_needed": 0.5,
+   "loo_min": -0.02,
+   "loo_max": 0.37,
+   "verdict": "no flag"
+  },
+  {
+   "feature": "rain30_mm",
+   "n": 16,
+   "r_raw": -0.41,
+   "r_detrended": -0.09,
+   "r_needed": 0.5,
+   "loo_min": -0.14,
+   "loo_max": -0.04,
+   "verdict": "no flag"
+  }
+ ],
+ "forecast_test": {
+  "folds": [
+   {
+    "origin": "2026-08-18",
+    "lead_days": 30,
+    "observed_mm": -3.4,
+    "beta_mm_per_sd": -1.25,
+    "rain7_at_cutoff": 1.4,
+    "rain7_at_target": 3.1,
+    "export": {
+     "persistence": 0,
+     "theil_sen": 4.0,
+     "gaussian_process": 4.08
+    },
+    "reproduced": {
+     "persistence": 0.0,
+     "theil_sen": 3.82,
+     "gaussian_process": 4.17
+    },
+    "rain_issuance": 2.78,
+    "rain_conditional": 3.56
+   },
+   {
+    "origin": "2026-08-24",
+    "lead_days": 30,
+    "observed_mm": 5.69,
+    "beta_mm_per_sd": -1.19,
+    "rain7_at_cutoff": 0.5,
+    "rain7_at_target": 0.8,
+    "export": {
+     "persistence": 0,
+     "theil_sen": -1.5,
+     "gaussian_process": 2.77
+    },
+    "reproduced": {
+     "persistence": 0.0,
+     "theil_sen": -1.56,
+     "gaussian_process": 2.78
+    },
+    "rain_issuance": -2.56,
+    "rain_conditional": -1.6
+   },
+   {
+    "origin": "2026-08-30",
+    "lead_days": 30,
+    "observed_mm": -0.75,
+    "beta_mm_per_sd": -1.6,
+    "rain7_at_cutoff": 22.0,
+    "rain7_at_target": 0.1,
+    "export": {
+     "persistence": 0,
+     "theil_sen": -2.73,
+     "gaussian_process": -1.93
+    },
+    "reproduced": {
+     "persistence": 0.0,
+     "theil_sen": -2.67,
+     "gaussian_process": -1.88
+    },
+    "rain_issuance": -0.36,
+    "rain_conditional": 1.21
+   },
+   {
+    "origin": "2026-09-05",
+    "lead_days": 30,
+    "observed_mm": -6.93,
+    "beta_mm_per_sd": -1.45,
+    "rain7_at_cutoff": 0.4,
+    "rain7_at_target": 0.0,
+    "export": {
+     "persistence": 0,
+     "theil_sen": -1.38,
+     "gaussian_process": -2.7
+    },
+    "reproduced": {
+     "persistence": 0.0,
+     "theil_sen": -1.54,
+     "gaussian_process": -2.95
+    },
+    "rain_issuance": -2.8,
+    "rain_conditional": -1.47
+   }
+  ],
+  "mae_30d_mm": {
+   "persistence": 4.19,
+   "theil_sen": 5.44,
+   "gaussian_process": 3.9,
+   "rain_issuance": 4.74,
+   "rain_conditional": 5.42
+  },
+  "export_mae_30d_mm": {
+   "persistence": 4.19,
+   "theil_sen": 5.53,
+   "gaussian_process": 3.95
+  }
+ }
+}
