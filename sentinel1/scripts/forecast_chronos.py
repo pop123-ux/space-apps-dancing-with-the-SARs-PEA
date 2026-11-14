@@ -6,13 +6,18 @@
 Run after forecast.py, in an environment with `chronos-forecasting>=2` and CPU torch (about 1.4 GB; not needed by the
 page or the rest of the pipeline). Model: amazon/chronos-2 from Hugging Face, used zero-shot (no fine-tuning) on CPU.
 
-Writes into forecast.json, leaving every existing path, metric and the default `model` unchanged:
+    [--default] [--weather ../analysis/chronos_weather.json]
+
+Writes into forecast.json, leaving every existing path and metric unchanged:
   model_paths_mm.chronos2       median path on the export's dates (same reference as the other paths)
   intervals.chronos2            q10 and q90 paths (80 % interval)
   metrics.chronos2              30-day MAE on forecast.py's own cutoffs (their training series are in folds[].train_mm)
   chronos2                      model id, package version, quantile coverage, and a 30- and 88-day backtest on the
                                 January to October 029A Zone 4 series (final reconstruction cut at each cutoff, so a
                                 small look-ahead remains; cutoffs overlap, so the folds are not independent).
+  --default                     also makes chronos2 the default `model` (team decision, 14 Nov 2026, 20:30): sets
+                                `model`, `forecast_mm`, `interval` and `model_reason`.
+  --weather                     copies chronos_weather.py's predeclared covariate backtest into covariate_tests.
 """
 import argparse
 import json
@@ -30,6 +35,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('forecast', type=Path)
     ap.add_argument('--janoct', type=Path, help='sentinel1/analysis_jan_oct/summary.json for the longer backtest')
+    ap.add_argument('--default', action='store_true', help='make chronos2 the default model (team decision)')
+    ap.add_argument('--weather', type=Path, help='chronos_weather.py report to record under covariate_tests')
     a = ap.parse_args()
     import chronos
     from chronos import Chronos2Pipeline
@@ -88,6 +95,19 @@ def main():
         f['interval_reason'] = (f"Only Chronos-2 has an interval: its 80 % band held the truth in {min(cov):.0%} to {max(cov):.0%} "
                                 "of the overlapping January to October backtests. The other models have none, because four "
                                 "summer backtests cannot calibrate one.")
+    if a.weather:
+        w = json.loads(a.weather.read_text())
+        f.setdefault('covariate_tests', {})['chronos2_weather'] = dict(
+            source=w['covariates'], target=w['target'], rule=w['rule'], results=w['results'], adopted=w['adopt_past'],
+            note='Past-only rain and soil-moisture covariates did not lower the error, so the export uses Chronos-2 '
+                 'without covariates. Known-future weather (not available for a real forecast) helped only at 88 days.')
+    if a.default:
+        f['model'] = 'chronos2'
+        f['forecast_mm'] = f['model_paths_mm']['chronos2']
+        f['interval'] = f['intervals']['chronos2']
+        f['model_reason'] = ('Team decision, 14 Nov 2026: lowest MAE on every backtest that reaches the January horizon '
+                             '(30-day summer and January to October, 88-day January to October), and the only interval '
+                             'with near-nominal coverage.')
     a.forecast.write_text(json.dumps(f, indent=2, allow_nan=False) + '\n')
     print({k: round(v['mae_mm'], 2) for k, v in f['metrics'].items()}, '| 1 Jan', round(f['model_paths_mm']['chronos2'][-1], 2),
           '80%', [round(f['intervals']['chronos2'][k][-1], 2) for k in ('q10', 'q90')])
