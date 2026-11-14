@@ -36,7 +36,7 @@ The full plan, hour by hour, is [docs/schedule.md](docs/schedule.md).
 | 01 Mario | Hour 0, the guide, the hour-2 review, the contract freeze | [build-spec.md § 01](docs/build-spec.md#01--lead-and-story-mario) |
 | 02 Alexandru and Eric | Token; T1 (venue network); T2 (`fetch.py --list` gives 22 pairs) | [§ 02](docs/build-spec.md#02--nisar-data-alexandru-and-eric) |
 | 03 Alexandru and Eric | O-05 (method); read 02's hand-off | [§ 03](docs/build-spec.md#03--insar-analyst-alexandru-and-eric) |
-| 04 Matei | `refs.py`; Table S3 verticals for VLC2 and HORE | [§ 04](docs/build-spec.md#04--geodesist-matei) |
+| 04 Matei | `refs.py` and `calibrate.py` implemented and tested on synthetic inputs. Run `python refs.py ocnele_mari` on real inputs, then tie per track after 02 and 03 hand off. T8 and the EGMS stable-ground comparison are pending. | [§ 04](docs/build-spec.md#04--geodesist-matei) |
 | 05 Paul | HyP3 order; EGMS Up tile; station screening | [§ 05](docs/build-spec.md#05--validator-paul) |
 | 06 Darius | `python mock_products.py`; the page on `products/mock/`; Pages; O-09 | [§ 06](docs/build-spec.md#06--app-developer-darius) |
 

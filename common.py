@@ -83,11 +83,13 @@ COMMON_WINDOW = ("2026-07-07", "2026-10-04")   # dates both sensors cover: Senti
 VIEWS = ("change", "rate", "zones", "agreement", "coverage")   # the page's view switch (docs/ui.md)
 
 # Published station rates: Muntean et al. 2026, Solid Earth 17, 747–762, supplement Tables S1/S3, Eurasia-fixed.
-# station: (lat, lon, ve, vn, vu, se, sn, su) in mm/yr; NaN = not read yet. Owner 04 fills the vertical from Table S3.
+# station: (lat, lon, ve, vn, vu, se, sn, su) in mm/yr; NaN = not published. Owner 04 fills the vertical from Table S3.
 # Cite the paper; do not copy the table into the repository (open question Q4 on quoting it in the app).
+# VLC2 east/north and uncertainties use Table S1's Vlon/Vlat and Siglon/Siglat columns.
+# VLC2 up comes from Table S3. HORE has no Table S3 entry. Its separate historical up rate is from NGL MIDAS.
 _nan = float("nan")
 PUBLISHED = {
-    "VLC2": (45.1074, 24.3664, 0.15, 0.14, _nan, 0.21, 0.19, 0.61),
+    "VLC2": (45.1074, 24.3664, -0.84, 0.77, 0.86, 0.21, 0.19, 0.61),
     "HORE": (45.1456, 23.9891, -0.50, 0.41, _nan, 0.09, 0.11, _nan),
 }
 
