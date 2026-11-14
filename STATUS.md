@@ -1,6 +1,6 @@
 # Status
 
-Updated Sat 14 Nov 2026, 13:30 Europe/Bucharest. `EVENT_TZ=Europe/Bucharest` is assumed; 01 confirms it.
+Updated Sat 14 Nov 2026, 14:30 Europe/Bucharest. Event: NASA Space Apps Cluj-Napoca, ClujHUB, 14 to 15 Nov 2026, so `EVENT_TZ=Europe/Bucharest`.
 
 **Hour 0:** `____` (01 fills this in, O-04). **Submission deadline:** `____` (01, from the 13 Nov guide).
 
@@ -8,7 +8,7 @@ Updated Sat 14 Nov 2026, 13:30 Europe/Bucharest. `EVENT_TZ=Europe/Bucharest` is 
 
 ## Done, with evidence
 
-- **Skeleton on `main`.** The plan, rules, stubs and tools are in [pop123-ux/space-apps-dancing-with-the-SARs-PEA#1](https://github.com/pop123-ux/space-apps-dancing-with-the-SARs-PEA/pull/1), and the documents are restructured in this commit's PR.
+- **Skeleton on `main`.** The plan, rules, stubs and tools are in [pop123-ux/space-apps-dancing-with-the-SARs-PEA#1](https://github.com/pop123-ux/space-apps-dancing-with-the-SARs-PEA/pull/1), the documents were restructured in [pop123-ux/space-apps-dancing-with-the-SARs-PEA#2](https://github.com/pop123-ux/space-apps-dancing-with-the-SARs-PEA/pull/2), and `docs/schedule.md` (hour by hour, per role) and `AI-DISCLOSURE.md` were added after it.
 - **Smoke test.** `pytest -q` passes: every script answers `--help`, the mock products pass `checkpoint.py`, and nothing under `data/work/` is tracked.
 - **NISAR inventory.** NASA CMR on 14 Nov 2026, 10:40 UTC: 22 GUNW pairs over the town, written to `data/scenes/ocnele_mari_gunw.csv`.
   - 129A has 13 pairs: 4 BETA and 9 PROVISIONAL, from 7 Nov 2025 to 21 Oct 2026, with nothing between 18 Jan and 23 Jun 2026.
@@ -23,6 +23,8 @@ Updated Sat 14 Nov 2026, 13:30 Europe/Bucharest. `EVENT_TZ=Europe/Bucharest` is 
 - **Repo owner:** set the Drive copy of the rehearsal kit back to Restricted, if it isn't already.
 
 ## Next, per role
+
+The full plan, hour by hour, is [docs/schedule.md](docs/schedule.md).
 
 | Role | Next step | Section |
 | --- | --- | --- |
@@ -54,4 +56,5 @@ The tests are defined in [prompts/early-tests.md](prompts/early-tests.md). Each 
 ## Notes
 
 - Our copy of the deck says −250 mm/yr on slides 1, 5 and 6. The rehearsal corrects it to about −25 mm/yr. Never quote −250.
-- The Space Apps resources page was unreachable from the setup machine on 14 Nov. 01 lists what we use in `CITATIONS.md`.
+- The Space Apps resources page and the 2026 Project Submission Guide returned HTTP 503 from the setup machine on 14 Nov. 01 lists what we use in `CITATIONS.md`.
+- The [Cluj-Napoca participant's guide](https://app.notion.com/p/Participant-s-Guide-NASA-Space-Apps-Challenge-Cluj-Napoca-2026-40903dd4dbcc80eab387c2962430efef) (Notion) could not be read from the setup machine. It renders in the browser only, and the Notion connector is not signed in. 01 reads it at hour 0 and copies the kickoff time, the submission deadline and any AI-disclosure wording into `STATUS.md` and `AI-DISCLOSURE.md`.

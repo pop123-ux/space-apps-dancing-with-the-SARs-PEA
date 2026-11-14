@@ -2,7 +2,7 @@
 
 Version 1, Sat 14 Nov 2026. This is the companion to [overview.md](overview.md). The evidence it rests on is the advisor's rehearsal, summarised in [rehearsal.md](rehearsal.md), and the data notes in [data.md](data.md).
 
-It covers what each of the six roles builds, in what format, with which fixed numbers, and when it hands off. It exists so the hours go to building, not debating. It contains no code. Every role's Claude Code session works from it through [../prompts/build.md](../prompts/build.md).
+It covers what each of the six roles builds, in what format, with which fixed numbers, and when it hands off. It exists so the hours go to building, not debating. It contains no code. Every role's Claude Code session works from it through [../prompts/build.md](../prompts/build.md). The same steps laid out hour by hour, one column per role, are in [schedule.md](schedule.md).
 
 **How decisions work here.** Only D-001 and D-002 are locked. Everything else in "Decisions to fix by hour 2" is **proposed**. The team reviews it at the hour-2 checkpoint, and from then on it is frozen: nobody changes a cut, threshold, window or test after seeing a result. Any later change goes in the change log at the end of this file, with a reason that comes from a test, not from a result. Day-to-day choices go in [../DECISIONS.md](../DECISIONS.md).
 
@@ -122,7 +122,7 @@ Everyone works on their own laptop. 02 streams the window on one machine: about 
    - Give each one an owner and a verdict (fix, cut or explain), and write them in `STATUS.md`.
    - The advisor joins.
 4. **Hour 18 to 30.** Video script, then a rough cut on the mock or demo site with the banner visible.
-5. **Hour 30 to 40.** `SUBMISSION.md`: name, summary, demo link, details, data, AI use (from [AI_USE.md](AI_USE.md)), prior work and credits (from [../CITATIONS.md](../CITATIONS.md)).
+5. **Hour 30 to 40.** `SUBMISSION.md`: name, summary, demo link, details, data, AI use (section 1 of [../AI-DISCLOSURE.md](../AI-DISCLOSURE.md)), prior work and credits (from [../CITATIONS.md](../CITATIONS.md)).
 6. **Hour 40.** Freeze: no number changes after this. Then the final video, the project page, and the submission (a person clicks).
 
 Watch out: our copy of the deck still says −250 mm/yr. Never quote it.

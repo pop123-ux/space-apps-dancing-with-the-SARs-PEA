@@ -15,6 +15,7 @@ Start here:
 
 - **[docs/synopsis.md](docs/synopsis.md):** the one-page version, to explain the project to the team.
 - **[STATUS.md](STATUS.md):** where the build is right now, what waits on whom, and each role's next step.
+- **[docs/schedule.md](docs/schedule.md):** who does what, hour by hour: one column per role, with the gates and cut lines.
 - **[docs/overview.md](docs/overview.md):** why it matters, the page, the candidate claims and how each could fail, the video, scope in tiers, the 48 hours, risks and fallbacks.
 - **[docs/build-spec.md](docs/build-spec.md):**
   - the locked and proposed decisions, and the file contracts between roles;
@@ -25,7 +26,8 @@ Start here:
 - **[prompts/build.md](prompts/build.md):** the Claude Code prompt each person uses to build their role. Say "Read prompts/build.md. I am role 0N."
 - [docs/rehearsal.md](docs/rehearsal.md): what the advisor's rehearsal on real data found, and what it changes.
 - [docs/data.md](docs/data.md): the NISAR pairs, the references and the data traps.
-- [DECISIONS.md](DECISIONS.md): the decision log. [CITATIONS.md](CITATIONS.md): sources, prior work and advisor help. [docs/AI_USE.md](docs/AI_USE.md): how AI was used.
+- [DECISIONS.md](DECISIONS.md): the decision log. [CITATIONS.md](CITATIONS.md): sources, prior work and advisor help.
+- **[AI-DISCLOSURE.md](AI-DISCLOSURE.md):** how we used AI tools: the text for the submission, and the running log everyone appends to.
 - [CLAUDE.md](CLAUDE.md): the rules and conventions for Claude Code sessions in this repo.
 - [INFO.md](INFO.md): the team's site notes (in Romanian).
 
@@ -54,7 +56,7 @@ Everything else is proposed until the hour-2 review.
 ## Layout
 
 ```
-STATUS.md  DECISIONS.md  CITATIONS.md  CLAUDE.md  README.md  INFO.md  LICENSE
+STATUS.md  DECISIONS.md  CITATIONS.md  AI-DISCLOSURE.md  CLAUDE.md  README.md  INFO.md  LICENSE
 common.py               shared settings: site, zones, stations, thresholds, helpers
 refs.py fetch.py stack.py calibrate.py split.py validate.py hyp3_order.py export.py
                         the pipeline, one script per owner (stubs with fixed interfaces)
@@ -66,7 +68,7 @@ data/scenes/            committed query output: the 22 NISAR pairs over the town
 data/work/              local intermediates, git-ignored
 products/<site>/        what the page reads (written by scripts only)
 prompts/                Claude Code prompts: setup, early tests, build
-docs/                   synopsis, overview, build spec, data, rehearsal, AI use, validation log
+docs/                   synopsis, overview, schedule, build spec, data, rehearsal, validation log
 ```
 
 ## Quickstart
