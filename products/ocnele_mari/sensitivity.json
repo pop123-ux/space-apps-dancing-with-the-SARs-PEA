@@ -2,6 +2,7 @@
  "windows": {
   "jul_oct": {
    "label": "July to October 2026",
+   "empty_zone_label": "No connected series for this zone on this track",
    "dates": {
     "029A": [
      "2026-07-07",

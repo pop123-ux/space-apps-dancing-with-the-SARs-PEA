@@ -53,6 +53,13 @@ SCENARIOS = {           # summary.json fit name → label on the page
     "elevation_correction": "Elevation correction",
 }
 WINDOW = "jul_oct"
+# What the page says when a zone has no series in a window (docs/ui.md, "Zone review and historical context"):
+# July to October: the zone has no connected pixels on that track; January to October: no zone pixel stays connected
+# across all 49 dates, so the extended fit gives no continuous series.
+EMPTY_ZONE_LABEL = {
+    "jul_oct": "No connected series for this zone on this track",
+    "jan_oct": "Insufficient continuous coverage",
+}
 
 # Interpretation labels from 03's zone review (sentinel1/docs/TEAM_HANDOFF.md, "Group-aware refit and EGMS
 # cross-check", and docs/ui.md, "Zone review and historical context", 14 Nov 2026). Text only: no value is changed.
@@ -311,7 +318,7 @@ def run(site_key: str) -> None:
             for t in s1["frames"]},
         source=dict(nisar="data/scenes/ocnele_mari_gunw.csv (NASA CMR, 14 Nov 2026)",
                     s1="sentinel1/analysis/summary.json (03)")))
-    windows = {WINDOW: dict(label="July to October 2026", dates={t: [f["dates"][0], f["dates"][-1]] for t, f in s1["frames"].items()},
+    windows = {WINDOW: dict(label="July to October 2026", empty_zone_label=EMPTY_ZONE_LABEL[WINDOW], dates={t: [f["dates"][0], f["dates"][-1]] for t, f in s1["frames"].items()},
                             frames=s1["frames"], layers=s1["layers"], points=s1["points"], variants=variants,
                             maps_scenario="baseline",
                             quality={t: summary[t]["fits"]["quality"] for t in s1["frames"]})}

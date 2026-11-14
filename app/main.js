@@ -698,7 +698,7 @@ function factRow(point, sat, trk) {
   const e = entry(point, sat, trk);
   const dir = dirOf(sat, trk);
   const head = `<span class="${SATS[sat].cls}" aria-hidden="true">${SATS[sat].mark}</span> ${esc(sensors()[sat].label)} ${esc(trk)} ${ARROW[dir] || ''}`;
-  if (!e) return `<div class="fact"><span>${head}</span><span class="sub">No connected series for this zone on this track</span></div>`;
+  if (!e) return `<div class="fact"><span>${head}</span><span class="sub">${esc(emptyZoneLabel(sat))}</span></div>`;
   const change = e.fitted_change_mm !== undefined && e.fitted_change_mm !== null ? `<b>${fmt(e.fitted_change_mm, 1)} mm</b> fitted change` : `<b>${fmt(e.rate)} mm/yr</b>`;
   const limited = e.n_pixels !== undefined && e.n_pixels !== null && e.n_pixels < LIMITED_PX;
   const d = direction(point, sat, trk);
@@ -706,6 +706,9 @@ function factRow(point, sat, trk) {
   return `<div class="fact"><span>${head}</span><span>${change} · ${esc(e.n_pixels ?? 'n/a')} pixels</span>
     <span class="tags">${limited ? `<span class="badge warn">Limited coverage · ${esc(e.n_pixels)} px</span>` : ''}${d ? `<span class="badge ${d.cls}">${esc(d.text)}</span>` : ''}${trackNote(point, sat, trk) ? `<span class="badge" title="${esc(trackNote(point, sat, trk).detail)}">${esc(trackNote(point, sat, trk).label)}</span>` : ''}</span>${caveat ? `<small class="sub">${esc(caveat)}</small>` : ''}</div>`;
 }
+// the products say how to label a zone with no series in the selected window (sensitivity.json, per window)
+const EMPTY_ZONE_FALLBACK = { jan_oct: 'Insufficient continuous coverage' };   // docs/ui.md, if a products set omits the label
+const emptyZoneLabel = (sat) => (sat === 's1' && (win()?.empty_zone_label || EMPTY_ZONE_FALLBACK[S.window])) || 'No connected series for this zone on this track';
 // which stored runs flip the direction of the selected run, and by how much (from sensitivity.json; after Alexandru's
 // Zone 1 and Zone 2 note in PR #12, generalised so the numbers come from the products)
 function flipCaveat(point, sat, trk) {
@@ -768,7 +771,7 @@ function zonesSheet() {
     const lines = linesFor(z);
     const missing = sats.filter(s => !entry(z, s, S.track[s])).length;
     return block(`z-${z.id}`, esc(zoneName(z)), '', lines, { top: `${notesBox(z, sats, false)}<div class="facts">${facts}</div>`,
-      foot: missing ? `No series on ${S.track[sat || 's1']} for this zone` : `Chart: ${sats.map(s => `${sensors()[s].label} ${S.track[s]}`).join(' and ')}` });
+      foot: missing ? `${sats.filter(s => !entry(z, s, S.track[s])).map(s => S.track[s]).join(' and ')}: ${emptyZoneLabel(sat || 's1')}` : `Chart: ${sats.map(s => `${sensors()[s].label} ${S.track[s]}`).join(' and ')}` });
   });
   const ex = zs.length ? linesFor(zs.find(z => linesFor(z).length) || zs[0]) : [];
   return `<h2>Where did the ground move?</h2><p class="lead">Median line-of-sight change in each salt zone, in mm since the first date${win() ? `, ${esc(win().label)}` : ''}. Negative means away from the satellite, which is what sinking ground looks like. It is relative to nearby terrain, not an absolute or vertical value.</p>
