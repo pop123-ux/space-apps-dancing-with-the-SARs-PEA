@@ -3,19 +3,51 @@
  "tracks": [
   {
    "sensor": "nisar",
-   "track": "129A",
-   "direction": "Ascending",
+   "track": "094D",
+   "direction": "Descending",
    "method": "offset",
-   "offset_mm_yr": -5.8,
+   "offset_mm_yr": -15.15,
    "slope_east_mm_yr_per_10km": 0.0,
    "slope_north_mm_yr_per_10km": 0.0,
-   "n_tie_pixels": 347765,
-   "residual_std_mm_yr": 39.15,
-   "residual_mad_mm_yr": 37.07,
-   "model_los_mean_mm_yr": -0.63,
+   "n_tie_pixels": 157186,
+   "residual_std_mm_yr": 48.38,
+   "residual_mad_mm_yr": 47.62,
+   "model_los_mean_mm_yr": 0.25,
    "swap_delta_mm_yr": 0.704,
    "swap_model": "egms",
-   "swap_offset_mm_yr": -5.1,
+   "swap_offset_mm_yr": -14.45,
+   "frame": "Eurasia-fixed (EuVeM2022: horizontals ETRF2000, up IGS14)",
+   "dates": [
+    "2026-06-20",
+    "2026-07-02",
+    "2026-07-14",
+    "2026-07-26",
+    "2026-08-19",
+    "2026-08-31",
+    "2026-09-12",
+    "2026-09-24",
+    "2026-10-06",
+    "2026-10-18"
+   ],
+   "gaps": [],
+   "ts_made_by": "stack.py (03)",
+   "phase_sign": -1
+  },
+  {
+   "sensor": "nisar",
+   "track": "129A",
+   "direction": "Ascending",
+   "method": "plane",
+   "offset_mm_yr": -7.78,
+   "slope_east_mm_yr_per_10km": -12.036,
+   "slope_north_mm_yr_per_10km": 2.306,
+   "n_tie_pixels": 66648,
+   "residual_std_mm_yr": 28.24,
+   "residual_mad_mm_yr": 26.32,
+   "model_los_mean_mm_yr": -0.59,
+   "swap_delta_mm_yr": 0.74,
+   "swap_model": "egms",
+   "swap_offset_mm_yr": -7.08,
    "frame": "Eurasia-fixed (EuVeM2022: horizontals ETRF2000, up IGS14)",
    "dates": [
     "2025-11-07",
@@ -40,7 +72,7 @@
      "2026-06-23"
     ]
    ],
-   "ts_made_by": "04 stand-in r04_129a.py (stack.py real path is a stub)",
+   "ts_made_by": "stack.py (03)",
    "phase_sign": -1
   }
  ]

@@ -50,7 +50,22 @@ Verdict: **04's first-pair report reproduces.** Two small differences, neither o
 
 What this check cannot tell: the phase sign (T3 stays open; no field states the convention), and anything about the other 12 pairs or 04's tie (−5.80 mm/yr), which need the stack.
 
-## Product notes and traps
+## Our own NISAR fit (14 Nov 2026, 23:30)
+
+`fetch.py` streamed all 22 pairs (729 MB, windows only; Earthdata token injected by the session proxy, never stored), `stack.py` inverted them, `calibrate.py` tied them to EuVeM2022, `split.py` solved up and east on the common June to October window.
+
+| | 129A (ascending) | 094D (descending) |
+| --- | --- | --- |
+| Dates, pairs, groups | 15, 13, 2 (gap 18 Jan to 23 Jun) | 10, 9, 1 |
+| Pixels with a rate (coherence ≥ 0.35, connected network) | 18 % | 42 % |
+| Tie to EuVeM2022 | plane, −7.78 mm/yr at the centre; scatter 28.2 mm/yr; 66,648 tie pixels | offset −15.15 mm/yr; scatter 48.4; 157,186 |
+| Model swap vs EGMS (T8, < 1 mm/yr) | 0.74 mm/yr | 0.70 mm/yr |
+| T3: zones' median LOS rate (< −2 mm/yr) | **−10.1 mm/yr: passes** (Zone 4 −10.5) | **+23.5 mm/yr: fails** |
+| Correlation with Sentinel-1's rate map (same direction) | +0.39 (029A) | +0.32 (007D) |
+
+**094D held off the page.** Checks in `notebooks/03/t3_094d_checks.json`: no 2π unwrapping jump (largest per-pair zone offset 12 mm, a cycle is 122 mm); two pairs (26 Jul to 19 Aug, 12 to 24 Sep) each add about +12 mm to the zones against far stable ground but about 0 against terrain 1 to 3 km away, so the signal covers the whole valley, which lies about 100 m below the stable ground; the ECMWF weather model does not remove it (+22.7 mm/yr); against a local 1 to 3 km reference the zones read −5.1 mm/yr (Zone 4 −10.2), which would pass, but that reference was chosen after seeing the failure, so it is not proof. The positive map correlation with Sentinel-1 rules out a global sign error. The sign stays −1. **On the page:** NISAR 129A (map, rate, dots, zone series, beta/provisional), 094D as a disabled "under review" chip with this reason, Compare and Agreement off until both tracks pass T3 and O-19 settles the shared window and reference. Up/east (12 % of pixels, σ_up about 19 mm/yr) is not exported.
+
+
 
 - **`mask` is a 32-bit bitfield** (product spec 1.4), but older pairs store a uint8 code.
   - Bits 0 to 7 are a decimal code for water and the reference and secondary subswaths. Bits 8 to 23 are anomaly flags. Bit 24 means the ionosphere was interpolated there, and the phase is still good. 255 is fill.

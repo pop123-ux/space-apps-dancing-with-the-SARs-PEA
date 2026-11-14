@@ -299,3 +299,51 @@ dialog p { margin: 6px 0; }
 .egms th, .egms td { border-bottom: 1px solid var(--line); padding: 4px 6px; text-align: right; font-weight: 400; }
 .egms thead th { color: var(--muted); }
 .egms th[scope="row"], .egms thead th:first-child { text-align: left; }
+
+/* ---------------------------------------------------------------- docked layout (v4, 14 Nov 2026)
+   Team sketch (Alexandru): toolbar with the logo on top, the map in the middle, a menu column on the right that a click
+   on the map opens (zone, station, view), and the timeline across the full width at the bottom. The map never sits
+   under a panel: it is sized to the space between them. */
+:root { --bar-h: 64px; --side-w: 420px; --side-wide: min(760px, 55vw); }
+#bar { top: 0; left: 0; right: 0; height: var(--bar-h); padding: 0 var(--gap); align-items: center; background: var(--card);
+  border-bottom: 1px solid var(--line); pointer-events: auto; }
+#bar .brand { box-shadow: none; border-radius: 0; padding: 0; align-items: center; }
+.logo { width: 34px; height: 34px; flex: none; }
+#bar .pill, #bar .round { box-shadow: none; border: 1px solid var(--line); }
+#stage { top: var(--bar-h); bottom: var(--dock-h); right: 0; transition: right .2s ease; }
+body.side-open #stage { right: var(--side-w); }
+body.side-open.side-wide #stage { right: var(--side-wide); }
+#dock { left: 0; right: 0; bottom: 0; transform: none; width: auto; border-radius: 0; box-shadow: none; border-top: 1px solid var(--line);
+  padding: 10px 20px 12px; }
+#sheet, #sheet.wide { top: var(--bar-h); bottom: var(--dock-h); right: 0; width: var(--side-w); max-height: none; border-radius: 0;
+  box-shadow: none; border-left: 1px solid var(--line); }
+#sheet.wide { width: var(--side-wide); }
+#flags { top: calc(var(--bar-h) + 12px); }
+#cmp-tags { top: calc(var(--bar-h) + 12px); }
+.legend { bottom: calc(var(--dock-h) + var(--gap)); }
+.layers-wrap { bottom: calc(var(--dock-h) + var(--gap)); transition: right .2s ease; }
+body.side-open .layers-wrap { right: calc(var(--side-w) + var(--gap)); }
+body.side-open.side-wide .layers-wrap { right: calc(var(--side-wide) + var(--gap)); }
+.maplibregl-ctrl-top-right { top: 0; }
+
+@media (max-width: 760px) {
+  :root { --bar-h: 58px; }
+  .logo { width: 28px; height: 28px; }
+  #bar .brand { padding: 0; }
+  body.side-open #stage, body.side-open.side-wide #stage { right: 0; }
+  body.side-open .layers-wrap, body.side-open.side-wide .layers-wrap { right: var(--gap); }
+  #dock { border-radius: 0; padding: 8px 12px 10px; }
+  /* the menu is a drawer above the timeline; the toolbar and its satellite menu stay above it (audit, 14 Nov) */
+  #sheet, #sheet.wide { left: 0; right: 0; width: auto; top: auto; bottom: var(--dock-h); max-height: 55%; z-index: 18;
+    border-left: 0; border-top: 1px solid var(--line); border-radius: 18px 18px 0 0; box-shadow: var(--shadow); }
+  /* the sign convention stays visible on phones (honest-comparison rule 5; audit, 14 Nov) */
+  .legend .caps { display: flex; font-size: 11px; }
+  .status { white-space: normal; overflow: visible; text-overflow: clip; }
+}
+
+/* forecast date slider (Chronos-2 only, 14 Nov 2026) */
+.fc-slider { display: grid; gap: 6px; margin: 10px 0; padding: 10px 12px; background: var(--soft); border-radius: 12px; }
+.fc-slider label { font-size: 13px; font-weight: 600; }
+.fc-slider input[type="range"] { width: 100%; accent-color: #7C3AED; }
+.fc-slider output { font-size: 14px; }
+.tracks button.held { opacity: .55; cursor: help; font-size: 13px; }

@@ -1,15 +1,17 @@
 # Owner: 06 · App developer (Darius)
 """06 · App developer: turn the science outputs into what the page reads: products/<site>/.
 
-Status: WORKS for Sentinel-1 (Jul to Oct 2026 fit) and NISAR catalog coverage. NISAR displacement is not exported yet:
-its fit (fetch.py → stack.py → calibrate.py) has not produced ts.npz, so the page shows "Displacement fit pending".
+Status: WORKS for Sentinel-1 (Jul to Oct 2026 fit) and NISAR (fetch.py → stack.py → calibrate.py, 14 Nov 2026). NISAR is
+exported when data/work/<site>/<track>/ts.npz exists for a track (cal.npz preferred: GNSS-tied); otherwise the page keeps
+"Displacement fit pending" for it.
 
     python export.py ocnele_mari
 
 Reads (never writes) these inputs:
   Sentinel-1 (03): sentinel1/analysis/summary.json and the grid chunks in sentinel1/assets/ (029A, 007D). The chunks
       are joined in memory and checked against sentinel1/assets/SHA256SUMS; nothing is written into sentinel1/.
-  NISAR (02): data/scenes/ocnele_mari_gunw.csv, the 22 public GUNW pairs (catalog coverage only).
+  NISAR (02): data/scenes/ocnele_mari_gunw.csv, the 22 public GUNW pairs (catalog coverage); per track, if present,
+      data/work/<site>/<track>/meta.json, ts.npz (03) and cal.npz (04).
   common.py: site, view (D-002), zones, sensors, common window.
 Writes products/<site>/ (file contracts in docs/build-spec.md, design in docs/ui.md):
   manifest.json      sensors.{nisar,s1}, views, default (NISAR Coverage), windows, methods, credits
@@ -17,7 +19,10 @@ Writes products/<site>/ (file contracts in docs/build-spec.md, design in docs/ui
   s1/los_<track>.png             line-of-sight rate (annualized short-window slope)
   s1/points_<track>.json         the same values as map dots, one every 80 m (the page draws these; the PNGs stay
                                  as a fallback and for the GeoTIFF-free slides)
-  series.json        zone and outer-comparison histories, keyed "s1:<track>"
+  nisar/frames/<track>/<date>.png, nisar/los_<track>.png, nisar/points_<track>.json   the same for NISAR (80 m grid;
+                                 frames are cumulative since the first date of the date's acquisition group; dots only
+                                 inside the Sentinel-1 box, 16.4 km around the town, to keep the file small)
+  series.json        zone and outer-comparison histories, keyed "s1:<track>" and "nisar:<track>"
   sensitivity.json   per window: frames, layers, and every processing scenario per track and zone
   coverage.json      acquisition dates per sensor and track; NISAR pairs from the catalog; usable zone pixels
   stations.geojson, calib.json, checks.json   only if missing, as explicit "pending" files: 04 and 05 own them
@@ -271,6 +276,129 @@ def nisar_coverage() -> dict:
     return cov
 
 
+# ------------------------------------------------------------------------------------------------ NISAR displacement
+NISAR_POINT_BOX_M = 8200
+# Tracks held off the page until a check clears them (DECISIONS.md, 14 Nov 2026, 23:00). The reason is shown on the page.
+NISAR_HOLD = {
+    "094D": "094D is under review: phase-sign test T3 not passed (the zones read +23.5 mm/yr against far stable ground). "
+            "Unwrapping is ruled out; the signal covers the whole valley, not only the zones "
+            "(notebooks/03/t3_094d_checks.json).",
+}    # dots only within this half-size of the site centre (the Sentinel-1 window)
+
+
+def load_nisar(site_key: str, track: str):
+    """→ (meta, ts, values) or None. values: dates, cum (mm, per group from 0), vel (mm/yr), tied (bool)."""
+    import numpy as np
+    d = C.WORK / site_key / track
+    if not (d / "ts.npz").exists():
+        return None
+    meta = C.load_json(d / "meta.json")
+    ts = dict(np.load(d / "ts.npz", allow_pickle=False))
+    tied = (d / "cal.npz").exists()
+    if tied:
+        cal = dict(np.load(d / "cal.npz", allow_pickle=False))
+        cum, vel = cal["cum_cal"], cal["vel_cal"]
+    else:
+        cum, vel = ts["cum"], ts["vel"]
+    return meta, ts, dict(dates=[str(x) for x in ts["dates"]], cum=cum, vel=vel, tied=tied)
+
+
+def nisar_bounds(meta: dict):
+    xmin = meta["x0"] - meta["dx"] / 2
+    ymax = meta["y0"] - meta["dy"] / 2                   # dy < 0: row 0 is north
+    return (xmin, ymax + meta["ny"] * meta["dy"], xmin + meta["nx"] * meta["dx"], ymax)
+
+
+def nisar_zone_masks(site: dict, meta: dict):
+    """Zone discs and the outer comparison ring (6.5 to 8 km from the zone edges), as fit.py draws them for Sentinel-1."""
+    import numpy as np
+    X = meta["x0"] + np.arange(meta["nx"]) * meta["dx"]
+    Y = meta["y0"] + np.arange(meta["ny"]) * meta["dy"]
+    X, Y = np.meshgrid(X, Y)
+    dist = []
+    for z in site["zones"]:
+        zx, zy = C.to_xy(meta["epsg"], z["lon"], z["lat"])
+        dist.append(np.hypot(X - zx, Y - zy) - z["r_m"])
+    off = np.min(dist, axis=0)
+    masks = {z["id"]: d <= 0 for z, d in zip(site["zones"], dist)}
+    masks["outer_control"] = (off >= 6500) & (off <= 8000)
+    return masks
+
+
+def nisar_series(dates, cum, groups, mask) -> dict | None:
+    """Median over the pixels with a value on every date; rate through the dates with one offset per group."""
+    import numpy as np
+    good = mask & np.isfinite(cum).all(axis=0)
+    n = int(good.sum())
+    if not n:
+        return None
+    mm = np.median(cum[:, good], axis=1)
+    t = C.years(dates)
+    A = np.c_[t, np.eye(len(set(groups)))[groups]]
+    rate = float(np.linalg.lstsq(A, mm, rcond=None)[0][0])
+    return dict(dates=dates, mm=[round(float(v), 2) for v in mm], rate=round(rate, 2), n_pixels=n,
+                fitted_change_mm=round(rate * (t[-1] - t[0]), 2))
+
+
+def export_nisar(out: pathlib.Path, site_key: str, series: list[dict]):
+    """→ (layers, frames, points, notes) for the manifest; adds "nisar:<track>" histories to series in place."""
+    import numpy as np
+    site = C.SITES[site_key]
+    meta_s = C.SENSORS["nisar"]
+    layers, frames, points, notes = [], {}, {}, {}
+    for track in meta_s["tracks"]:
+        got = None if track in NISAR_HOLD else load_nisar(site_key, track)
+        if not got:
+            continue
+        meta, ts, v = got
+        dates, cum, vel = v["dates"], v["cum"], v["vel"]
+        groups = [int(g) for g in ts["group"]]
+        bounds = nisar_bounds(meta)
+        grid = LonLatGrid(bounds, vel.shape, meta["epsg"])
+        pngs = []
+        for k, d in enumerate(dates):
+            png = f"nisar/frames/{track}/{d}.png"
+            overlay_png(grid.sample(cum[k]), out / png, CHANGE_VMAX)
+            pngs.append(png)
+        gaps = [list(g) for g in ts["gap_ranges"]]
+        frames[track] = dict(dates=dates, pngs=pngs, vmin=-CHANGE_VMAX, vmax=CHANGE_VMAX,
+                             units="mm since the first date of its acquisition group", direction=meta_s["tracks"][track],
+                             gaps=gaps, window="nisar", saturates=True, groups=groups)
+        png = f"nisar/los_{track}.png"
+        overlay_png(grid.sample(vel), out / png, RATE_VMAX)
+        layers.append(dict(id=f"los_{track}", label=f"NISAR {track}: line-of-sight rate through the dates"
+                           + (", tied to EuVeM2022" if v["tied"] else ", terrain-relative"),
+                           png=png, units="mm/yr", vmin=-RATE_VMAX, vmax=RATE_VMAX, track=track, experimental=False,
+                           window="nisar", scenario="baseline", saturates=True))
+        # dots: crop to the Sentinel-1 box so the file stays small
+        cx, cy = C.to_xy(meta["epsg"], site["lon"], site["lat"])
+        X = meta["x0"] + np.arange(meta["nx"]) * meta["dx"]
+        Y = meta["y0"] + np.arange(meta["ny"]) * meta["dy"]
+        cs = np.where(np.abs(X - cx) <= NISAR_POINT_BOX_M)[0]
+        rs = np.where(np.abs(Y - cy) <= NISAR_POINT_BOX_M)[0]
+        sub = np.s_[rs[0]:rs[-1] + 1, cs[0]:cs[-1] + 1]
+        zb = (X[cs[0]] - meta["dx"] / 2, Y[rs[-1]] + meta["dy"] / 2, X[cs[-1]] + meta["dx"] / 2, Y[rs[0]] - meta["dy"] / 2)
+        pts_file = f"nisar/points_{track}.json"
+        global POINT_STEP
+        step, POINT_STEP = POINT_STEP, 1                     # NISAR pixels are already 80 m
+        try:
+            n_pts = write_points(dict(bounds_utm=zb, rate_mm_yr=vel[sub], displacement_mm=cum[(slice(None),) + sub]),
+                                 out / pts_file, track, [d.replace("-", "") for d in dates], meta["epsg"])
+        finally:
+            POINT_STEP = step
+        points[track] = pts_file
+        masks = nisar_zone_masks(site, meta)
+        for p in series:
+            e = nisar_series(dates, cum, groups, masks[p["id"]])
+            if e:
+                p["series"][f"nisar:{track}"] = e
+        notes[track] = dict(tied=v["tied"], pairs=int(ts["n_pairs"]), groups=len(set(groups)),
+                            phase_sign=int(ts["phase_sign"]), iono_used=int(np.sum(ts["iono_used"])))
+        print(f"  nisar {track}: {len(dates)} frames + rate map + {n_pts} points, {grid.shape[1]}×{grid.shape[0]} px, "
+              f"{dates[0]}..{dates[-1]}, {int(ts['n_pairs'])} pairs, {'GNSS-tied' if v['tied'] else 'terrain-relative'}")
+    return layers, frames, points, notes
+
+
 # ------------------------------------------------------------------------------------------------ the products set
 def write_pending(out: pathlib.Path) -> list[str]:
     """stations.geojson, calib.json, checks.json belong to 04 and 05; write explicit pending files only if missing."""
@@ -311,6 +439,7 @@ def run(site_key: str) -> None:
 
     s1, bounds = export_s1(out, summary)
     series, variants = export_series(summary, site)
+    n_layers, n_frames_, n_points, n_notes = export_nisar(out, site_key, series)
     C.save_json(out / "series.json", series)
     cov = nisar_coverage()
     C.save_json(out / "coverage.json", dict(
@@ -333,16 +462,23 @@ def run(site_key: str) -> None:
 
     nmeta = C.SENSORS["nisar"]
     nisar = {k: nmeta[k] for k in ("label", "agency", "band", "wavelength_cm", "status", "reference", "credit")}
-    nisar.update(layers=[], frames={}, look=nmeta["look"], product=nmeta["product"],
-                 pending="Displacement fit pending: authenticated download, independent fit and line-of-sight sign check "
-                         "are not done yet. Catalog coverage only.")
+    nisar.update(layers=n_layers, frames=n_frames_, points=n_points, look=nmeta["look"], product=nmeta["product"],
+                 fit=n_notes)
+    missing = [t for t in nmeta["tracks"] if t not in n_frames_]
+    if missing:
+        nisar["pending"] = (" ".join(NISAR_HOLD.get(t, f"{t}: displacement fit pending.") for t in missing) if n_frames_ else
+                            "Displacement fit pending: authenticated download, independent fit and line-of-sight sign "
+                            "check are not done yet. Catalog coverage only.")
     C.save_json(out / "manifest.json", dict(
         site=site_key, name=f"{site['name']}, {site['county']}", story=site["story"], synthetic=False,
-        note="Sentinel-1 measurements (Jul to Oct 2026) and NISAR catalog coverage. NISAR displacement is pending.",
+        note=("Sentinel-1 measurements (Jul to Oct 2026) and NISAR measurements (" + ", ".join(sorted(n_frames_)) + ")."
+              if n_frames_ else "Sentinel-1 measurements (Jul to Oct 2026) and NISAR catalog coverage. NISAR displacement is pending."),
         built=datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
         bounds=bounds, center=[site["lat"], site["lon"]], view=dict(site["view"], min_zoom=6, context="romania-blurred"),
         sensors=dict(nisar=nisar, s1=s1), views=list(C.VIEWS), common_window=list(C.COMMON_WINDOW),
         default=dict(sat="nisar", view="coverage", track="129A"),
+        compare=dict(ready=False, reason="Compare waits for both NISAR tracks to pass T3 and a shared window and "
+                                          "reference (O-19); NISAR 094D is under review."),
         windows={WINDOW: windows[WINDOW]["label"]}, default_window=WINDOW,
         checks={k: sum(c.get("status") == k for c in checks) for k in ("pass", "warn", "fail", "info")},
         zone_notes=ZONE_NOTES, track_notes=TRACK_NOTES,
@@ -353,6 +489,11 @@ def run(site_key: str) -> None:
                "3 to 6.5 km from the zone edges; the outer comparison area is 6.5 to 8 km. Not GNSS-calibrated.",
             sign="Line of sight, positive toward the satellite. Red is away from the satellite, blue is toward.",
             rate="A rate is a fitted annualized slope over the window, not a long-term velocity. No per-pixel uncertainty layer is validated yet.",
+            nisar="NISAR L2 GUNW (frequency A, HH, 80 m) streamed over the 50 km window by fetch.py: mask decoded as a "
+                  "bitfield, largest connected component, ionosphere screen subtracted. stack.py: coherence ≥ 0.35, "
+                  "elevation slope and stable-ground reference removed per pair, small-baseline inversion with one "
+                  "group per side of the January to June gap, rate through the dates. calibrate.py ties each track to "
+                  "EuVeM2022 on stable ground. Beta and provisional products, not intended for scientific research.",
             zones="Four zone circles from the advisor's starter kit (permission to publish them is still to be confirmed).",
             links=[dict(label="Sentinel-1 team handoff", href="sentinel1/docs/TEAM_HANDOFF.md"),
                    dict(label="Sentinel-1 analysis notes", href="sentinel1/analysis/README.md"),
@@ -367,7 +508,8 @@ def run(site_key: str) -> None:
     C.save_json(idx, sorted(sites, key=lambda s: (s["synthetic"], s["site"])))
     n_frames = sum(len(f["dates"]) for f in s1["frames"].values())
     print(f"{out}: s1 {len(s1['layers'])} rate maps, {n_frames} frames, {len(series)} series points · "
-          f"nisar coverage {sum(len(c['pairs']) for c in cov.values())} pairs (displacement pending)"
+          f"nisar {len(n_layers)} rate maps, {sum(len(f['dates']) for f in n_frames_.values())} frames, "
+          f"coverage {sum(len(c['pairs']) for c in cov.values())} pairs"
           + (f" · pending files written: {', '.join(made)}" if made else ""))
 
 

@@ -89,7 +89,7 @@ function viewAllowed(v, sat = S.sat) {
   if (!MEASURED_VIEWS.includes(v)) return true;
   return sat === 'compare' ? measured('nisar') && measured('s1') : measured(sat);
 }
-const compareReady = () => sensorKeys().length === 2 && measured('nisar') && measured('s1');
+const compareReady = () => sensorKeys().length === 2 && measured('nisar') && measured('s1') && S.man.compare?.ready !== false;
 
 // a point's series for one sensor and track, honouring the selected window and scenario (sensitivity.json)
 function entry(point, sat, trk, scenario = S.scenario) {
@@ -126,7 +126,7 @@ function applyHash(h) {
   if (h.sat && (keys.includes(h.sat) || (h.sat === 'compare' && compareReady()))) S.sat = h.sat;
   if (h.track) for (const t of h.track.split(',')) for (const s of keys) if (tracksOf(s).includes(t)) S.track[s] = t;
   if (h.view && (S.man.views || []).includes(h.view)) S.view = h.view;
-  if (h.date && /^\d{4}-\d{2}-\d{2}$/.test(h.date)) S.date = h.date;
+  if (h.date && /^\d{4}-\d{2}-\d{2}$/.test(h.date)) { S.date = h.date; S.dateUser = true; }
   if (h.exp) S.exp = h.exp === '1';
   if (!viewAllowed(S.view)) S.view = 'coverage';
 }
@@ -331,7 +331,7 @@ function layerFor(sat) {
   const f = frames(sat)[trk]; if (!f) return null;
   const d = S.sat === 'compare' ? nearest(f.dates, S.date) : S.date;
   const i = f.dates.indexOf(d);
-  return { png: i >= 0 ? f.pngs[i] : null, meta: f, kind: 'change', date: i >= 0 ? d : null, first: f.dates[0] };
+  return { png: i >= 0 ? f.pngs[i] : null, meta: f, kind: 'change', date: i >= 0 ? d : null, first: (i >= 0 && f.groups) ? f.dates[f.groups.indexOf(f.groups[i])] : f.dates[0] };   // grouped frames count from their group's first date
 }
 const hasUpLayer = () => sideSats().some(s => layers(s).some(l => l.id === 'up'));
 function renderOverlays() {
@@ -390,7 +390,7 @@ function renderSat() {
     };
   });
   const ready = compareReady();
-  const why = sensorKeys().length < 2 ? 'Needs both satellites' : !measured('nisar') ? 'Pending: NISAR displacement fit' : !measured('s1') ? 'Pending: Sentinel-1 measurements' : '';
+  const why = sensorKeys().length < 2 ? 'Needs both satellites' : !measured('nisar') ? 'Pending: NISAR displacement fit' : !measured('s1') ? 'Pending: Sentinel-1 measurements' : S.man.compare?.ready === false ? (S.man.compare.reason || 'Not ready') : '';
   items.push({
     key: 'compare', cls: 'item', disabled: ready ? null : why,
     html: `<span class="mk" aria-hidden="true">⇆</span><span><span class="t">Compare</span><span class="d">${ready ? `Side by side, same months only${w ? `: ${human(w[0], false)} to ${human(w[1])}` : ''}` : esc(why)}</span></span><span class="tick" aria-hidden="true">✓</span>`,
@@ -407,7 +407,7 @@ function pickSat(k, keepDate = true) {
     ensureMapB();
   }
   if (!viewAllowed(S.view)) { S.note = { kind: 'pending', sat: k }; S.view = 'coverage'; }
-  if (keepDate && prevDate) S.date = prevDate;
+  if (keepDate && prevDate) { S.date = prevDate; S.dateUser = true; }
   changed();
 }
 function renderChecksButton() {
@@ -450,6 +450,14 @@ function renderTracks() {
       b.setAttribute('aria-label', b.title);
       b.setAttribute('aria-pressed', S.track[s] === t ? 'true' : 'false');
       b.addEventListener('click', () => { S.track[s] = t; changed(); });
+      g.appendChild(b);
+    }
+    // tracks in the catalogue but held off the map (e.g. a failed check): shown disabled, with the reason
+    if (measured(s) && S.sat !== 'compare') for (const t of Object.keys(covOf(s)).filter(t => !tracksOf(s).includes(t))) {
+      const b = document.createElement('button'); b.type = 'button'; b.disabled = true; b.className = 'held';
+      b.textContent = `${t} · under review`;
+      b.title = sensors()[s].pending || `${t} is not shown yet`;
+      b.setAttribute('aria-label', `Track ${t}: ${b.title}`);
       g.appendChild(b);
     }
   }
@@ -512,7 +520,7 @@ function renderStatus() {
   if (sideSats().some(measured)) parts.push('positive = toward the satellite');
   $('#status').innerHTML = parts.join(' &nbsp;·&nbsp; ');
 }
-function setDate(d) { S.date = d; changed(false); }
+function setDate(d) { S.date = d; S.dateUser = true; changed(false); }
 function stepDate(delta) {
   const ds = sliderDates(); if (!ds.length) return;
   let i = ds.indexOf(S.date); if (i < 0) i = ds.indexOf(nearest(ds, S.date));
@@ -765,25 +773,41 @@ function forecastPanel() {
   if (!obs || obs.dates.length !== f.training_dates.length ||
       !obs.dates.every((date, index) => date === f.training_dates[index] &&
         Number.isFinite(obs.mm[index]) && Math.abs(obs.mm[index] - f.observed_mm[index]) <= .011)) return '';
-  const labels = { persistence: 'Persistence', theil_sen: 'Theil–Sen trend', gaussian_process: 'Gaussian process', long_term: 'Long-term trend (EGMS 2020–2025)', chronos2: 'Chronos-2 (zero-shot)' };
-  const lab = k => labels[k] || k;
-  const model = Object.hasOwn(f.model_paths_mm || {}, S.forecastModel) ? S.forecastModel : f.model;
-  const path = f.model_paths_mm?.[model] || f.forecast_mm;
-  const modelChoices = Object.keys(f.model_paths_mm || {}).map(key => `<button type="button" data-forecast-model="${esc(key)}" aria-pressed="${key === model}">${esc(lab(key))}</button>`).join('');
-  const iv = f.intervals?.[model];
-  const ivText = iv ? ` ${Math.round(iv.level * 100)} % interval at the endpoint: ${fmt(iv.q10.at(-1), 2)} to ${fmt(iv.q90.at(-1), 2)} mm (backtested coverage in docs/forecast.md).` : '';
+  // Chronos-2 is the page's only forecast (team decision, 14 Nov 2026). The four simple models stay in forecast.json as
+  // backtest baselines: they are named in the footnote as the comparison, never drawn as forecasts.
+  const BASE = { persistence: 'persistence', theil_sen: 'Theil–Sen trend', gaussian_process: 'Gaussian process', long_term: 'EGMS long-term trend' };
+  const model = 'chronos2';
+  const path = f.model_paths_mm?.chronos2; const iv = f.intervals?.chronos2;
+  if (!path || !iv) return '';
+  const last = f.observed_mm.at(-1);
+  const steps = [f.last_observation, ...f.dates];
+  const val = [last, ...path], lo = [last, ...iv.q10], hi = [last, ...iv.q90];
+  const k = Math.min(S.fcIdx ?? steps.length - 1, steps.length - 1);
   const lines = [
-    { label: 'Radar estimate', color: SATS.s1.color, shape: SATS.s1.shape, dates: f.training_dates, mm: f.observed_mm, gaps: [] },
-    { label: 'Model extrapolation', color: '#7C3AED', dates: [f.last_observation, ...f.dates],
-      mm: [f.observed_mm.at(-1), ...path], dash: true, gaps: [] },
+    { label: 'Radar estimate (Sentinel-1 029A)', color: SATS.s1.color, shape: SATS.s1.shape, dates: f.training_dates, mm: f.observed_mm, gaps: [] },
+    { label: 'Chronos-2 forecast (median)', color: '#7C3AED', dates: steps, mm: val, dash: true, gaps: [] },
+    { label: `${Math.round(iv.level * 100)} % range, low`, color: '#C4B5FD', dates: steps, mm: lo, dash: true, gaps: [] },
+    { label: `${Math.round(iv.level * 100)} % range, high`, color: '#C4B5FD', dates: steps, mm: hi, dash: true, gaps: [] },
   ];
-  const scores = Object.entries(f.metrics).map(([k, v]) => `${esc(lab(k))} ${Number(v.mae_mm).toFixed(2)} mm`).join(' · ');
+  const c = f.chronos2 || {};
+  const bt = [c.janoct_30d && `30 days: ${Number(c.janoct_30d.mae_mm).toFixed(2)} mm over ${c.janoct_30d.n} cutoffs`,
+              c.janoct_88d && `88 days: ${Number(c.janoct_88d.mae_mm).toFixed(2)} mm over ${c.janoct_88d.n} cutoffs`].filter(Boolean).join(' · ');
+  const base = Object.entries(f.metrics).filter(([k2]) => k2 !== model && BASE[k2]).map(([k2, v]) => `${BASE[k2]} ${Number(v.mae_mm).toFixed(2)} mm`).join(', ');
+  const nc = f.nisar_check;
+  const ncText = nc ? `<p class="reason"><b>Check against NISAR</b> (129A, ${esc(nc.dates[0])} to ${esc(nc.dates[1])}, after the forecast started): NISAR ${fmt(nc.nisar_change_mm, 1)} mm, Chronos-2 ${fmt(nc.chronos2_change_mm, 1)} mm. NISAR's own date-to-date scatter here is about ${Number(nc.nisar_step_scatter_mm).toFixed(1)} mm, so this is consistent within noise, not a validation. Scaled into Sentinel-1's line of sight assuming vertical motion only.</p>` : '';
   const retro = f.status === 'retrospective' || f.end_date <= new Date().toISOString().slice(0, 10);
-  return block('zone-forecast', `${esc(supported.label || f.zone)} · ${retro ? 'Retrospective forecast' : 'Experimental forecast'}`,
+  return block('zone-forecast', `${esc(supported.label || f.zone)} · ${retro ? 'Retrospective forecast' : 'Forecast'} · Chronos-2`,
     `<span class="badge">${f.horizon_days} days · ${esc(f.track)} LOS</span>`, lines, {
-      top: `<p class="reason">${esc(lab(model))} through ${esc(f.end_date)}, from radar data ending ${esc(f.last_observation)}. The dashed segment is a line-of-sight scenario. ${model === 'chronos2' && f.chronos2?.janoct_88d ? `At the 88-day horizon it was backtested on ${f.chronos2.janoct_88d.n} overlapping cutoffs (MAE ${Number(f.chronos2.janoct_88d.mae_mm).toFixed(2)} mm).` : 'Its 88-day backtest is in docs/forecast.md.'}</p><div class="seg wrap" role="group" aria-label="Forecast model">${modelChoices}</div><p class="reason">Endpoint ${fmt(path.at(-1), 2)} mm relative to the first acquisition.${ivText} Rainfall and soil moisture were tested and did not improve the forecast, so there is no weather control yet (docs/forecast.md).</p>${keys(lines)}`,
-      foot: `30-day backtest MAE from ${f.folds.length} overlapping historical cutoffs: ${scores}. ${esc(f.interval_reason)}`,
+      top: `<p class="reason">Chronos-2, a pretrained time-series model (amazon/chronos-2) used zero-shot, continues the radar series from ${esc(f.last_observation)} to ${esc(f.end_date)}. It extrapolates the shape of this one series; it knows nothing about salt, weather or the mine.</p>
+        <div class="fc-slider"><label for="fc-range">Forecast date</label>
+          <input id="fc-range" type="range" min="0" max="${steps.length - 1}" step="1" value="${k}" aria-valuetext="${esc(steps[k])}">
+          <output id="fc-out" for="fc-range" aria-live="polite">${fcReadout(steps[k], val[k], lo[k], hi[k], iv.level, f.training_dates[0])}</output></div>
+        ${ncText}${keys(lines.slice(0, 3).map((l, i) => i === 2 ? { ...l, label: `${Math.round(iv.level * 100)} % range (backtested)` } : l))}`,
+      foot: `Backtest error (mean absolute, January to October 2026 series): ${bt}. Over the four summer cutoffs Chronos-2 scored ${Number(f.metrics.chronos2.mae_mm).toFixed(2)} mm against simple baselines (${base}). ${esc(f.interval_reason)}`,
     });
+}
+function fcReadout(d, v, lo, hi, level, ref) {
+  return `<b>${esc(d)}</b> · ${fmt(v, 1)} mm <span class="sub">(${Math.round(level * 100)} % range ${fmt(lo, 1)} to ${fmt(hi, 1)} mm) relative to ${esc(ref)}</span>`;
 }
 
 function zonesSheet() {
@@ -832,8 +856,8 @@ function egmsPanel() {
 function agreementSheet() {
   const w = S.man.common_window;
   const head = `<h2>Do the two radars agree?</h2><p class="lead">NISAR next to Sentinel-1 over the months both cover${w ? ` (${human(w[0], false)} to ${human(w[1])})` : ''}, each in its own line of sight. The verdict comes from the validator's checks, never from this page.</p>`;
-  if (!(measured('nisar') && measured('s1'))) {
-    const why = !measured('nisar') ? 'NISAR displacement fit pending' : 'Sentinel-1 measurements pending';
+  if (!(measured('nisar') && measured('s1')) || S.man.compare?.ready === false) {
+    const why = !measured('nisar') ? 'NISAR displacement fit pending' : !measured('s1') ? 'Sentinel-1 measurements pending' : (S.man.compare.reason || 'not ready');
     return `${head}<div class="verdict na">Not testable yet · ${esc(why)}. O-19 (the shared quantity and geometry) is also open.</div>
       <p class="reason">NISAR and Sentinel-1 look from different sides, so their line-of-sight values are different quantities until 03 and 04 settle O-19.</p>${egmsPanel()}`;
   }
@@ -926,11 +950,14 @@ function renderSheet() {
   sh.querySelectorAll('[data-table]').forEach(b => b.onclick = () => { const id = b.dataset.table; S.tables.has(id) ? S.tables.delete(id) : S.tables.add(id); renderSheet(); });
   sh.querySelectorAll('[data-go]').forEach(b => b.onclick = () => goSentinel());
   wireChoices(sh);
-  sh.querySelectorAll('[data-forecast-model]').forEach(b => b.onclick = () => {
-    S.forecastModel = b.dataset.forecastModel;
-    renderSheet();
-    sh.querySelector('[data-forecast-model][aria-pressed="true"]')?.focus();
-  });
+  const fr = sh.querySelector('#fc-range');
+  if (fr) fr.oninput = () => {
+    const f = S.forecast; const i = +fr.value; S.fcIdx = i;
+    const steps = [f.last_observation, ...f.dates], last = f.observed_mm.at(-1), iv = f.intervals.chronos2;
+    const v = [last, ...f.model_paths_mm.chronos2][i], lo = [last, ...iv.q10][i], hi = [last, ...iv.q90][i];
+    fr.setAttribute('aria-valuetext', steps[i]);
+    sh.querySelector('#fc-out').innerHTML = fcReadout(steps[i], v, lo, hi, iv.level, f.training_dates[0]);
+  };
 }
 function select(sel) {
   S.selected = sel; closeMenus(); renderSheet(); $('#sheet').scrollTop = 0;
@@ -969,7 +996,7 @@ function renderAbout() {
 // ------------------------------------------------------------------------------------------------ main render
 function changed(full = true) {
   const ds = sliderDates();
-  if (ds.length && !S.date) S.date = ds[ds.length - 1];   // a kept date with no acquisition gets an explicit "nearest" offer
+  if (ds.length && (!S.date || (!S.dateUser && !ds.includes(S.date)))) S.date = ds[ds.length - 1];   // first load: the satellite's own last date   // a kept date with no acquisition gets an explicit "nearest" offer
   if (full) { renderSat(); renderViews(); renderTracks(); }
   renderLayersMenu();
   renderCompare(); renderOverlays();
@@ -993,6 +1020,15 @@ async function main() {
   mapA.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
   mapA.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
   addMarkers(mapA);
+  // Docked layout (v4): the map shrinks to the space left of the menu column, then redraws at its new size.
+  const side = () => {
+    const sh = $('#sheet'); const open = !sh.hidden;
+    document.body.classList.toggle('side-open', open);
+    document.body.classList.toggle('side-wide', open && sh.classList.contains('wide'));
+    setTimeout(() => { mapA?.resize(); mapB?.resize(); }, 220);
+  };
+  new MutationObserver(side).observe($('#sheet'), { attributes: true, attributeFilter: ['hidden', 'class'] });
+  side();
   mapA.on('zoom', updateBlur);
   mapA.on('load', () => { updateBlur(); document.querySelector('#map .maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show'); });
   mapA.on('click', (e) => {

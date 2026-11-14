@@ -1,0 +1,84 @@
+{
+ "rule": "both tracks' zone-median LOS rate below -2 mm/yr (prompts/early-tests.md, T3)",
+ "tracks": {
+  "129A": {
+   "phase_sign": -1,
+   "zones": {
+    "z1": {
+     "rate": -15.42,
+     "n": 32
+    },
+    "z2": {
+     "rate": -9.41,
+     "n": 21
+    },
+    "z3": {
+     "rate": -1.71,
+     "n": 12
+    },
+    "z4": {
+     "rate": -10.48,
+     "n": 20
+    },
+    "outer_control": {
+     "rate": -6.96,
+     "n": 3615
+    },
+    "zones_pooled": {
+     "rate": -10.11,
+     "n": 85
+    }
+   },
+   "s1": {
+    "s1_track": "029A",
+    "pixels": 45280,
+    "pearson": 0.393,
+    "spearman": 0.331,
+    "nisar_dates": [
+     "2026-06-23",
+     "2026-10-21"
+    ]
+   }
+  },
+  "094D": {
+   "phase_sign": -1,
+   "zones": {
+    "z1": {
+     "rate": 16.92,
+     "n": 21
+    },
+    "z2": {
+     "rate": 33.28,
+     "n": 20
+    },
+    "z3": {
+     "rate": 24.62,
+     "n": 23
+    },
+    "z4": {
+     "rate": 18.42,
+     "n": 15
+    },
+    "outer_control": {
+     "rate": -7.56,
+     "n": 6764
+    },
+    "zones_pooled": {
+     "rate": 23.51,
+     "n": 79
+    }
+   },
+   "s1": {
+    "s1_track": "007D",
+    "pixels": 51507,
+    "pearson": 0.316,
+    "spearman": 0.194,
+    "nisar_dates": [
+     "2026-06-20",
+     "2026-10-18"
+    ]
+   }
+  }
+ },
+ "pass": false
+}
