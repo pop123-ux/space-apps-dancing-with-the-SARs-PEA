@@ -92,6 +92,17 @@ A first-time visitor can open `#preset=zone4` (or press **Investigate Zone 4**) 
 - **Status pill:** shows the check that matters for the selection (for example the zone's NISAR against Sentinel-1 check) and opens the About panel at that evidence.
 - **Legend:** larger; "near 0 (pale dot)" and "no dot = no data" keys. Phone: one-line context, numbered zone chips, one scrolling control row, drawer at most 36 % of the height.
 
+## Round two (15 Nov 2026): satellite basemap, Romanian, tables, Compare, stations
+
+- **Satellite imagery by default**; switching basemaps keeps the measurement dots (the point source is reset on a style change). Coverage dots are white with a dark outline on imagery.
+- **Sentinel-1 marks** on the timeline are slim rounded capsules (they read cleanly at 49 dates); NISAR keeps round dots, so the two differ by shape, not only colour. Chart points: diamonds for Sentinel-1, circles for NISAR.
+- **Tables:** "Open table" shows the full table in a dialog in front of the page; **Export CSV** downloads it (zone series, compare series, the processing-run table).
+- **Language:** EN | RO beside the logo (`app/i18n.js`): tabs, buttons, headings, legend, the sign sentence, context strip, run names. Defaults to Romanian when the browser is Romanian; kept in the link (`lang=ro`). Texts written by the pipeline and the validator stay English.
+- **Compare enabled** (satellite menu): tracks paired by viewing geometry (NISAR 129A with Sentinel-1 007D; NISAR 094D with 029A), each in its own line of sight; per-zone verdicts come from the validator.
+- **NISAR 094D shown, flagged** (⚠ on its track chip and in the context strip): it failed T3 and stays visible for inspection only.
+- **Stations:** one marker per monument; the panel lists every solution (VLC1, VLC2 and their inverse-variance mean) against every radar track covering it, with the GNSS observation period and the radar pixels and radius used.
+- **Data freshness** in About, from `products/<site>/updates.json` (update.py).
+
 ## Implementation status (r06/page, 14 Nov 2026, 16:15)
 
 | Part | Status | Notes |

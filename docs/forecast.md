@@ -203,3 +203,11 @@ Not adopted. Past weather adds nothing. Knowing the actual future weather would 
 - [Fattahi and Amelung, DEM error in InSAR time series](https://doi.org/10.1109/TGRS.2012.2227761)
 - [De Zan et al., soil moisture and interferometric phase](https://elib.dlr.de/80946/)
 - [Ocnele Mari salt mine field case study](https://www.igipz.pan.pl/tl_files/igipz/ZGiHGiW/sgcb/sgcb_40/sgcb_40_08.pdf)
+
+## Keeping the forecast current, and fine-tuning (15 Nov 2026)
+
+**Predictor state:** complete and reproducible. Rerunning `forecast_chronos.py` gives the same 1 January 2027 value (−3.87 mm, 80 % range −11.27 to +15.17) and the same backtests; only the NISAR October check moved with the rerun NISAR series (−5.82 against +1.21 mm, NISAR noise 7.1 mm).
+
+**Updates:** `update.py --check` (no login) lists acquisitions newer than the fits into `products/<site>/updates.json` (15 Nov: 6 new on 029A and 6 on 007D, 11 Oct to 10 Nov; no new NISAR pairs). `--order` submits the HyP3 burst jobs (each new date with the one and two before it); `--refit` reruns the NISAR chain. `.github/workflows/update.yml` runs the check every Monday and opens a pull request when something is new. Ordering and refitting stay a person's decision: a refit must pass the same checks before the page changes.
+
+**Fine-tuning Chronos-2: tested and not adopted** (`notebooks/03/chronos_finetune_test.py` and `.json`, rule predeclared in DECISIONS.md, 02:30). LoRA on 3,000 Sentinel-1 pixel series up to 30 June (Zone 4 excluded), evaluated on the 11 Zone 4 forecasts issued after June: zero-shot 30-day MAE 4.58 mm with 82 % of truths inside its 80 % range; fine-tuned 7.11 mm and 55 % (its ranges became too narrow). The 88-day horizon has one test cutoff after June (6.52 against 6.72 mm), too few to read. Fine-tuning on one town's 49 dates teaches the model this summer's noise and makes it overconfident. Revisit when the updater has added about a year of new acquisitions, with the same rule.

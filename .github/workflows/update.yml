@@ -1,0 +1,36 @@
+# Owner: shared · announce changes; 01 reviews
+# Weekly: look for new Sentinel-1 and NISAR acquisitions over Ocnele Mari (no login), and open a pull request that
+# updates products/ocnele_mari/updates.json when something is new. Ordering and refitting stay a person's decision
+# (python update.py ocnele_mari --order / --refit, docs/handoff-02-03.md), because they need an Earthdata login and a
+# review of the checks before the page changes.
+name: data-check
+on:
+  schedule:
+    - cron: "17 6 * * 1"        # Mondays 06:17 UTC
+  workflow_dispatch: {}
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests pyproj
+      - run: python update.py ocnele_mari --check
+      - name: Open a pull request if the data changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet -- products/ocnele_mari/updates.json; then echo "nothing new"; exit 0; fi
+          branch="auto/data-check-$(date -u +%Y%m%d)"
+          git config user.name "data-check bot"
+          git config user.email "actions@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add products/ocnele_mari/updates.json
+          git commit -m "data-check: new acquisitions over Ocnele Mari"
+          git push -u origin "$branch"
+          gh pr create --title "New acquisitions over Ocnele Mari" --body "$(python -c "import json;print(json.load(open('products/ocnele_mari/updates.json'))['summary'])")"

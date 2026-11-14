@@ -102,3 +102,11 @@ Checked Sat 14 Nov 2026 on NASA CMR and in `sentinel1/`.
 - **Geometry.** Sentinel-1 looks right, NISAR looks left, and their incidence angles differ. The same ground motion therefore reads differently in each line of sight, which is why the page never subtracts one LOS from the other directly.
 
 **Not available to us:** ROMPOS raw data and daily solutions are closed. Nothing derived from them enters the repository.
+
+## 094D and NASA's own troposphere screens (15 Nov 2026)
+
+Every GUNW carries hydrostatic and wet troposphere phase screens and solid-earth tides as 3D cubes (radarGrid, 20 heights, 500 m). `fetch.py --corrections` samples them at each pixel's DEM height; `stack.py --gunw-corrections` subtracts them. On 094D (9 pairs, about 100 MB per pair because the cubes are stored in large chunks) the zones read **+28.2 mm/yr** with the correction (+35.0 with the opposite sign) against +23.5 without, and the per-pair elevation dependence on stable ground did not shrink (median |slope| 0.82 → 1.22 mm per 100 m). Neither the ECMWF weather model nor NASA's screens explain the valley-wide signal; unwrapping was ruled out before. **T3 stays failed on 094D.** A same-height local reference (validate.py reports it: z1 −4.0, z2 +11.4, z3 +3.2, z4 +8.2 mm/yr) is not used to pass the test, because it was chosen after the failure. The track is shown on the page, flagged, for inspection. The next independent test would be our own pairs from NISAR GSLC (O-07). 129A corrections were not downloaded (about 1.3 GB more) because 129A already passes.
+
+## Stations after the rerun (15 Nov 2026)
+
+The NISAR chain was rerun with `main`'s partial-series stack (129A: 79 % of pixels with a rate, tie offset −9.09 mm/yr, scatter 41.7 mm/yr; T3 −11.3 mm/yr, pass). At the VLC monument NISAR 129A reads −1.7 mm/yr against GNSS −0.6 (VLC1, NGL 2012 to 2018), +0.3 (VLC2, Muntean 2019 to 2025) and −0.3 mm/yr for their inverse-variance mean: within 2.1 mm/yr. The checks say "warn", not "pass", because a station-sized box of NISAR pixels scatters by about ±55 mm/yr on stable ground (correlated noise), so the test cannot confirm. HORE now has comparisons (box grown to 280 m): NISAR 129A +21.8 against −1.1 mm/yr, inside ±55.5. Sentinel-1 at VLC (relative to its terrain band, GNSS model subtracted): 029A +31.8, 007D +25.7 mm/yr, inside ±40.7: inconclusive.

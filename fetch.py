@@ -298,6 +298,50 @@ def write_dem(tdir) -> None:
     print(f"{tdir.name}: DEM {np.nanmin(dem):.0f} to {np.nanmax(dem):.0f} m, {np.isfinite(dem).mean():.0%} filled")
 
 
+CORR_LAYERS = {"tropo_rad": ("hydrostaticTroposphericPhaseScreen", "wetTroposphericPhaseScreen"),
+               "set_rad": ("slantRangeSolidEarthTidesPhase",)}
+
+
+def read_corrections(site: str, track: str, ref: str, sec: str, url: str, token: str | None) -> int:
+    """Add NASA's own corrections to <ref>_<sec>.npz: tropo_rad (hydrostatic + wet troposphere phase screen) and
+    set_rad (solid-earth tides), each from the product's radarGrid cube, interpolated to every window pixel at its DEM
+    height. Units are radians, the interferogram's own convention (stack.py --gunw-corrections subtracts them; the sign
+    is checked on stable ground, see notebooks/03/t3_094d_checks.json). The DEM is EGM2008 orthometric and the cube
+    heights are ellipsoidal; the geoid (about 40 m here) shifts a whole frame almost uniformly and is ignored."""
+    import numpy as np
+    from scipy.interpolate import RegularGridInterpolator
+    tdir = C.WORK / site / track
+    f = tdir / f"{ref}_{sec}.npz"
+    z = dict(np.load(f))
+    if "tropo_rad" in z:
+        return 0
+    meta = C.load_json(tdir / "meta.json")
+    dem = np.load(tdir / "dem.npz")["dem"]
+    h5, rf = open_h5(url, token)
+    rg = h5[RADAR_GRID]
+    hz, rx, ry = rg["heightAboveEllipsoid"][()], rg["xCoordinates"][()], rg["yCoordinates"][()]
+    X = meta["x0"] + np.arange(meta["nx"]) * meta["dx"]
+    Y = meta["y0"] + np.arange(meta["ny"]) * meta["dy"]
+    c0 = max(int(np.searchsorted(rx, X.min())) - 2, 0); c1 = min(int(np.searchsorted(rx, X.max())) + 3, len(rx))
+    r0 = max(int(np.searchsorted(-ry, -Y.max())) - 2, 0); r1 = min(int(np.searchsorted(-ry, -Y.min())) + 3, len(ry))
+    yy, xx = np.meshgrid(Y, X, indexing="ij")
+    h = np.where(np.isfinite(dem), dem, np.nanmedian(dem))
+    k = np.clip(np.searchsorted(hz, h) - 1, 0, len(hz) - 2)
+    w = (h - hz[k]) / (hz[k + 1] - hz[k])
+    for name, layers in CORR_LAYERS.items():
+        cube = sum(rg[L][:, r0:r1, c0:c1].astype("f8") for L in layers)
+        lv = np.empty((len(hz),) + X.shape[:0] + yy.shape)
+        for i in range(len(hz)):
+            fi = RegularGridInterpolator((ry[r0:r1][::-1], rx[c0:c1]), cube[i][::-1], bounds_error=False, fill_value=None)
+            lv[i] = fi(np.stack([yy.ravel(), xx.ravel()], -1)).reshape(yy.shape)
+        ii, jj = np.indices(yy.shape)
+        z[name] = ((1 - w) * lv[k, ii, jj] + w * lv[k + 1, ii, jj]).astype("f4")
+    np.savez_compressed(f, **z)
+    print(f"{track} {ref}_{sec}: corrections added (troposphere {np.nanstd(z['tropo_rad']):.2f} rad spread, "
+          f"tides {np.nanstd(z['set_rad']):.3f} rad), {rf.fetched / 1e6:.0f} MB", flush=True)
+    return rf.fetched
+
+
 def synthetic(site: str, seed: int = 7) -> None:
     """Offline known-answer stack in exactly the real file shapes: truth.npz + per-track meta/geom/pairs.
 
@@ -313,6 +357,8 @@ def main() -> None:
     ap.add_argument("--synthetic", action="store_true", help="offline known-answer stack")
     ap.add_argument("--track", help="only this track, e.g. 129A")
     ap.add_argument("--workers", type=int, default=4, help="parallel streams (tune on the venue Wi-Fi)")
+    ap.add_argument("--corrections", action="store_true",
+                    help="add NASA's troposphere and solid-earth-tide screens to pairs already on disk")
     a = ap.parse_args()
     if a.synthetic or C.SITES[a.site].get("synthetic"):
         return synthetic(a.site)
@@ -328,6 +374,11 @@ def main() -> None:
     if a.list:
         return
     token = os.environ.get("EARTHDATA_TOKEN")            # None: the session proxy injects it
+    if a.corrections:
+        with ThreadPoolExecutor(a.workers) as ex:
+            n = sum(ex.map(lambda k: read_corrections(a.site, *k, pairs[k][1], token), list(pairs)))
+        print(f"corrections: {n / 1e6:.0f} MB")
+        return
     total = 0
     for tr in sorted({k[0] for k in pairs}):
         ks = [k for k in pairs if k[0] == tr]

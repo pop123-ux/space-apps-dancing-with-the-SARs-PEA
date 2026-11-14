@@ -2658,6 +2658,10 @@
     }
    },
    "maps_scenario": "baseline",
+   "town_cover": {
+    "029A": 16,
+    "007D": 46
+   },
    "quality": {
     "029A": {
      "closure_triangles": 14,
@@ -5695,6 +5699,10 @@
     }
    },
    "maps_scenario": "baseline",
+   "town_cover": {
+    "029A": 12,
+    "007D": 0
+   },
    "quality": {
     "029A": {
      "closure_triangles": 47,

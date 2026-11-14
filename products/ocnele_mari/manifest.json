@@ -3,8 +3,8 @@
  "name": "Ocnele Mari, Vâlcea",
  "story": "TODO(01): one sentence, written by the Lead",
  "synthetic": false,
- "note": "Sentinel-1 measurements (Jul to Oct 2026) and NISAR measurements (129A).",
- "built": "2026-11-14T17:27:57+00:00",
+ "note": "Sentinel-1 measurements (Jul to Oct 2026) and NISAR measurements (094D, 129A).",
+ "built": "2026-11-14T22:05:52+00:00",
  "bounds": [
   [
    45.016685,
@@ -46,6 +46,19 @@
      "vmin": -40.0,
      "vmax": 40.0,
      "track": "129A",
+     "experimental": false,
+     "window": "nisar",
+     "scenario": "baseline",
+     "saturates": true
+    },
+    {
+     "id": "los_094D",
+     "label": "NISAR 094D: line-of-sight rate through the dates, tied to EuVeM2022",
+     "png": "nisar/los_094D.png",
+     "units": "mm/yr",
+     "vmin": -40.0,
+     "vmax": 40.0,
+     "track": "094D",
      "experimental": false,
      "window": "nisar",
      "scenario": "baseline",
@@ -116,11 +129,59 @@
       1,
       1,
       1
-     ]
+     ],
+     "flag": null
+    },
+    "094D": {
+     "dates": [
+      "2026-06-20",
+      "2026-07-02",
+      "2026-07-14",
+      "2026-07-26",
+      "2026-08-19",
+      "2026-08-31",
+      "2026-09-12",
+      "2026-09-24",
+      "2026-10-06",
+      "2026-10-18"
+     ],
+     "pngs": [
+      "nisar/frames/094D/2026-06-20.png",
+      "nisar/frames/094D/2026-07-02.png",
+      "nisar/frames/094D/2026-07-14.png",
+      "nisar/frames/094D/2026-07-26.png",
+      "nisar/frames/094D/2026-08-19.png",
+      "nisar/frames/094D/2026-08-31.png",
+      "nisar/frames/094D/2026-09-12.png",
+      "nisar/frames/094D/2026-09-24.png",
+      "nisar/frames/094D/2026-10-06.png",
+      "nisar/frames/094D/2026-10-18.png"
+     ],
+     "vmin": -20.0,
+     "vmax": 20.0,
+     "units": "mm since the first date of its acquisition group",
+     "direction": "Descending",
+     "gaps": [],
+     "window": "nisar",
+     "saturates": true,
+     "groups": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+     ],
+     "flag": "Failed the phase-sign test T3: the zones read +23.5 mm/yr against far stable ground, where they should sink. Unwrapping is ruled out, and neither the ECMWF weather model nor NASA's own troposphere screens (in the product) remove it; the signal covers the whole valley. Shown for inspection, not interpretation (notebooks/03/t3_094d_checks.json)."
     }
    },
    "points": {
-    "129A": "nisar/points_129A.json"
+    "129A": "nisar/points_129A.json",
+    "094D": "nisar/points_094D.json"
    },
    "look": "left",
    "product": "NISAR L2 GUNW, frequency A, HH (beta and provisional)",
@@ -131,9 +192,18 @@
      "groups": 2,
      "phase_sign": -1,
      "iono_used": 13
+    },
+    "094D": {
+     "tied": true,
+     "pairs": 9,
+     "groups": 1,
+     "phase_sign": -1,
+     "iono_used": 9
     }
    },
-   "pending": "094D is under review: phase-sign test T3 not passed (the zones read +23.5 mm/yr against far stable ground). Unwrapping is ruled out; the signal covers the whole valley, not only the zones (notebooks/03/t3_094d_checks.json)."
+   "flags": {
+    "094D": "Failed the phase-sign test T3: the zones read +23.5 mm/yr against far stable ground, where they should sink. Unwrapping is ruled out, and neither the ECMWF weather model nor NASA's own troposphere screens (in the product) remove it; the signal covers the whole valley. Shown for inspection, not interpretation (notebooks/03/t3_094d_checks.json)."
+   }
   },
   "s1": {
    "label": "Sentinel-1",
@@ -268,7 +338,11 @@
     "007D": "s1/points_007D.json"
    },
    "look": "right",
-   "product": "Sentinel-1C/D VV burst InSAR, ASF HyP3 INSAR_ISCE_BURST, 10x2 looks"
+   "product": "Sentinel-1C/D VV burst InSAR, ASF HyP3 INSAR_ISCE_BURST, 10x2 looks",
+   "town_cover": {
+    "029A": 16,
+    "007D": 46
+   }
   }
  },
  "views": [
@@ -288,8 +362,12 @@
   "track": "129A"
  },
  "compare": {
-  "ready": false,
-  "reason": "Compare waits for both NISAR tracks to pass T3 and a shared window and reference (O-19); NISAR 094D is under review."
+  "ready": true,
+  "pairs": {
+   "129A": "007D",
+   "094D": "029A"
+  },
+  "reason": "Side by side, each satellite in its own line of sight. Tracks are paired by geometry (NISAR 129A with Sentinel-1 007D: both see east-west motion the same way). The verdict per zone comes from the validator; a shared quantity (O-19) is still open."
  },
  "windows": {
   "jul_oct": "July to October 2026",
@@ -298,9 +376,9 @@
  "default_window": "jul_oct",
  "checks": {
   "pass": 5,
-  "warn": 5,
-  "fail": 3,
-  "info": 6
+  "warn": 10,
+  "fail": 4,
+  "info": 5
  },
  "zone_notes": {
   "z3": {

@@ -2,6 +2,7 @@
 // The page logic. It reads products/<site>/ only (file contracts in docs/build-spec.md; design and the 06 handoff in
 // docs/ui.md). No measured number is typed in this file: every value on screen comes from the products files.
 import * as maplibregl from 'https://unpkg.com/maplibre-gl@6.15.0/dist/maplibre-gl.mjs';
+import { initLang, setLang, getLang } from './i18n.js';
 
 // ------------------------------------------------------------------------------------------------ fixed UI settings
 const ZOOM_OFFSET = 1;     // manifest.view.zoom uses 256 px tiles (Google Maps, D-002); MapLibre uses 512 px tiles
@@ -58,7 +59,7 @@ async function getJSON(url) {
 // ------------------------------------------------------------------------------------------------ state
 const S = {
   site: null, base: 'products/', dir: '', man: null, series: [], stations: null, checks: [], cov: null, sens: null,
-  sat: 'nisar', track: {}, view: 'change', date: null, exp: false, basemap: 'light', window: null, scenario: 'baseline',
+  sat: 'nisar', track: {}, view: 'change', date: null, exp: false, basemap: 'satellite', window: null, scenario: 'baseline',
   split: 50, selected: null, playing: null, tables: new Set(), opacity: 0.7, note: null,
 };
 let mapA = null, mapB = null;
@@ -124,6 +125,7 @@ function writeHash() {
   if (S.window) p.set('window', S.window);
   if (S.sens) p.set('scenario', S.scenario);
   if (S.selected?.kind === 'zone') p.set('zone', S.selected.id);
+  if (getLang() === 'ro') p.set('lang', 'ro');
   history.replaceState(null, '', '#' + p.toString().replace(/%2C/g, ','));
 }
 function applyHash(h) {
@@ -167,6 +169,7 @@ async function load() {
     opt('stations.geojson'), opt('checks.json'), opt('coverage.json'), opt('sensitivity.json'), opt('forecast.json'),
   ]);
   Object.assign(S, { man, series, stations, checks: checks || [], cov, sens, forecast });
+  S.updates = await opt('updates.json');   // update.py --check: acquisitions newer than the fits
   S.window = sens ? (sens.default_window || Object.keys(sens.windows || {})[0]) : null;
   const d = man.default || {};
   S.sat = sensors()[d.sat] ? d.sat : sensorKeys()[0];
@@ -266,7 +269,8 @@ function setPoints(m, sat, L) {
     if (m._ptsWant !== want) return;            // the user moved on while the file loaded
     if (m._pts !== file) { m.getSource('pts').setData(gj); m._pts = file; S.spacing = gj.meta.spacing; renderLegend(); }
     const cov = S.view === 'coverage';   // Coverage: where a connected series exists, whatever its value
-    m.setPaintProperty('pts', 'circle-color', cov ? '#57534E' : rdbuExpr(key, want.vmax));
+    m.setPaintProperty('pts', 'circle-color', cov ? (S.basemap === 'satellite' ? '#FAFAF9' : '#57534E') : rdbuExpr(key, want.vmax));
+    m.setPaintProperty('pts', 'circle-stroke-color', S.basemap === 'satellite' ? '#0C0A09' : '#1C1917');
     m.setFilter('pts', ['has', cov ? 'r' : key]);
     m.setLayoutProperty('pts', 'visibility', 'visible');
   }).catch(() => { m.setLayoutProperty('pts', 'visibility', 'none'); });
@@ -286,7 +290,8 @@ function setBasemap(key) {
   S.basemap = key;
   for (const m of [mapA, mapB]) {
     if (!m) continue;
-    m.setStyle(styleFor(key));
+    m._pts = null; m._ptsWant = null;               // the new style starts with an empty point source
+    m.setStyle(styleFor(key), { diff: false });
     m.once('style.load', () => { addOverlay(m); renderOverlays(); });
   }
   renderLayersMenu();
@@ -309,13 +314,20 @@ function addMarkers(m) {
     el.addEventListener('click', (e) => { e.stopPropagation(); select({ kind: 'zone', id: p.id }); });
     new maplibregl.Marker({ element: el }).setLngLat([p.lon, p.lat]).addTo(m);
   }
+  const seen = {};   // one marker per monument: VLC1, VLC2 and their combined mean sit on the same spot
   for (const f of S.stations?.features || []) {
-    const p = f.properties;
+    const k = f.geometry.coordinates.map(v => v.toFixed(4)).join(',');
+    (seen[k] = seen[k] || []).push(f);
+  }
+  for (const group of Object.values(seen)) {
+    const f = group.find(g => g.properties.combined) || group[0];
+    const p = { ...f.properties, station: f.properties.station };
+    const names = group.filter(g => !g.properties.combined).map(g => g.properties.station).join(' · ');
     const cls = p.agree === true ? 'yes' : p.agree === false ? 'no' : 'na';
     const el = document.createElement('button');
     el.type = 'button'; el.className = `marker station ${cls}`; el.dataset.id = p.station;
     el.setAttribute('aria-label', `Station ${p.station}: ${cls === 'yes' ? 'agrees' : cls === 'no' ? 'disagrees' : 'not tested'}`);
-    el.innerHTML = `<i aria-hidden="true">${cls === 'yes' ? '✔' : cls === 'no' ? '✘' : '?'}</i>${esc(p.station)}`;
+    el.innerHTML = `<i aria-hidden="true">${p.status === 'warn' ? '!' : cls === 'yes' ? '✔' : cls === 'no' ? '✘' : '?'}</i>${esc(names || p.station)}`;
     el.addEventListener('click', (e) => { e.stopPropagation(); select({ kind: 'station', id: p.station }); });
     new maplibregl.Marker({ element: el }).setLngLat(f.geometry.coordinates).addTo(m);
   }
@@ -441,7 +453,8 @@ function pickSat(k, keepDate = true) {
   const prevDate = S.date;
   S.sat = k; S.note = null;
   if (k === 'compare') {
-    const match = tracksOf('s1').find(t => dirOf('s1', t) === dirOf('nisar', S.track.nisar));   // ascending with ascending
+    const pair = S.man.compare?.pairs?.[S.track.nisar];   // paired by viewing geometry when the products say so
+    const match = tracksOf('s1').includes(pair) ? pair : tracksOf('s1').find(t => dirOf('s1', t) === dirOf('nisar', S.track.nisar));
     if (match) S.track.s1 = match;
     ensureMapB();
   }
@@ -524,6 +537,7 @@ function renderContext() {
     const run = s === 's1' && S.sens ? scenarioLabel(S.scenario) : 'Single run';
     const ref = s === 's1' && /west|east/.test(S.scenario) ? `${S.scenario.startsWith('west') ? 'West' : 'East'} half of the terrain band` : cleanLabel(sn.reference).replace(/\s*\(.*\)\s*$/, '');
     parts.push(head, metric, `Run: ${esc(run)}`, `Reference: ${esc(ref)}`);
+    if (frames(s)[trk]?.flag) parts.push(`<span class="flagtxt">⚠ ${esc(frames(s)[trk].flag)}</span>`);
   } else parts.push(`<b>${esc(s ? sensors()[s].label : 'Compare')}</b> · ${esc(s ? pendingText(s) : 'side by side')}`);
   parts.push(`<span class="neg">${esc(NEG_TEXT)}</span>`);
   $('#ctx-what').innerHTML = parts.join('<span class="sep" aria-hidden="true"> · </span>');
@@ -539,7 +553,9 @@ function renderTracks() {
     for (const t of tracksOf(s)) {
       const dir = dirOf(s, t);
       const b = document.createElement('button'); b.type = 'button';
-      b.textContent = `${t} ${ARROW[dir] || ''}`;
+      const flag = frames(s)[t]?.flag;
+      b.textContent = `${t} ${ARROW[dir] || ''}${flag ? ' ⚠' : ''}`;
+      if (flag) b.classList.add('flagged');
       b.title = `Track ${t}, ${String(dir || '').toLowerCase()}`;
       b.setAttribute('aria-label', b.title);
       b.setAttribute('aria-pressed', S.track[s] === t ? 'true' : 'false');
@@ -791,7 +807,7 @@ function chart({ lines, from, to, gaps = [], window = null, height = 130, on = n
       const x = X(d), y = Y(v); const tip = `<title>${esc(l.label)} ${d}: ${v} mm · click to show this date on the map</title>`;
       const hit = d === on ? ' cpt on' : ' cpt';
       o.push(l.shape === 'tri'
-        ? `<path class="${hit}" data-cdate="${esc(d)}" d="M${x.toFixed(1)},${(y - 4.5).toFixed(1)} l4.5,8 h-9z" fill="${l.color}" stroke="${d === on ? '#1C1917' : '#fff'}" stroke-width="${d === on ? 1.6 : 0.8}">${tip}</path>`
+        ? `<path class="${hit}" data-cdate="${esc(d)}" d="M${x.toFixed(1)},${(y - (d === on ? 5 : 3.6)).toFixed(1)} l${d === on ? 5 : 3.6},${d === on ? 5 : 3.6} l-${d === on ? 5 : 3.6},${d === on ? 5 : 3.6} l-${d === on ? 5 : 3.6},-${d === on ? 5 : 3.6}z" fill="${l.color}" stroke="${d === on ? '#1C1917' : '#fff'}" stroke-width="${d === on ? 1.4 : 0.8}">${tip}</path>`
         : `<circle class="${hit}" data-cdate="${esc(d)}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${d === on ? 4.5 : 3}" fill="${l.color}" stroke="${d === on ? '#1C1917' : '#fff'}" stroke-width="${d === on ? 1.6 : 0.8}">${tip}</circle>`);
     });
   }
@@ -818,13 +834,32 @@ function rangeOf(lines) {
   const pad = Math.max(3, (day(ds[ds.length - 1]) - day(ds[0])) * 0.03);
   return [iso(day(ds[0]) - pad), iso(day(ds[ds.length - 1]) + pad)];
 }
+// tables open in a dialog in front of the page; Export CSV downloads the same rows (15 Nov 2026)
+const blockData = {};
+function csvOf(lines) {
+  const dates = [...new Set(lines.flatMap(l => l.dates))].sort();
+  const q = (s) => `"${String(s).replace(/"/g, '""')}"`;
+  const val = (l, d) => { const i = l.dates.indexOf(d); return i < 0 || l.mm[i] === null || l.mm[i] === undefined ? '' : l.mm[i]; };
+  return [['date', ...lines.map(l => `${l.label} (mm)`)].map(q).join(','), ...dates.map(d => [d, ...lines.map(l => val(l, d))].join(','))].join('\n') + '\n';
+}
+function download(name, text) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' })); a.download = name;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+function openTable(id) {
+  const b = blockData[id]; if (!b) return;
+  $('#table-body').innerHTML = `<h2>${b.title}</h2><p class="sub">${esc(NEG_TEXT)} Values in mm.</p>
+    <p><button type="button" class="chip strong" id="table-csv">Export CSV</button></p>${b.html || table(b.lines)}`;
+  $('#table-csv').onclick = () => download(`${S.site}_${id}.csv`, b.csv || csvOf(b.lines));
+  $('#table-dlg').showModal();
+}
 function block(id, title, right, lines, extra = {}) {
   const [from, to] = extra.range || rangeOf(lines);
-  const open = S.tables.has(id);
+  blockData[id] = { title, lines };
   return `<div class="block"><h3><span>${title}</span>${right || ''}</h3>${extra.top || ''}
     ${lines.length ? chart({ lines, from, to, gaps: lines.flatMap(l => l.dash ? [] : l.gaps), window: extra.window, on: extra.on === undefined ? S.date : extra.on, fits: extra.fits || [] }) : ''}
-    <div class="foot"><span>${extra.foot || ''}</span>${lines.length ? `<button type="button" class="linkbtn" data-table="${esc(id)}">${open ? 'Hide table' : 'Show as table'}</button>` : ''}</div>
-    ${open && lines.length ? table(lines) : ''}</div>`;
+    <div class="foot"><span>${extra.foot || ''}</span>${lines.length ? `<span class="tbtns"><button type="button" class="linkbtn" data-tview="${esc(id)}">Open table</button><button type="button" class="linkbtn" data-tcsv="${esc(id)}">Export CSV</button></span>` : ''}</div></div>`;
 }
 const keys = (lines) => `<div class="keys">${lines.map(l => `<span><i style="border-color:${l.color};${l.dash ? 'border-top-style:dashed' : ''}"></i>${esc(l.label)}</span>`).join('')}</div>`;
 
@@ -1046,19 +1081,24 @@ function coverageSheet() {
     ${px.length ? `<h3 class="sub-h">Usable pixels in each zone</h3><table class="data"><thead><tr><th>Track</th>${zones().map(z => `<th>${esc(zoneName(z))}</th>`).join('')}</tr></thead><tbody>${px.join('')}</tbody></table>
       <p class="sub small">Pixels with a connected series over the whole window. A zone with none has no measurement on that track.</p>` : ''}`;
 }
+// one station panel per monument: every GNSS solution there, each against every radar track that covers it
 function stationSheet(id) {
-  const f = S.stations?.features.find(f => f.properties.station === id); if (!f) return null;
-  const p = f.properties;
-  let html = `<h2>${esc(p.station)}</h2><div class="kicker">GNSS station · ${esc(cleanLabel(p.source))} · ${esc(p.dist_km)} km from the town</div>`;
-  for (const s of sideSats()) {
-    const t = p.tracks?.[`${s}:${S.track[s]}`];
-    html += `<div class="block"><h3><span><span class="${SATS[s].cls}" aria-hidden="true">${SATS[s].mark}</span> ${esc(sensors()[s].label)} ${esc(S.track[s])} against GNSS</span></h3>`;
-    html += t ? `<div class="nums"><div><small>${esc(sensors()[s].label)}</small><strong>${fmt(t.radar ?? t.nisar)}<span>mm/yr</span></strong></div><div><small>GNSS</small><strong>${fmt(t.gnss)}<span>mm/yr</span></strong></div><div><small>Difference</small><strong>${fmt(t.diff)}<span>mm/yr</span></strong></div><div><small>Tolerance</small><strong>±${esc(t.tol)}<span>mm/yr</span></strong></div></div>` : '<p class="reason">No comparison for this track.</p>';
-    html += '</div>';
+  const f0 = S.stations?.features.find(f => f.properties.station === id); if (!f0) return null;
+  const k = f0.geometry.coordinates.map(v => v.toFixed(4)).join(',');
+  const group = S.stations.features.filter(f => f.geometry.coordinates.map(v => v.toFixed(4)).join(',') === k)
+    .sort((a, b) => (b.properties.combined ? 1 : 0) - (a.properties.combined ? 1 : 0));
+  const label = (key) => { const [s, t] = key.split(':'); return `<span class="${SATS[s]?.cls || ''}" aria-hidden="true">${SATS[s]?.mark || ''}</span> ${esc(sensors()[s]?.label || s)} ${esc(t)}`; };
+  let html = `<h2>${esc(group.filter(g => !g.properties.combined).map(g => g.properties.station).join(' · ') || f0.properties.station)}</h2>
+    <div class="kicker">GNSS monument · ${esc(f0.properties.dist_km)} km from the town · ${group.length} solution${group.length > 1 ? 's' : ''}</div>
+    <p class="reason">Each solution is compared with every radar track covering the station. A tolerance includes how much a station-sized patch of radar pixels scatters on stable ground (correlated noise), so a "disagree" inside a wide tolerance is not evidence. ${esc(NEG_TEXT)}</p>`;
+  for (const f of group) {
+    const p = f.properties;
+    const v = p.status === 'warn' ? ['warn', '!', 'Inconclusive: radar noise wider than the test'] : p.agree === true ? ['yes', '✔', 'Satellite and station agree'] : p.agree === false ? ['no', '✘', 'Satellite and station disagree'] : ['na', '?', 'Not tested'];
+    html += `<div class="block"><h3><span>${esc(p.station)}</span><span class="badge">${esc(p.period || '')}</span></h3><p class="sub small">${esc(cleanLabel(p.source))}${p.t_end ? ` · series ends ${esc(p.t_end)}, assumes steady motion since` : ''}</p>`;
+    const rows = Object.entries(p.tracks || {});
+    html += rows.length ? `<div class="tscroll"><table class="data"><thead><tr><th>Radar</th><th>Radar, mm/yr</th><th>GNSS in LOS, mm/yr</th><th>Difference</th><th>Tolerance</th><th>Pixels</th></tr></thead><tbody>${rows.map(([key, t]) => `<tr><td>${label(key)}</td><td>${fmt(t.radar ?? t.nisar)}</td><td>${fmt(t.gnss)}</td><td>${fmt(t.diff)}</td><td>±${esc(t.tol)}</td><td>${esc(t.n_px)} (${esc(t.radius_m)} m)</td></tr>`).join('')}</tbody></table></div>` : '<p class="reason">No radar track covers this station.</p>';
+    html += `<div class="verdict ${v[0]}"><span aria-hidden="true">${v[1]}</span> ${v[2]}</div></div>`;
   }
-  const v = p.agree === true ? ['yes', '✔', 'Satellite and station agree'] : p.agree === false ? ['no', '✘', 'Satellite and station disagree'] : ['na', '?', 'Not tested'];
-  html += `<div class="verdict ${v[0]}"><span aria-hidden="true">${v[1]}</span> ${v[2]}</div><p class="reason">${esc(cleanLabel(p.reason) || p.reason)}</p>`;
-  if (p.t_end) html += `<p class="reason">The GNSS series ends in ${esc(p.t_end)}, so it assumes steady motion since.</p>`;
   return html;
 }
 function zoneSheet(id) {
@@ -1131,12 +1171,18 @@ function runsPanel(z, trk) {
       : 'no series is stored for this zone, track and window';
     return `<li><b>${esc(scenarioLabel(sc))}</b>: not available for ${esc(win()?.label || 'this window')}: ${esc(why)}.${elsewhere.length ? ` Available for ${esc(elsewhere.join(', '))}.` : ''}</li>`;
   }).join('');
+  const q = (s) => `"${String(s).replace(/"/g, '""')}"`;
+  blockData[`runs-${z.id}`] = { title: `${esc(zoneName(z))}: processing runs, ${esc(trk)}, ${esc(win()?.label || '')}`,
+    html: `<div class="tscroll"><table class="data runs-t big"><thead><tr><th>Run</th><th>Fitted change</th><th>Acquisitions</th><th>Usable pixels</th><th>Window</th><th>Reference</th></tr></thead><tbody>${rows}</tbody></table></div>${table(have.map(sc => { const e = entry(z, 's1', trk, sc); return { label: scenarioLabel(sc), dates: e.dates, mm: e.mm }; }))}`,
+    csv: ['run,fitted_change_mm,acquisitions,usable_pixels,window_start,window_end,reference', ...have.map(sc => { const e = entry(z, 's1', trk, sc);
+      return [q(scenarioLabel(sc)), e.fitted_change_mm, n(e), e.n_pixels, e.dates[0], e.dates[e.dates.length - 1], q(runRef(sc))].join(','); })].join('\n') + '\n' };
   const lead = flips.length ? `<div class="lead-finding"><b>Fitted direction changes with processing</b><span>Baseline ${fmt(base.fitted_change_mm, 2)} mm; ${flips.map(sc => { const e = entry(z, 's1', trk, sc); return `${esc(scenarioLabel(sc))} ${fmt(e.fitted_change_mm, 2)} mm (${e.n_pixels} px)`; }).join('; ')}. The sign of this zone's result depends on how the data are processed, so it is not a settled finding.</span></div>` : '';
   return `${lead}<div class="block runs"><h3><span>Compare processing runs</span><span class="badge">${esc(trk)} · ${esc(win()?.label || '')}</span></h3>
     <label class="runpick">Overlay with <select id="cmp-run">${alts.map(sc => `<option value="${esc(sc)}"${sc === S.cmpRun ? ' selected' : ''}>${esc(scenarioLabel(sc))}</option>`).join('')}</select></label>
     ${keys(lines.map(l => ({ ...l, label: `${l.label}: observed` })).concat(fits.map(f => ({ label: `${f.label.split(':')[0]}: fitted line`, color: f.color, dash: true }))))}
     ${chart({ lines, ...(() => { const [a, b] = rangeOf(lines); return { from: a, to: b }; })(), fits, on: S.date })}
     <div class="tscroll"><table class="data runs-t"><thead><tr><th>Run</th><th>Fitted change</th><th>Acquisitions</th><th>Usable pixels</th><th>Window</th><th>Reference</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <p class="tbtns"><button type="button" class="linkbtn" data-tview="runs-${esc(z.id)}">Open table</button><button type="button" class="linkbtn" data-tcsv="runs-${esc(z.id)}">Export CSV</button></p>
     ${missing ? `<ul class="missing">${missing}</ul>` : ''}
     <p class="sub small">Observed points are the zone median at each acquisition; dashed lines are each run's fitted annualized slope over its window. The elevation correction is fitted to the data, so it can absorb real motion that follows elevation. ${esc(NEG_TEXT)}</p></div>`;
 }
@@ -1197,7 +1243,8 @@ function renderSheet() {
   if (!html) { sh.hidden = true; return; }
   const top = sh.scrollTop;
   $('#sheet-body').innerHTML = html; sh.hidden = false; sh.scrollTop = top;
-  sh.querySelectorAll('[data-table]').forEach(b => b.onclick = () => { const id = b.dataset.table; S.tables.has(id) ? S.tables.delete(id) : S.tables.add(id); renderSheet(); });
+  sh.querySelectorAll('[data-tview]').forEach(b => b.onclick = () => openTable(b.dataset.tview));
+  sh.querySelectorAll('[data-tcsv]').forEach(b => b.onclick = () => { const d = blockData[b.dataset.tcsv]; if (d) download(`${S.site}_${b.dataset.tcsv}.csv`, d.csv || csvOf(d.lines)); });
   sh.querySelectorAll('[data-go]').forEach(b => b.onclick = () => goSentinel());
   sh.querySelectorAll('[data-fill]').forEach(b => b.onclick = () => { const [a, c] = b.dataset.fill.split('|'); fillGap(a, c); });
   wireChoices(sh);
@@ -1237,6 +1284,7 @@ function renderAbout() {
     <p>It shows ground motion measured by radar satellites, along each satellite's line of sight and relative to nearby terrain, over the months they observed. It is not a hazard forecast, an evacuation guide or a building safety assessment. For official notices, follow the Vâlcea emergency inspectorate (ISU Vâlcea) and the Ocnele Mari town hall.</p>
     <h3 id="checks-h">Checks · ${n.pass ?? 0} pass, ${n.warn ?? 0} warn, ${n.fail ?? 0} fail, ${n.info ?? 0} info</h3>
     <ul class="checks">${S.checks.map(c => `<li id="chk-${esc(c.id)}" class="${esc(c.status)}"><span class="ic" title="${esc(c.status)}">${STATUS_ICON[c.status] || '·'}</span><div><div>${esc(c.title)}</div><div class="detail">${esc(c.detail)}${c.value !== null && c.value !== undefined ? ` · value ${esc(c.value)}` : ''}</div></div></li>`).join('') || '<li>No checks yet.</li>'}</ul>
+    ${S.updates ? `<h3>Data freshness</h3><p class="sub">${esc(S.updates.summary)} Checked ${esc(S.updates.checked)} (update.py).</p>` : ''}
     <h3>The two radars</h3>
     ${sn.map(x => `<p><b>${esc(x.label)}</b> · ${esc(x.agency)} · ${esc(x.band)}, ${esc(x.wavelength_cm)} cm · ${esc(x.status)}${x.look ? ` · looks ${esc(x.look)}` : ''}<br><span class="sub">${esc(x.product || '')}${x.product ? '. ' : ''}Reference: ${esc(x.reference)}</span>${x.pending ? `<br><span class="sub">${esc(x.pending)}</span>` : ''}</p>`).join('')}
     ${Object.keys(m).length ? `<h3>Methods</h3>${['s1', 'sign', 'rate', 'zones'].filter(k => m[k]).map(k => `<p class="sub">${esc(m[k])}</p>`).join('')}
@@ -1332,6 +1380,7 @@ async function main() {
     setTimeout(() => { b.textContent = was; }, 1600);
   });
   $('#about').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.close(); });
+  $('#table-dlg').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.close(); });
   $('#exp').addEventListener('change', (e) => { S.exp = e.target.checked; changed(); });
   $('#opacity').addEventListener('input', (e) => {
     S.opacity = Number(e.target.value) / 100;
@@ -1350,6 +1399,8 @@ async function main() {
   handle.addEventListener('keydown', (e) => { if (e.key === 'ArrowLeft') setSplit(S.split - 5); else if (e.key === 'ArrowRight') setSplit(S.split + 5); });
 
   wireTimeline(); renderChecksButton(); renderAbout();
+  initLang(readHash().lang);
+  document.querySelectorAll('[data-lang]').forEach(b => b.addEventListener('click', () => { setLang(b.dataset.lang); writeHash(); }));
   changed();
 }
 main();
