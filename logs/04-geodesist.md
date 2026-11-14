@@ -6,39 +6,6 @@ This is the running log for role 04, newest entry first, so the team can follow 
 
 ---
 
-## Sat 14 Nov 2026, about 21:15 · EuVeM2022 or EGMS for the historical (long-term) forecast: EGMS Ortho
-
-Branch `r04/forecast-anchor`. Done with Claude Code (see the `AI-DISCLOSURE.md` log). A decision note only: no code or product changed.
-
-### The question
-
-`sentinel1/scripts/forecast.py` (03) has a `long_term` path: a fixed Zone 4 rate from history, projected on 029A's line of sight. Which reference should give that rate: the GNSS model EuVeM2022 (our NISAR tie model) or EGMS?
-
-### Decision: EGMS Ortho 2020 to 2025 (L3, Up and East), as `forecast.py` already does. EuVeM2022 is not used for the forecast.
-
-| Reference | Resolution | Zone 4 rate it gives, 029A LOS | Usable for a zone forecast? |
-| --- | --- | --- | --- |
-| EuVeM2022 (GNSS velocity model) | 0.1° grid (about 8 by 11 km); data end 2021 | ve −0.74, vu +0.08 mm/yr at the site centre: +0.53 mm/yr in LOS, the **same** under the zone and under the reference band, so **0 mm/yr relative** | No: it cannot see a 250 m salt zone |
-| EGMS GNSS model (A-EPND 2023) | 50 km grid | Same problem, smoother still | No |
-| **EGMS Ortho 2020 to 2025** (05's cut, 10 Zone 4 cells) | 100 m | Up −3.1, East +4.9 mm/yr: **−5.48 mm/yr** in LOS (e −0.634, u 0.765) | **Yes**, and it agrees with Sentinel-1 January to October 2026 (−5.4 mm/yr) within 0.1 mm/yr |
-
-- **Why not EuVeM2022:** a GNSS model fixes the frame (level and tilt over 50 km). It holds no information about a 2 km bowl. Used as a forecast anchor it would give a flat path, the same as persistence with no trend.
-- **Role split stays as it is:** EuVeM2022 ties NISAR to a frame (`calibrate.py`); EGMS GNSS is the swap model (T8); EGMS Ortho is the history for zones (05's cut) and the forecast anchor (03).
-
-### Frame check on the anchor (04)
-
-- **What is relative:** the Sentinel-1 series that the forecast extends is referenced to a local band (`fit.py` subtracts the reference band median). EGMS Ortho is absolute in ETRF2000. To compare like with like, the anchor should be zone minus the EGMS level of the stable ground.
-- **Size of that correction:** EGMS stable ground near the site is Up −0.4 to −0.6 mm/yr (05, `docs/validation-log.md`). EGMS East on stable ground follows its GNSS model, about −0.75 mm/yr (ETRF2000) at the centre. In 029A LOS: −0.634 × (−0.75) + 0.765 × (−0.4 to −0.6) = **+0.02 to +0.17 mm/yr**.
-- **Effect:** the relative anchor would be about −5.5 to −5.65 mm/yr instead of −5.48. Over the 178 days from 7 Jul 2026 to 1 Jan 2027 that moves the endpoint by at most 0.08 mm, against a 30-day MAE of about 4 mm. **No change needed**; the number is recorded so nobody has to redo it.
-- **Not covered:** the north component is dropped (EGMS Ortho has none; 029A's n is small). The ETRF2000 vertical offset (about −0.4 mm/yr, 15:45 entry) cancels in zone minus stable ground, so it does not enter the forecast.
-
-### What this does not change
-
-- The January default is Chronos-2 (team decision, `DECISIONS.md` 20:30). The long-term trend stays the independent physical anchor next to it; this note only settles which reference that anchor comes from.
-- `forecast.py` is 03's file. Nothing to edit; if 03 ever wants the relative form, the correction is the line above.
-
----
-
 ## Sat 14 Nov 2026, about 17:40 · 129A on the team's own stream: HDF5 verified, 13 pairs, real tie
 
 Branch `r04/129a-series`. Done with Claude Code (see the `AI-DISCLOSURE.md` log). Earthdata: Matei signed in himself; the token sits in `.env` (git-ignored) and was never printed or copied.
