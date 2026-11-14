@@ -287,3 +287,8 @@ dialog p { margin: 6px 0; }
 }
 .legend-town { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-top: 8px; }
 .legend-town i { width: 22px; height: 0; border-top: 2.5px solid #111; box-shadow: 0 0 0 1.5px rgba(255,255,255,.8); }
+
+/* interpretation notes from the products (03 zone review) */
+.zone-note { display: flex; flex-direction: column; gap: 2px; border-left: 3px solid var(--warn); background: #FFFBEB; border-radius: 10px; padding: 8px 12px; margin: 4px 0 10px; font-size: 14px; }
+.zone-note.quiet { border-left-color: var(--muted); background: var(--soft); }
+.zone-note small { color: var(--muted); font-size: 12px; }

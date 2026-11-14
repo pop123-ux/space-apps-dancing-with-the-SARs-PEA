@@ -54,6 +54,24 @@ SCENARIOS = {           # summary.json fit name → label on the page
 }
 WINDOW = "jul_oct"
 
+# Interpretation labels from 03's zone review (sentinel1/docs/TEAM_HANDOFF.md, "Group-aware refit and EGMS
+# cross-check", and docs/ui.md, "Zone review and historical context", 14 Nov 2026). Text only: no value is changed.
+REVIEW = "03 zone review, 14 Nov 2026 (sentinel1/docs/TEAM_HANDOFF.md)"
+ZONE_NOTES = {
+    "z3": dict(label="Historically subsiding · 2026 trend inconclusive",
+               detail="EGMS history shows this zone sinking, but the 2026 Sentinel-1 evidence is limited: no connected "
+                      "ascending (029A) series in July to October, and the descending (007D) result changes sign across "
+                      "processing runs. Over January to October no zone pixel stays connected on either track.",
+               source=REVIEW),
+}
+TRACK_NOTES = {
+    "s1:029A": dict(zones=["z1", "z2", "z4"], label="Local reference sensitivity",
+                    detail="On 029A, terrain near the zones also shows a negative line-of-sight signal, so part of a zone "
+                           "value may come from the reference area, the atmosphere or the geometry rather than the zone. "
+                           "The values are shown as measured, without a correction.",
+                    source=REVIEW),
+}
+
 
 # ------------------------------------------------------------------------------------------------ inputs
 def iso(d: str) -> str:
@@ -304,6 +322,7 @@ def run(site_key: str) -> None:
         default=dict(sat="nisar", view="coverage", track="129A"),
         windows={WINDOW: windows[WINDOW]["label"]}, default_window=WINDOW,
         checks={k: sum(c.get("status") == k for c in checks) for k in ("pass", "warn", "fail", "info")},
+        zone_notes=ZONE_NOTES, track_notes=TRACK_NOTES,
         egms=dict(status="pending", label="EGMS Ortho · 2020 to 2025 · 100 m",
                   detail="The E54N25 extracts (05) are not verified yet. EGMS history gives context; it cannot verify a 2026 rate."),
         methods=dict(

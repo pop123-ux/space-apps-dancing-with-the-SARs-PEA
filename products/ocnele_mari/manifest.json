@@ -4,7 +4,7 @@
  "story": "TODO(01): one sentence, written by the Lead",
  "synthetic": false,
  "note": "Sentinel-1 measurements (Jul to Oct 2026) and NISAR catalog coverage. NISAR displacement is pending.",
- "built": "2026-11-14T13:59:48+00:00",
+ "built": "2026-11-14T14:26:57+00:00",
  "bounds": [
   [
    45.016685,
@@ -204,6 +204,25 @@
   "warn": 0,
   "fail": 0,
   "info": 1
+ },
+ "zone_notes": {
+  "z3": {
+   "label": "Historically subsiding · 2026 trend inconclusive",
+   "detail": "EGMS history shows this zone sinking, but the 2026 Sentinel-1 evidence is limited: no connected ascending (029A) series in July to October, and the descending (007D) result changes sign across processing runs. Over January to October no zone pixel stays connected on either track.",
+   "source": "03 zone review, 14 Nov 2026 (sentinel1/docs/TEAM_HANDOFF.md)"
+  }
+ },
+ "track_notes": {
+  "s1:029A": {
+   "zones": [
+    "z1",
+    "z2",
+    "z4"
+   ],
+   "label": "Local reference sensitivity",
+   "detail": "On 029A, terrain near the zones also shows a negative line-of-sight signal, so part of a zone value may come from the reference area, the atmosphere or the geometry rather than the zone. The values are shown as measured, without a correction.",
+   "source": "03 zone review, 14 Nov 2026 (sentinel1/docs/TEAM_HANDOFF.md)"
+  }
  },
  "egms": {
   "status": "pending",

@@ -66,6 +66,7 @@ One title pill and one satellite menu at the top, one dock at the bottom, the ma
 | Processing choices | Built | Window and run selectors over `sensitivity.json`; the map stays the baseline run and says so. Only the July to October window is in the repository |
 | Agreement | Built, pending data | "Not testable yet" while NISAR is unmeasured and O-19 is open; EGMS 2020 to 2025 panel in its empty state |
 | Coverage | Built | NISAR catalog pairs (hollow marks), Sentinel-1 dates, the January to June gap, the common window, usable pixels per zone |
+| 03 zone review labels | Built | Zone 3: "Historically subsiding · 2026 trend inconclusive"; 029A on Zones 1, 2 and 4: "Local reference sensitivity". Text from `manifest.zone_notes` and `track_notes` (written by `export.py`); values unchanged |
 | Up and east (experimental) | Disabled | No supported export (O-19) |
 | Station pins | Built, no data | `stations.geojson` is an empty pending file until `validate.py` (05) runs |
 | URL state | Built | `#site=…&sat=…&track=…&view=…&date=…&exp=…&window=…&scenario=…` |

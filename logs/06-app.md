@@ -6,6 +6,12 @@ This is the running log for role 06, newest entry first, so the team can follow 
 
 ---
 
+## Sat 14 Nov 2026, about 16:27 · 03's zone review labels
+
+Added the labels 03 asked for in `docs/ui.md` ("Zone review and historical context"). `export.py` writes them into `manifest.json` as `zone_notes` (Zone 3: "Historically subsiding · 2026 trend inconclusive") and `track_notes` (Sentinel-1 029A on Zones 1, 2 and 4: "Local reference sensitivity"), each with its source; the page shows a short label in Zones and the full text in the zone card. No value changed: the re-export altered only `manifest.json`. EGMS numbers stay off the page until 05's products reach 06. Checked in the browser; `pytest -q` and `checkpoint.py` pass.
+
+---
+
 ## Sat 14 Nov 2026, about 16:25 · merged to `main`
 
 `r06/page` merged into `main` at Darius's request, without a PR (he asked for it directly, on condition that nothing breaks). `main` had two new 03 commits (PR #10: `.gitattributes` keeps `summary.json` bytes, a zone review in `docs/ui.md` and `TEAM_HANDOFF.md`); they were merged into `r06/page` first. The only conflict was two appended rows in `AI-DISCLOSURE.md`; both kept.

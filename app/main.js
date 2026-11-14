@@ -277,7 +277,7 @@ function addMarkers(m) {
   for (const p of zones()) {
     const el = document.createElement('button');
     el.type = 'button'; el.className = 'marker zone'; el.dataset.id = p.id;
-    el.title = zoneName(p);
+    el.title = zoneNote(p) ? `${zoneName(p)} · ${zoneNote(p).label}` : zoneName(p);
     el.setAttribute('aria-label', `${zoneName(p)}: show its history`);
     el.textContent = zoneShort(p);
     el.addEventListener('click', (e) => { e.stopPropagation(); select({ kind: 'zone', id: p.id }); });
@@ -702,7 +702,20 @@ function factRow(point, sat, trk) {
   const limited = e.n_pixels !== undefined && e.n_pixels !== null && e.n_pixels < LIMITED_PX;
   const d = direction(point, sat, trk);
   return `<div class="fact"><span>${head}</span><span>${change} · ${esc(e.n_pixels ?? 'n/a')} pixels</span>
-    <span class="tags">${limited ? `<span class="badge warn">Limited coverage · ${esc(e.n_pixels)} px</span>` : ''}${d ? `<span class="badge ${d.cls}">${esc(d.text)}</span>` : ''}</span></div>`;
+    <span class="tags">${limited ? `<span class="badge warn">Limited coverage · ${esc(e.n_pixels)} px</span>` : ''}${d ? `<span class="badge ${d.cls}">${esc(d.text)}</span>` : ''}${trackNote(point, sat, trk) ? `<span class="badge" title="${esc(trackNote(point, sat, trk).detail)}">${esc(trackNote(point, sat, trk).label)}</span>` : ''}</span></div>`;
+}
+// interpretation notes from the products (03's zone review), shown as written
+const zoneNote = (z) => S.man.zone_notes?.[z.id] || null;
+const trackNote = (z, sat, trk) => { const n = S.man.track_notes?.[`${sat}:${trk}`]; return n && (!n.zones || n.zones.includes(z.id)) ? n : null; };
+function notesBox(z, sats, full) {
+  const out = [];
+  const zn = zoneNote(z);
+  if (zn) out.push(`<div class="zone-note"><b>${esc(zn.label)}</b>${full ? `<span>${esc(zn.detail)}</span><small>${esc(zn.source)}</small>` : ''}</div>`);
+  if (full) for (const s of sats) for (const t of tracksOf(s)) {
+    const tn = trackNote(z, s, t);
+    if (tn) out.push(`<div class="zone-note quiet"><b>${esc(tn.label)} · ${esc(sensors()[s].label)} ${esc(t)}</b><span>${esc(tn.detail)}</span><small>${esc(tn.source)}</small></div>`);
+  }
+  return out.join('');
 }
 
 // ------------------------------------------------------------------------------------------------ processing choices
@@ -741,7 +754,7 @@ function zonesSheet() {
     const facts = sat ? tracksOf(sat).map(t => factRow(z, sat, t)).join('') : sats.map(s => factRow(z, s, S.track[s])).join('');
     const lines = linesFor(z);
     const missing = sats.filter(s => !entry(z, s, S.track[s])).length;
-    return block(`z-${z.id}`, esc(zoneName(z)), '', lines, { top: `<div class="facts">${facts}</div>`,
+    return block(`z-${z.id}`, esc(zoneName(z)), '', lines, { top: `${notesBox(z, sats, false)}<div class="facts">${facts}</div>`,
       foot: missing ? `No series on ${S.track[sat || 's1']} for this zone` : `Chart: ${sats.map(s => `${sensors()[s].label} ${S.track[s]}`).join(' and ')}` });
   });
   const ex = zs.length ? linesFor(zs.find(z => linesFor(z).length) || zs[0]) : [];
@@ -830,7 +843,7 @@ function zoneSheet(id) {
   let html = `<h2>${esc(zoneName(z))}</h2><div class="kicker">Salt zone · ${esc(z.lat)}° N, ${esc(z.lon)}° E${win() ? ` · ${esc(win().label)}` : ''}</div>`;
   if (!sats.length) return html + `<div class="verdict na">${esc(pendingText(S.sat))}</div>`;
   const facts = S.sat === 'compare' ? sats.map(s => factRow(z, s, S.track[s])).join('') : tracksOf(S.sat).map(t => factRow(z, S.sat, t)).join('');
-  html += `<div class="facts">${facts}</div>${choicesPanel()}`;
+  html += `${notesBox(z, S.sat === 'compare' ? sats : [S.sat], true)}<div class="facts">${facts}</div>${choicesPanel()}`;
   const lines = sats.map(s => lineOf(z, s, S.track[s])).filter(Boolean);
   const ctl = control();
   if (ctl) for (const s of sats) { const l = lineOf(ctl, s, S.track[s], { dash: true, color: '#A8A29E', label: cleanLabel(ctl.label) }); if (l) lines.push(l); }
