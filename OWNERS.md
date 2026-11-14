@@ -74,6 +74,7 @@ Every file in this repository has an owner role, 01 to 06, or is shared. The own
 | `run_all.py` | shared · announce changes; 01 reviews | Runs the steps in order |
 | `tests/test_skeleton.py` | shared · announce changes; 01 reviews | Smoke test; must pass before every push |
 | `tests/test_owners.py` | shared · announce changes; 01 reviews | Checks that every file is in this list and carries the same owner line |
+| `tests/test_sentinel1_fit.py` | shared · announce changes; 01 reviews | Checks the Sentinel-1 solver and rate estimators, gaps included |
 | `requirements.txt` | shared · announce changes; 01 reviews | Python packages; each owner adds what their script needs |
 | `.gitignore` | shared · announce changes; 01 reviews | Keeps data and secrets out of git |
 | `.env.example` | shared · announce changes; 01 reviews | Template for the Earthdata token; the real .env is never committed |
