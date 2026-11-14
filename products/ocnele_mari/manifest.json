@@ -267,5 +267,9 @@
    }
   ]
  },
- "credits": "Contains modified Copernicus Sentinel data 2026, processed by ASF HyP3. NISAR catalog: NASA–ISRO, ASF DAAC (beta and provisional products, not intended for scientific research)."
+ "credits": "Contains modified Copernicus Sentinel data 2026, processed by ASF HyP3. NISAR catalog: NASA–ISRO, ASF DAAC (beta and provisional products, not intended for scientific research).",
+ "zone_notes": {
+  "z1": "Strict coherence flips the fitted direction from −5.15 mm to +0.33 mm, with only 2 pixels.",
+  "z2": "The west reference flips the fitted direction from −1.42 mm to +0.25 mm."
+ }
 }
