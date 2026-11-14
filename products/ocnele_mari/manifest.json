@@ -57,8 +57,8 @@
      "label": "Sentinel-1 029A: line-of-sight rate, annualized short-window slope",
      "png": "s1/los_029A.png",
      "units": "mm/yr",
-     "vmin": -40.0,
-     "vmax": 40.0,
+     "vmin": -40,
+     "vmax": 40,
      "track": "029A",
      "experimental": false,
      "window": "jul_oct",
@@ -70,8 +70,8 @@
      "label": "Sentinel-1 007D: line-of-sight rate, annualized short-window slope",
      "png": "s1/los_007D.png",
      "units": "mm/yr",
-     "vmin": -40.0,
-     "vmax": 40.0,
+     "vmin": -40,
+     "vmax": 40,
      "track": "007D",
      "experimental": false,
      "window": "jul_oct",
@@ -117,8 +117,8 @@
       "s1/frames/029A/2026-09-29.png",
       "s1/frames/029A/2026-10-05.png"
      ],
-     "vmin": -20.0,
-     "vmax": 20.0,
+     "vmin": -20,
+     "vmax": 20,
      "units": "mm since first date",
      "direction": "Ascending",
      "gaps": [],
@@ -162,8 +162,8 @@
       "s1/frames/007D/2026-09-28.png",
       "s1/frames/007D/2026-10-04.png"
      ],
-     "vmin": -20.0,
-     "vmax": 20.0,
+     "vmin": -20,
+     "vmax": 20,
      "units": "mm since first date",
      "direction": "Descending",
      "gaps": [],
@@ -206,9 +206,42 @@
   "info": 1
  },
  "egms": {
-  "status": "pending",
-  "label": "EGMS Ortho · 2020 to 2025 · 100 m",
-  "detail": "The E54N25 extracts (05) are not verified yet. EGMS history gives context; it cannot verify a 2026 rate."
+  "status": "reported_summary",
+  "label": "EGMS Ortho · 2020–2025 · 100 m",
+  "detail": "Tile E54N25, 9 December 2020–25 November 2025. Zone 3 shows the strongest historical sinking in this report. Its 2026 trend is inconclusive. Cell maps and time series are pending. The R05 stable-ground sample uses a different mask from the Sentinel-1 outer comparison area.",
+  "summary": [
+   {
+    "id": "z1",
+    "cells": 2,
+    "up_mm_yr": -3.9,
+    "east_mm_yr": -4.1
+   },
+   {
+    "id": "z2",
+    "cells": 5,
+    "up_mm_yr": -2.5,
+    "east_mm_yr": -3.3
+   },
+   {
+    "id": "z3",
+    "cells": 6,
+    "up_mm_yr": -18.9,
+    "east_mm_yr": 0.2
+   },
+   {
+    "id": "z4",
+    "cells": 10,
+    "up_mm_yr": -3.1,
+    "east_mm_yr": 4.9
+   },
+   {
+    "id": "stable",
+    "cells": 27972,
+    "up_mm_yr": -0.5,
+    "east_mm_yr": -0.1
+   }
+  ],
+  "source": "https://github.com/pop123-ux/space-apps-dancing-with-the-SARs-PEA/blob/a5ad330a8361d7d75b78221ea1352cb292176272/docs/validation-log.md#egms"
  },
  "methods": {
   "s1": "Sentinel-1 IW2 VV bursts 029_060407_IW2 and 007_013694_IW2, processed by ASF HyP3 (10×2 looks, water mask) and inverted on a 40 m grid with coherence-squared weights. Each pair is zeroed on a terrain reference band 3 to 6.5 km from the zone edges; the outer comparison area is 6.5 to 8 km. Not GNSS-calibrated.",

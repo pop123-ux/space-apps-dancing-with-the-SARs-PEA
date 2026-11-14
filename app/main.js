@@ -754,6 +754,17 @@ function checkForZone(z) {
 }
 function egmsPanel() {
   const e = S.man.egms; if (!e) return '';
+  if (e.summary?.length) {
+    const names = { z1: 'Zone 1', z2: 'Zone 2', z3: 'Zone 3', z4: 'Zone 4', stable: 'R05 stable-ground sample' };
+    const rate = value => Number.isFinite(value) ? value.toFixed(1) : '—';
+    const rows = e.summary.map(row => `<tr><th scope="row">${esc(names[row.id] || row.id)}</th><td>${esc(row.cells)}</td><td>${rate(row.up_mm_yr)}</td><td>${rate(row.east_mm_yr)}</td></tr>`).join('');
+    return `<div class="block egms"><h3><span>${esc(e.label)}</span><span class="badge">Reported zone medians</span></h3>
+      <p class="reason">${esc(e.detail)}</p>
+      <table><caption>Historical median rates in mm/yr. Positive means up or east.</caption>
+      <thead><tr><th scope="col">Area</th><th scope="col">Cells</th><th scope="col">Up</th><th scope="col">East–West</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+      <p class="reason"><a href="${esc(e.source)}">R05 extraction and provenance</a></p></div>`;
+  }
   return `<div class="block egms"><h3><span>${esc(e.label)}</span><span class="badge">${esc(e.status === 'pending' ? 'Pending verification' : e.status)}</span></h3>
     <div class="seg" role="group" aria-label="EGMS component"><button type="button" disabled aria-pressed="true">Up</button><button type="button" disabled aria-pressed="false">East–West</button></div>
     <p class="reason">${esc(e.detail)}</p></div>`;
