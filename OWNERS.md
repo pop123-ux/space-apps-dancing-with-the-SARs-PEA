@@ -77,6 +77,7 @@ Every file in this repository has an owner role, 01 to 06, or is shared. The own
 | `tests/test_skeleton.py` | shared · announce changes; 01 reviews | Smoke test; must pass before every push |
 | `tests/test_owners.py` | shared · announce changes; 01 reviews | Checks that every file is in this list and carries the same owner line |
 | `tests/test_sentinel1_fit.py` | shared · announce changes; 01 reviews | Checks the Sentinel-1 solver and rate estimators, gaps included |
+| `tests/test_forecast.py` | shared · announce changes; 01 reviews | Checks the Zone 4 forecast models and 05's rain test |
 | `requirements.txt` | shared · announce changes; 01 reviews | Python packages; each owner adds what their script needs |
 | `.gitignore` | shared · announce changes; 01 reviews | Keeps data and secrets out of git |
 | `.gitattributes` | shared · announce changes; 01 reviews | Preserves exact bytes for checksum-tracked files |
