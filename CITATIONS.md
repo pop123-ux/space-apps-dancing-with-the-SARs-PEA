@@ -24,7 +24,9 @@ These are the data, software, documents and prior work this project uses, with w
 | Published station rates, Muntean et al. 2026, Supplement Tables S1 and S3 | VLC2 and HORE | [The paper's supplement](https://se.copernicus.org/articles/17/747/2026/se-17-747-2026-supplement.pdf) (*Solid Earth* 17, 747–762; [article](https://se.copernicus.org/articles/17/747/2026/)), read 14 Nov 2026: Table S3 has VLC2 and no HORE. Do not redistribute the table (O-13) | 04 |
 | EGMS Ortho L3 Up, 100 m, 2020 to 2024 | Stable-ground check; the bowl's history | [EGMS](https://egms.land.copernicus.eu/), free login; cut to `data/work/<site>/refs/egms_up.csv` | 05 |
 | Copernicus GLO-30 DEM | Troposphere slope | `https://copernicus-dem-30m.s3.amazonaws.com/Copernicus_DSM_COG_10_N45_00_E024_00_DEM/…`; [AWS Registry of Open Data](https://registry.opendata.aws/copernicus-dem/) | 02 |
-| Basemap | Map context | To be decided (O-09) | 06 |
+| Basemap, light (default): OpenFreeMap "positron" style, OpenMapTiles schema, OpenStreetMap data | The page's default map background | `https://tiles.openfreemap.org/styles/positron` ([openfreemap.org](https://openfreemap.org)); free, no API key; credited on the map and in About. Checked 14 Nov 2026 | 06 |
+| Basemap, satellite: Sentinel-2 cloudless 2020 by EOX IT Services GmbH (contains modified Copernicus Sentinel data 2020) | The page's optional "Satellite" background | `https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/…` ([s2maps.eu](https://s2maps.eu)); credited on the map and in About. The 2018 and later layers are licensed CC BY-NC-SA 4.0, as we understand it: 06 confirms on s2maps.eu before submitting | 06 |
+| Ocnele Mari town boundary: OpenStreetMap relation 9845422 (admin_level 8, the town with its villages) | The black outline on the map | Nominatim, `https://nominatim.openstreetmap.org/details?osmtype=R&osmid=9845422&polygon_geojson=1`, fetched 14 Nov 2026, saved as `app/ocnele_mari_boundary.geojson`; © OpenStreetMap contributors, ODbL 1.0, credited on the map | 06 |
 
 ## Software
 
@@ -32,7 +34,8 @@ These are the data, software, documents and prior work this project uses, with w
 | --- | --- | --- |
 | Python, NumPy, SciPy, pandas, h5py, pyproj, requests, asf_search, hyp3_sdk, rasterio, matplotlib, Pillow | Recorded at hour 2 by each owner | PyPI or conda-forge |
 | MintPy | If O-05 picks it | https://github.com/insarlab/MintPy |
-| Leaflet | Recorded by 06 | https://leafletjs.com |
+| MapLibre GL JS | 6.15.0 (loaded from unpkg) | https://maplibre.org |
+| Fonts: Instrument Serif and Inter (SIL Open Font License) | Loaded from Google Fonts | https://fonts.google.com |
 
 ## Documents
 

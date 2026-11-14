@@ -1,72 +1,333 @@
 # Owner: 06 · App developer (Darius)
-"""06 · App developer: turn the numbers into what the page reads: products/<site>/.
+"""06 · App developer: turn the science outputs into what the page reads: products/<site>/.
 
-Status: STUB (interfaces only). Until it works, build the page on
-`python mock_products.py` (products/mock/), which writes the same contract with invented values.
+Status: WORKS for Sentinel-1 (Jul to Oct 2026 fit) and NISAR catalog coverage. NISAR displacement is not exported yet:
+its fit (fetch.py → stack.py → calibrate.py) has not produced ts.npz, so the page shows "Displacement fit pending".
 
     python export.py ocnele_mari
 
-Reads, for both radars (D-004):
-  NISAR: up_east.npz (split.py), per track meta.json/ts.npz/cal.npz;
-  Sentinel-1: sentinel1/analysis/029A.npz, 007D.npz, summary.json (03; restore the grids with sentinel1/scripts/restore_grids.py);
-  products/<site>/stations.geojson + checks.json (validate.py) and calib.json (calibrate.py).
-Writes products/<site>/ (file contracts in docs/build-spec.md): manifest.json with a `sensors` block, <sensor>/los_<track>.png,
-<sensor>/frames/<track>/<date>.png, experimental <sensor>/up.png and east.png, series.json keyed "<sensor>:<track>",
-up.tif, east.tif, and updates products/index.json. The page design is docs/ui.md.
+Reads (never writes) these inputs:
+  Sentinel-1 (03): sentinel1/analysis/summary.json and the grid chunks in sentinel1/assets/ (029A, 007D). The chunks
+      are joined in memory and checked against sentinel1/assets/SHA256SUMS; nothing is written into sentinel1/.
+  NISAR (02): data/scenes/ocnele_mari_gunw.csv, the 22 public GUNW pairs (catalog coverage only).
+  common.py: site, view (D-002), zones, sensors, common window.
+Writes products/<site>/ (file contracts in docs/build-spec.md, design in docs/ui.md):
+  manifest.json      sensors.{nisar,s1}, views, default (NISAR Coverage), windows, methods, credits
+  s1/frames/<track>/<date>.png   cumulative line-of-sight change since the first date, lon/lat grid, RdBu
+  s1/los_<track>.png             line-of-sight rate (annualized short-window slope)
+  s1/points_<track>.json         the same values as map dots, one every 80 m (the page draws these; the PNGs stay
+                                 as a fallback and for the GeoTIFF-free slides)
+  series.json        zone and outer-comparison histories, keyed "s1:<track>"
+  sensitivity.json   per window: frames, layers, and every processing scenario per track and zone
+  coverage.json      acquisition dates per sensor and track; NISAR pairs from the catalog; usable zone pixels
+  stations.geojson, calib.json, checks.json   only if missing, as explicit "pending" files: 04 and 05 own them
+and adds the site to products/index.json.
 
-Starting points (advisor kit + D-002):
-- Leaflet image overlays are axis-aligned: resample UTM grids to a lon/lat grid (~100 m) for the PNGs; the GeoTIFFs keep
-  the original grid.
-- Colours RdBu diverging, red = sinking / away; a fixed, symmetric, readable scale per layer and per track for frames.
-- manifest.view carries D-002: open on Ocnele Mari (center/zoom); Romania is context only.
-- Honest slider: no frames invented across the 18 Jan → 23 Jun 2026 gap; manifest frames carry the gaps so the page
-  can label "no data".
-- Grey out pixels whose |rate| < 2σ (decision with 03).
-- manifest.synthetic must be true for demo/mock; the page shows "simulated, not data" whenever it is.
+Choices (logged in DECISIONS.md): colours fixed at ±20 mm for change and ±40 mm/yr for rate on every track, so both
+satellites share one legend; values beyond the scale are drawn at full colour and the legend says so. Missing pixels
+stay transparent. No experimental up/east layer is exported (03 and 04 have not signed it off, O-19).
 """
 from __future__ import annotations
 
 import argparse
+import csv
+import datetime
+import hashlib
+import io
+import json
+import pathlib
 
 import common as C
 
-
-def lonlat_grid(meta: dict, step_deg: float = 0.0012):
-    """Regular lon/lat grid inside the (rotated) UTM window → (LON, LAT), bounds [[S, W], [N, E]]."""
-    raise C.todo("06", "lon/lat display grid for the overlays")
-
-
-def overlay_png(arr, path, vmax: float) -> None:
-    """RdBu PNG with transparency where there is no data (or where |rate| < 2σ)."""
-    raise C.todo("06", "write one overlay PNG")
-
-
-def export_layers(site: str) -> list[dict]:
-    raise C.todo("06", "up/east/LOS rate overlays → manifest.layers")
-
-
-def export_frames(site: str) -> dict:
-    raise C.todo("06", "cumulative frames per track and date → manifest.frames (with gaps)")
+S1_DIR = C.ROOT / "sentinel1"
+SCENES = C.DATA / "scenes" / "ocnele_mari_gunw.csv"
+CHANGE_VMAX = 20.0      # mm, frames (same scale as mock_products.py, shared by both satellites)
+RATE_VMAX = 40.0        # mm/yr, rate layers
+PX_DEG = 0.0005         # output pixel size in degrees of latitude (about 55 m; the grids are 40 m)
+POINT_STEP = 2          # points: one per 2 × 2 block of 40 m pixels, i.e. one dot every 80 m (its top-left pixel)
+SCENARIOS = {           # summary.json fit name → label on the page
+    "baseline": "Baseline (coherence ≥ 0.35)",
+    "strict_coherence": "Stricter coherence (≥ 0.55)",
+    "west_reference": "West reference area only",
+    "east_reference": "East reference area only",
+    "elevation_correction": "Elevation correction",
+}
+WINDOW = "jul_oct"
 
 
-def export_series(site: str) -> list[dict]:
-    raise C.todo("06", "series at the salt zones and stations → series.json")
+# ------------------------------------------------------------------------------------------------ inputs
+def iso(d: str) -> str:
+    return f"{d[:4]}-{d[4:6]}-{d[6:]}"
 
 
-def write_manifest(site: str, layers: list[dict], frames: dict) -> None:
-    raise C.todo("06", "manifest.json incl. view (D-002), synthetic flag, checks summary, credits")
+def load_summary() -> dict:
+    return json.loads((S1_DIR / "analysis" / "summary.json").read_text(encoding="utf-8"))
 
 
-def write_tifs(site: str) -> None:
-    raise C.todo("06", "up.tif / east.tif on the original grid (rasterio)")
+def load_grid(track: str):
+    """Join the committed chunks of <track>.npz in memory and check them against SHA256SUMS."""
+    import numpy as np
+    sums = {name: digest for digest, name in (l.split() for l in (S1_DIR / "assets" / "SHA256SUMS").read_text().splitlines())}
+    payload = b"".join(p.read_bytes() for p in sorted((S1_DIR / "assets").glob(f"{track}.npz.part*")))
+    if hashlib.sha256(payload).hexdigest() != sums[f"analysis/{track}.npz"]:
+        raise SystemExit(f"sentinel1/assets/{track}.npz.part*: checksum mismatch, the grids do not match SHA256SUMS")
+    return np.load(io.BytesIO(payload), allow_pickle=False)
 
 
-def run(site: str) -> None:
-    layers = export_layers(site)
-    frames = export_frames(site)
-    export_series(site)
-    write_manifest(site, layers, frames)
-    write_tifs(site)
+# ------------------------------------------------------------------------------------------------ rasters
+class LonLatGrid:
+    """A regular lon/lat display grid covering a UTM box, with a nearest-neighbour lookup into the UTM grid."""
+
+    def __init__(self, bounds_utm, shape, epsg: int = 32635):
+        import numpy as np
+        from pyproj import Transformer
+        xmin, ymin, xmax, ymax = bounds_utm
+        ny, nx = shape
+        self.dx, self.dy = (xmax - xmin) / nx, (ymax - ymin) / ny
+        to_ll = Transformer.from_crs(epsg, 4326, always_xy=True)
+        lon, lat = to_ll.transform([xmin, xmax, xmin, xmax], [ymin, ymin, ymax, ymax])
+        # inner box so every display pixel lies inside the UTM grid
+        self.W, self.E = max(lon[0], lon[2]), min(lon[1], lon[3])
+        self.S, self.N = max(lat[0], lat[1]), min(lat[2], lat[3])
+        h = int(round((self.N - self.S) / PX_DEG))
+        w = int(round((self.E - self.W) * np.cos(np.radians((self.N + self.S) / 2)) / PX_DEG))   # square pixels on the ground
+        lats = self.N - (np.arange(h) + 0.5) * (self.N - self.S) / h
+        lons = self.W + (np.arange(w) + 0.5) * (self.E - self.W) / w
+        LON, LAT = np.meshgrid(lons, lats)
+        x, y = Transformer.from_crs(4326, epsg, always_xy=True).transform(LON, LAT)
+        self.col = np.clip(((x - xmin) / self.dx).astype(int), 0, nx - 1)
+        self.row = np.clip(((ymax - y) / self.dy).astype(int), 0, ny - 1)   # row 0 is north
+        self.shape = (h, w)
+
+    def sample(self, arr):
+        return arr[self.row, self.col]
+
+    @property
+    def bounds(self):
+        return [[round(self.S, 6), round(self.W, 6)], [round(self.N, 6), round(self.E, 6)]]
+
+
+def write_points(z, path: pathlib.Path, track: str, dates: list[str], epsg: int = 32635) -> int:
+    """Measurement points for the map's dot layer: one every POINT_STEP pixels, values in 0.1 mm (null = no data).
+
+    The values are the grid's own pixels (sampled, not averaged), so a dot shows exactly what the fit gives there.
+    """
+    import numpy as np
+    from pyproj import Transformer
+    xmin, ymin, xmax, ymax = z["bounds_utm"]
+    rate = z["rate_mm_yr"]; disp = z["displacement_mm"]
+    ny, nx = rate.shape
+    dx, dy = (xmax - xmin) / nx, (ymax - ymin) / ny
+    rows, cols = np.mgrid[0:ny:POINT_STEP, 0:nx:POINT_STEP]
+    rows, cols = rows.ravel(), cols.ravel()
+    keep = np.isfinite(rate[rows, cols]) | np.isfinite(disp[:, rows, cols]).any(axis=0)
+    rows, cols = rows[keep], cols[keep]
+    x = xmin + (cols + 0.5) * dx
+    y = ymax - (rows + 0.5) * dy                       # row 0 is north
+    lon, lat = Transformer.from_crs(epsg, 4326, always_xy=True).transform(x, y)
+    tenth = lambda a: [None if not np.isfinite(v) else int(round(float(v) * 10)) for v in a]
+    obj = dict(track=track, dates=[iso(d) for d in dates], spacing_m=round(dx * POINT_STEP), scale=0.1,
+               units=dict(change="mm since first date", rate="mm/yr"),
+               lon=[round(float(v), 5) for v in lon], lat=[round(float(v), 5) for v in lat],
+               rate=tenth(rate[rows, cols]), change=[tenth(disp[k, rows, cols]) for k in range(len(dates))])
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(obj, separators=(",", ":")), encoding="utf-8")
+    return len(rows)
+
+
+def overlay_png(arr, path: pathlib.Path, vmax: float) -> None:
+    """RdBu PNG: red = negative (away from the satellite), blue = positive; NaN transparent; beyond ±vmax saturated."""
+    import numpy as np
+    from PIL import Image
+    stops = np.array([[103, 0, 31], [214, 96, 77], [247, 247, 247], [67, 147, 195], [5, 48, 97]], float)
+    v = np.clip(np.nan_to_num(arr, nan=0.0) / vmax, -1, 1)
+    pos = (v + 1) / 2 * (len(stops) - 1)
+    i = np.clip(pos.astype(int), 0, len(stops) - 2)
+    f = (pos - i)[..., None]
+    rgb = stops[i] * (1 - f) + stops[i + 1] * f
+    alpha = np.where(np.isfinite(arr), 230, 0)
+    img = np.dstack([rgb, alpha]).round().astype("uint8")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    Image.fromarray(img, "RGBA").save(path, optimize=True)
+
+
+# ------------------------------------------------------------------------------------------------ Sentinel-1
+def export_s1(out: pathlib.Path, summary: dict):
+    """→ (sensor block for the manifest, display bounds)."""
+    meta = C.SENSORS["s1"]
+    frames, layers, bounds, points = {}, [], None, {}
+    for track in meta["tracks"]:
+        z = load_grid(track)
+        dates = [str(d) for d in z["dates"]]
+        if dates != summary[track]["dates"]:
+            raise SystemExit(f"{track}: grid dates differ from sentinel1/analysis/summary.json; ask 03 to repack the grids")
+        grid = LonLatGrid(z["bounds_utm"], z["rate_mm_yr"].shape)
+        bounds = bounds or grid.bounds
+        pngs = []
+        for k, d in enumerate(dates):
+            png = f"s1/frames/{track}/{iso(d)}.png"
+            overlay_png(grid.sample(z["displacement_mm"][k]), out / png, CHANGE_VMAX)
+            pngs.append(png)
+        frames[track] = dict(dates=[iso(d) for d in dates], pngs=pngs, vmin=-CHANGE_VMAX, vmax=CHANGE_VMAX,
+                             units="mm since first date", direction=meta["tracks"][track], gaps=[],
+                             window=WINDOW, saturates=True)
+        png = f"s1/los_{track}.png"
+        overlay_png(grid.sample(z["rate_mm_yr"]), out / png, RATE_VMAX)
+        pts_file = f"s1/points_{track}.json"
+        n_pts = write_points(z, out / pts_file, track, dates)
+        points[track] = pts_file
+        layers.append(dict(id=f"los_{track}", label=f"Sentinel-1 {track}: line-of-sight rate, annualized short-window slope",
+                           png=png, units="mm/yr", vmin=-RATE_VMAX, vmax=RATE_VMAX, track=track, experimental=False,
+                           window=WINDOW, scenario="baseline", saturates=True))
+        print(f"  s1 {track}: {len(dates)} frames + rate map + {n_pts} points, {grid.shape[1]}×{grid.shape[0]} px, "
+              f"{dates[0]}..{dates[-1]}, {summary[track]['pair_count']} pairs")
+    block = {k: meta[k] for k in ("label", "agency", "band", "wavelength_cm", "status", "reference", "credit")}
+    block.update(layers=layers, frames=frames, points=points, look=meta["look"], product=meta["product"])
+    return block, bounds
+
+
+def zone_points(site: dict) -> list[dict]:
+    pts = []
+    for z in site["zones"]:
+        n = z["id"].lstrip("z")
+        pts.append(dict(id=z["id"], key=f"zone_{n}", label=f"Zone {n}", kind="zone", lat=z["lat"], lon=z["lon"], r_m=z["r_m"]))
+    pts.append(dict(id="outer_control", key="outer_control", label="Outer comparison area (6.5 to 8 km)", kind="control",
+                    lat=site["lat"], lon=site["lon"]))
+    return pts
+
+
+def scenario_entry(fit: dict, dates: list[str]) -> dict:
+    mm = [None if v is None or v != v else round(v, 2) for v in fit["displacement_mm"]]
+    rng = fit.get("date_fit_omission_range_mm_yr") or [None, None]
+    return dict(dates=[iso(d) for d in dates], mm=mm, n_pixels=fit["pixels"],
+                fitted_change_mm=round(fit["window_fit_mm"], 2), rate=round(fit["linear_mm_yr"], 2),
+                theil_sen_mm_yr=round(fit["theil_sen_mm_yr"], 2),
+                omission_range_mm_yr=[round(v, 2) for v in rng] if None not in rng else None)
+
+
+def export_series(summary: dict, site: dict) -> tuple[list[dict], dict]:
+    """series.json (baseline) and the per-scenario variants for sensitivity.json."""
+    pts = zone_points(site)
+    variants = {}
+    for track in C.SENSORS["s1"]["tracks"]:
+        fits = summary[track]["fits"]
+        variants[track] = {}
+        for sc in SCENARIOS:
+            variants[track][sc] = {}
+            for p in pts:
+                fit = fits.get(sc, {}).get(p["key"])
+                variants[track][sc][p["id"]] = scenario_entry(fit, summary[track]["dates"]) if fit else None
+    for p in pts:
+        p["series"] = {}
+        for track in C.SENSORS["s1"]["tracks"]:
+            e = variants[track]["baseline"][p["id"]]
+            if e:
+                p["series"][f"s1:{track}"] = {k: e[k] for k in ("dates", "mm", "rate", "n_pixels", "fitted_change_mm")}
+        p.pop("key")
+    return pts, variants
+
+
+# ------------------------------------------------------------------------------------------------ NISAR coverage
+def nisar_coverage() -> dict:
+    rows = list(csv.DictReader(SCENES.open(encoding="utf-8")))
+    cov = {}
+    for t in C.SENSORS["nisar"]["tracks"]:
+        pairs = sorted((r for r in rows if r["track"] == t), key=lambda r: r["ref_date"])
+        dates = sorted({r["ref_date"] for r in pairs} | {r["sec_date"] for r in pairs})
+        # a gap is any stretch between consecutive dates that no pair spans
+        spans = [(r["ref_date"], r["sec_date"]) for r in pairs]
+        gaps = [[a, b] for a, b in zip(dates, dates[1:]) if not any(r <= a and s >= b for r, s in spans)]
+        cov[t] = dict(dates=dates, gaps=gaps, direction=C.SENSORS["nisar"]["tracks"][t],
+                      pairs=[dict(ref=r["ref_date"], sec=r["sec_date"], days=int(r["days"]), collection=r["collection"])
+                             for r in pairs])
+    return cov
+
+
+# ------------------------------------------------------------------------------------------------ the products set
+def write_pending(out: pathlib.Path) -> list[str]:
+    """stations.geojson, calib.json, checks.json belong to 04 and 05; write explicit pending files only if missing."""
+    made = []
+    pending = {
+        "stations.geojson": dict(type="FeatureCollection", features=[], pending="validate.py (05) has not compared stations yet"),
+        "calib.json": dict(model=None, tracks=[], pending="calibrate.py (04) has not tied NISAR to the GNSS model yet"),
+        "checks.json": [dict(id="validation-pending", status="info", title="Validation not run yet",
+                             detail="validate.py (05) has not written checks for this build", value=None)],
+    }
+    for name, obj in pending.items():
+        if not (out / name).exists():
+            C.save_json(out / name, obj)
+            made.append(name)
+    return made
+
+
+def run(site_key: str) -> None:
+    if C.SITES[site_key].get("synthetic"):
+        raise C.todo("06", "export the synthetic demo site once fetch/stack/calibrate --synthetic exist")
+    site = C.SITES[site_key]
+    out = C.PRODUCTS / site_key
+    out.mkdir(parents=True, exist_ok=True)
+    summary = load_summary()
+
+    s1, bounds = export_s1(out, summary)
+    series, variants = export_series(summary, site)
+    C.save_json(out / "series.json", series)
+    cov = nisar_coverage()
+    C.save_json(out / "coverage.json", dict(
+        nisar={t: c for t, c in cov.items()},
+        s1={t: dict(dates=s1["frames"][t]["dates"], gaps=[], direction=C.SENSORS["s1"]["tracks"][t],
+                    pairs=summary[t]["pair_count"],
+                    zone_pixels={p["id"]: (variants[t]["baseline"][p["id"]] or {}).get("n_pixels") for p in series})
+            for t in s1["frames"]},
+        source=dict(nisar="data/scenes/ocnele_mari_gunw.csv (NASA CMR, 14 Nov 2026)",
+                    s1="sentinel1/analysis/summary.json (03)")))
+    windows = {WINDOW: dict(label="July to October 2026", dates={t: [f["dates"][0], f["dates"][-1]] for t, f in s1["frames"].items()},
+                            frames=s1["frames"], layers=s1["layers"], points=s1["points"], variants=variants,
+                            maps_scenario="baseline",
+                            quality={t: summary[t]["fits"]["quality"] for t in s1["frames"]})}
+    C.save_json(out / "sensitivity.json", dict(windows=windows, scenarios=SCENARIOS, default_window=WINDOW,
+                                                note="Selectors choose stored results; maps exist for the baseline only. "
+                                                     "The single-date omission range is diagnostic, not a confidence interval."))
+    made = write_pending(out)
+    checks = C.load_json(out / "checks.json")
+
+    nmeta = C.SENSORS["nisar"]
+    nisar = {k: nmeta[k] for k in ("label", "agency", "band", "wavelength_cm", "status", "reference", "credit")}
+    nisar.update(layers=[], frames={}, look=nmeta["look"], product=nmeta["product"],
+                 pending="Displacement fit pending: authenticated download, independent fit and line-of-sight sign check "
+                         "are not done yet. Catalog coverage only.")
+    C.save_json(out / "manifest.json", dict(
+        site=site_key, name=f"{site['name']}, {site['county']}", story=site["story"], synthetic=False,
+        note="Sentinel-1 measurements (Jul to Oct 2026) and NISAR catalog coverage. NISAR displacement is pending.",
+        built=datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
+        bounds=bounds, center=[site["lat"], site["lon"]], view=dict(site["view"], min_zoom=6, context="romania-blurred"),
+        sensors=dict(nisar=nisar, s1=s1), views=list(C.VIEWS), common_window=list(C.COMMON_WINDOW),
+        default=dict(sat="nisar", view="coverage", track="129A"),
+        windows={WINDOW: windows[WINDOW]["label"]}, default_window=WINDOW,
+        checks={k: sum(c.get("status") == k for c in checks) for k in ("pass", "warn", "fail", "info")},
+        egms=dict(status="pending", label="EGMS Ortho · 2020 to 2025 · 100 m",
+                  detail="The E54N25 extracts (05) are not verified yet. EGMS history gives context; it cannot verify a 2026 rate."),
+        methods=dict(
+            s1="Sentinel-1 IW2 VV bursts 029_060407_IW2 and 007_013694_IW2, processed by ASF HyP3 (10×2 looks, water mask) "
+               "and inverted on a 40 m grid with coherence-squared weights. Each pair is zeroed on a terrain reference band "
+               "3 to 6.5 km from the zone edges; the outer comparison area is 6.5 to 8 km. Not GNSS-calibrated.",
+            sign="Line of sight, positive toward the satellite. Red is away from the satellite, blue is toward.",
+            rate="A rate is a fitted annualized slope over the window, not a long-term velocity. No per-pixel uncertainty layer is validated yet.",
+            zones="Four zone circles from the advisor's starter kit (permission to publish them is still to be confirmed).",
+            links=[dict(label="Sentinel-1 team handoff", href="sentinel1/docs/TEAM_HANDOFF.md"),
+                   dict(label="Sentinel-1 analysis notes", href="sentinel1/analysis/README.md"),
+                   dict(label="NISAR pair list", href="data/scenes/ocnele_mari_gunw.csv"),
+                   dict(label="ASF NISAR Data User Guide", href="https://nisar-docs.asf.alaska.edu/")]),
+        credits="Contains modified Copernicus Sentinel data 2026, processed by ASF HyP3. NISAR catalog: NASA–ISRO, ASF DAAC "
+                "(beta and provisional products, not intended for scientific research).",
+    ))
+    idx = C.PRODUCTS / "index.json"
+    sites = C.load_json(idx) if idx.exists() else []
+    sites = [s for s in sites if s.get("site") != site_key] + [dict(site=site_key, name=site["name"], synthetic=False)]
+    C.save_json(idx, sorted(sites, key=lambda s: (s["synthetic"], s["site"])))
+    n_frames = sum(len(f["dates"]) for f in s1["frames"].values())
+    print(f"{out}: s1 {len(s1['layers'])} rate maps, {n_frames} frames, {len(series)} series points · "
+          f"nisar coverage {sum(len(c['pairs']) for c in cov.values())} pairs (displacement pending)"
+          + (f" · pending files written: {', '.join(made)}" if made else ""))
 
 
 def main() -> None:

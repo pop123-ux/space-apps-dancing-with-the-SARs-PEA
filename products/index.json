@@ -1,0 +1,12 @@
+[
+ {
+  "site": "ocnele_mari",
+  "name": "Ocnele Mari",
+  "synthetic": false
+ },
+ {
+  "site": "mock",
+  "name": "Ocnele Mari · MOCK",
+  "synthetic": true
+ }
+]

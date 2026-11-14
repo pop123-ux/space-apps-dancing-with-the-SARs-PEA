@@ -1,0 +1,248 @@
+{
+ "nisar": {
+  "129A": {
+   "dates": [
+    "2025-11-07",
+    "2025-12-01",
+    "2025-12-13",
+    "2025-12-25",
+    "2026-01-18",
+    "2026-06-23",
+    "2026-07-05",
+    "2026-07-17",
+    "2026-08-10",
+    "2026-08-22",
+    "2026-09-03",
+    "2026-09-15",
+    "2026-09-27",
+    "2026-10-09",
+    "2026-10-21"
+   ],
+   "gaps": [
+    [
+     "2026-01-18",
+     "2026-06-23"
+    ]
+   ],
+   "direction": "Ascending",
+   "pairs": [
+    {
+     "ref": "2025-11-07",
+     "sec": "2025-12-01",
+     "days": 24,
+     "collection": "NISAR_L2_GUNW_BETA_V1"
+    },
+    {
+     "ref": "2025-12-01",
+     "sec": "2025-12-13",
+     "days": 12,
+     "collection": "NISAR_L2_GUNW_BETA_V1"
+    },
+    {
+     "ref": "2025-12-13",
+     "sec": "2025-12-25",
+     "days": 12,
+     "collection": "NISAR_L2_GUNW_BETA_V1"
+    },
+    {
+     "ref": "2025-12-25",
+     "sec": "2026-01-18",
+     "days": 24,
+     "collection": "NISAR_L2_GUNW_BETA_V1"
+    },
+    {
+     "ref": "2026-06-23",
+     "sec": "2026-07-05",
+     "days": 12,
+     "collection": "NISAR_L2_GUNW_PROVISIONAL_V1"
+    },
+    {
+     "ref": "2026-07-05",
+     "sec": "2026-07-17",
+     "days": 12,
+     "collection": "NISAR_L2_GUNW_PROVISIONAL_V1"
+    },
+    {
+     "ref": "2026-07-17",
+     "sec": "2026-08-10",
+     "days": 24,
+     "collection": "NISAR_L2_GUNW_PROVISIONAL_V1"
+    },
+    {
+     "ref": "2026-08-10",
+     "sec": "2026-08-22",
+     "days": 12,
+     "collection": "NISAR_L2_GUNW_PROVISIONAL_V1"
+    },
+    {
+     "ref": "2026-08-22",
+     "sec": "2026-09-03",
+     "days": 12,
+     "collection": "NISAR_L2_GUNW_PROVISIONAL_V1"
+    },
+    {
+     "ref": "2026-09-03",
+     "sec": "2026-09-15",
+     "days": 12,
+     "collection": "NISAR_L2_GUNW_PROVISIONAL_V1"
+    },
+    {
+     "ref": "2026-09-15",
+     "sec": "2026-09-27",
+     "days": 12,
+     "collection": "NISAR_L2_GUNW_PROVISIONAL_V1"
+    },
+    {
+     "ref": "2026-09-27",
+     "sec": "2026-10-09",
+     "days": 12,
+     "collection": "NISAR_L2_GUNW_PROVISIONAL_V1"
+    },
+    {
+     "ref": "2026-10-09",
+     "sec": "2026-10-21",
+     "days": 12,
+     "collection": "NISAR_L2_GUNW_PROVISIONAL_V1"
+    }
+   ]
+  },
+  "094D": {
+   "dates": [
+    "2026-06-20",
+    "2026-07-02",
+    "2026-07-14",
+    "2026-07-26",
+    "2026-08-19",
+    "2026-08-31",
+    "2026-09-12",
+    "2026-09-24",
+    "2026-10-06",
+    "2026-10-18"
+   ],
+   "gaps": [],
+   "direction": "Descending",
+   "pairs": [
+    {
+     "ref": "2026-06-20",
+     "sec": "2026-07-02",
+     "days": 12,
+     "collection": "NISAR_L2_GUNW_PROVISIONAL_V1"
+    },
+    {
+     "ref": "2026-07-02",
+     "sec": "2026-07-14",
+     "days": 12,
+     "collection": "NISAR_L2_GUNW_PROVISIONAL_V1"
+    },
+    {
+     "ref": "2026-07-14",
+     "sec": "2026-07-26",
+     "days": 12,
+     "collection": "NISAR_L2_GUNW_PROVISIONAL_V1"
+    },
+    {
+     "ref": "2026-07-26",
+     "sec": "2026-08-19",
+     "days": 24,
+     "collection": "NISAR_L2_GUNW_PROVISIONAL_V1"
+    },
+    {
+     "ref": "2026-08-19",
+     "sec": "2026-08-31",
+     "days": 12,
+     "collection": "NISAR_L2_GUNW_PROVISIONAL_V1"
+    },
+    {
+     "ref": "2026-08-31",
+     "sec": "2026-09-12",
+     "days": 12,
+     "collection": "NISAR_L2_GUNW_PROVISIONAL_V1"
+    },
+    {
+     "ref": "2026-09-12",
+     "sec": "2026-09-24",
+     "days": 12,
+     "collection": "NISAR_L2_GUNW_PROVISIONAL_V1"
+    },
+    {
+     "ref": "2026-09-24",
+     "sec": "2026-10-06",
+     "days": 12,
+     "collection": "NISAR_L2_GUNW_PROVISIONAL_V1"
+    },
+    {
+     "ref": "2026-10-06",
+     "sec": "2026-10-18",
+     "days": 12,
+     "collection": "NISAR_L2_GUNW_PROVISIONAL_V1"
+    }
+   ]
+  }
+ },
+ "s1": {
+  "029A": {
+   "dates": [
+    "2026-07-07",
+    "2026-07-13",
+    "2026-07-19",
+    "2026-07-25",
+    "2026-07-31",
+    "2026-08-06",
+    "2026-08-12",
+    "2026-08-18",
+    "2026-08-24",
+    "2026-08-30",
+    "2026-09-05",
+    "2026-09-11",
+    "2026-09-17",
+    "2026-09-23",
+    "2026-09-29",
+    "2026-10-05"
+   ],
+   "gaps": [],
+   "direction": "Ascending",
+   "pairs": 29,
+   "zone_pixels": {
+    "z1": 21,
+    "z2": 43,
+    "z3": null,
+    "z4": 34,
+    "outer_control": 14963
+   }
+  },
+  "007D": {
+   "dates": [
+    "2026-07-06",
+    "2026-07-12",
+    "2026-07-18",
+    "2026-07-24",
+    "2026-07-30",
+    "2026-08-05",
+    "2026-08-11",
+    "2026-08-17",
+    "2026-08-23",
+    "2026-08-29",
+    "2026-09-04",
+    "2026-09-10",
+    "2026-09-16",
+    "2026-09-22",
+    "2026-09-28",
+    "2026-10-04"
+   ],
+   "gaps": [],
+   "direction": "Descending",
+   "pairs": 29,
+   "zone_pixels": {
+    "z1": 79,
+    "z2": 48,
+    "z3": 55,
+    "z4": 76,
+    "outer_control": 12153
+   }
+  }
+ },
+ "source": {
+  "nisar": "data/scenes/ocnele_mari_gunw.csv (NASA CMR, 14 Nov 2026)",
+  "s1": "sentinel1/analysis/summary.json (03)"
+ }
+}

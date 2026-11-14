@@ -1,0 +1,95 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     24.3664,
+     45.1074
+    ]
+   },
+   "properties": {
+    "station": "VLC2",
+    "source": "MOCK",
+    "t_end": "2020",
+    "dist_km": 6.4,
+    "tracks": {
+     "nisar:129A": {
+      "radar": 1.59,
+      "gnss": 1.24,
+      "diff": 0.35,
+      "tol": 4.0
+     },
+     "nisar:094D": {
+      "radar": -0.2,
+      "gnss": -0.17,
+      "diff": -0.03,
+      "tol": 4.0
+     },
+     "s1:029A": {
+      "radar": -0.42,
+      "gnss": -0.22,
+      "diff": -0.2,
+      "tol": 4.0
+     },
+     "s1:007D": {
+      "radar": -2.92,
+      "gnss": -2.52,
+      "diff": -0.4,
+      "tol": 4.0
+     }
+    },
+    "agree": true,
+    "gnss_up": null,
+    "reason": "MOCK · agrees within tolerance"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     23.9891,
+     45.1456
+    ]
+   },
+   "properties": {
+    "station": "HORE",
+    "source": "MOCK",
+    "t_end": "2020",
+    "dist_km": 24.5,
+    "tracks": {
+     "nisar:129A": {
+      "radar": 2.07,
+      "gnss": 11.57,
+      "diff": -9.5,
+      "tol": 4.0
+     },
+     "nisar:094D": {
+      "radar": -1.91,
+      "gnss": 7.59,
+      "diff": -9.5,
+      "tol": 4.0
+     },
+     "s1:029A": {
+      "radar": -0.28,
+      "gnss": 9.22,
+      "diff": -9.5,
+      "tol": 4.0
+     },
+     "s1:007D": {
+      "radar": 1.44,
+      "gnss": 10.94,
+      "diff": -9.5,
+      "tol": 4.0
+     }
+    },
+    "agree": false,
+    "gnss_up": null,
+    "reason": "MOCK · disagrees: check the monument (rooftop mast?) before blaming the radar"
+   }
+  }
+ ]
+}

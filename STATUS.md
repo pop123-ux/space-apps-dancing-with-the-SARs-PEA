@@ -39,7 +39,7 @@ The full plan, hour by hour, is [docs/schedule.md](docs/schedule.md).
 | 03 Alexandru and Eric | O-05 (method); read 02's hand-off | [§ 03](docs/build-spec.md#03--insar-analyst-alexandru-and-eric) |
 | 04 Matei | 14 Nov, 15:20: station rates checked against Muntean Tables S1/S3 and NGL MIDAS; first real `refs.py ocnele_mari` run (VLC1, VLC2, HORE; Italian VLC2 dropped); EGMS swap hook passes a synthetic known-answer test. Next: tie per track after 02 and 03 hand off. T8 waits on the EGMS GNSS model CSV (O-06). Log: `logs/04-geodesist.md` | [§ 04](docs/build-spec.md#04--geodesist-matei) |
 | 05 Paul | HyP3 order; EGMS Up tile; station screening | [§ 05](docs/build-spec.md#05--validator-paul) |
-| 06 Darius | Implement the [UI handoff](docs/ui.md#06-implementation-handoff--14-november-2026) with Claude Code. Verify the real-data and mock flows. | [§ 06](docs/build-spec.md#06--app-developer-darius) |
+| 06 Darius | Page pushed on `r06/page` (14 Nov, 16:16; not merged): NISAR Coverage by default, Sentinel-1 Jul to Oct as dots with Zones, processing choices and the town boundary; mock still works. `checkpoint.py ocnele_mari` contract OK, `pytest -q` 8 passed. Log and proposals for 01: [logs/06-app.md](logs/06-app.md). Next: Pages deploy, T9 on two phones, the Jan to Oct window when 03 commits it | [§ 06](docs/build-spec.md#06--app-developer-darius) |
 
 ## Early tests
 

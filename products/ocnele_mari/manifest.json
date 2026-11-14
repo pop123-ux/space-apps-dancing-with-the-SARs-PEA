@@ -1,0 +1,238 @@
+{
+ "site": "ocnele_mari",
+ "name": "Ocnele Mari, Vâlcea",
+ "story": "TODO(01): one sentence, written by the Lead",
+ "synthetic": false,
+ "note": "Sentinel-1 measurements (Jul to Oct 2026) and NISAR catalog coverage. NISAR displacement is pending.",
+ "built": "2026-11-14T13:59:48+00:00",
+ "bounds": [
+  [
+   45.016685,
+   24.189539
+  ],
+  [
+   45.159206,
+   24.390728
+  ]
+ ],
+ "center": [
+  45.088,
+  24.29
+ ],
+ "view": {
+  "center": [
+   45.086281,
+   24.2704806
+  ],
+  "zoom": 13,
+  "min_zoom": 6,
+  "context": "romania-blurred"
+ },
+ "sensors": {
+  "nisar": {
+   "label": "NISAR",
+   "agency": "NASA–ISRO",
+   "band": "L-band",
+   "wavelength_cm": 24.4,
+   "status": "beta/provisional",
+   "reference": "tied to the EuVeM2022 velocity model (04; DRAFT until the tie exists)",
+   "credit": "NISAR L2 GUNW (NASA–ISRO, ASF DAAC); beta and provisional products, not intended for scientific research",
+   "layers": [],
+   "frames": {},
+   "look": "left",
+   "product": "NISAR L2 GUNW, frequency A, HH (beta and provisional)",
+   "pending": "Displacement fit pending: authenticated download, independent fit and line-of-sight sign check are not done yet. Catalog coverage only."
+  },
+  "s1": {
+   "label": "Sentinel-1",
+   "agency": "ESA / Copernicus",
+   "band": "C-band",
+   "wavelength_cm": 5.55,
+   "status": "operational",
+   "reference": "relative to surrounding terrain, a 3 to 6.5 km band (sentinel1/analysis/README.md)",
+   "credit": "Contains modified Copernicus Sentinel data 2026, processed by ASF HyP3",
+   "layers": [
+    {
+     "id": "los_029A",
+     "label": "Sentinel-1 029A: line-of-sight rate, annualized short-window slope",
+     "png": "s1/los_029A.png",
+     "units": "mm/yr",
+     "vmin": -40.0,
+     "vmax": 40.0,
+     "track": "029A",
+     "experimental": false,
+     "window": "jul_oct",
+     "scenario": "baseline",
+     "saturates": true
+    },
+    {
+     "id": "los_007D",
+     "label": "Sentinel-1 007D: line-of-sight rate, annualized short-window slope",
+     "png": "s1/los_007D.png",
+     "units": "mm/yr",
+     "vmin": -40.0,
+     "vmax": 40.0,
+     "track": "007D",
+     "experimental": false,
+     "window": "jul_oct",
+     "scenario": "baseline",
+     "saturates": true
+    }
+   ],
+   "frames": {
+    "029A": {
+     "dates": [
+      "2026-07-07",
+      "2026-07-13",
+      "2026-07-19",
+      "2026-07-25",
+      "2026-07-31",
+      "2026-08-06",
+      "2026-08-12",
+      "2026-08-18",
+      "2026-08-24",
+      "2026-08-30",
+      "2026-09-05",
+      "2026-09-11",
+      "2026-09-17",
+      "2026-09-23",
+      "2026-09-29",
+      "2026-10-05"
+     ],
+     "pngs": [
+      "s1/frames/029A/2026-07-07.png",
+      "s1/frames/029A/2026-07-13.png",
+      "s1/frames/029A/2026-07-19.png",
+      "s1/frames/029A/2026-07-25.png",
+      "s1/frames/029A/2026-07-31.png",
+      "s1/frames/029A/2026-08-06.png",
+      "s1/frames/029A/2026-08-12.png",
+      "s1/frames/029A/2026-08-18.png",
+      "s1/frames/029A/2026-08-24.png",
+      "s1/frames/029A/2026-08-30.png",
+      "s1/frames/029A/2026-09-05.png",
+      "s1/frames/029A/2026-09-11.png",
+      "s1/frames/029A/2026-09-17.png",
+      "s1/frames/029A/2026-09-23.png",
+      "s1/frames/029A/2026-09-29.png",
+      "s1/frames/029A/2026-10-05.png"
+     ],
+     "vmin": -20.0,
+     "vmax": 20.0,
+     "units": "mm since first date",
+     "direction": "Ascending",
+     "gaps": [],
+     "window": "jul_oct",
+     "saturates": true
+    },
+    "007D": {
+     "dates": [
+      "2026-07-06",
+      "2026-07-12",
+      "2026-07-18",
+      "2026-07-24",
+      "2026-07-30",
+      "2026-08-05",
+      "2026-08-11",
+      "2026-08-17",
+      "2026-08-23",
+      "2026-08-29",
+      "2026-09-04",
+      "2026-09-10",
+      "2026-09-16",
+      "2026-09-22",
+      "2026-09-28",
+      "2026-10-04"
+     ],
+     "pngs": [
+      "s1/frames/007D/2026-07-06.png",
+      "s1/frames/007D/2026-07-12.png",
+      "s1/frames/007D/2026-07-18.png",
+      "s1/frames/007D/2026-07-24.png",
+      "s1/frames/007D/2026-07-30.png",
+      "s1/frames/007D/2026-08-05.png",
+      "s1/frames/007D/2026-08-11.png",
+      "s1/frames/007D/2026-08-17.png",
+      "s1/frames/007D/2026-08-23.png",
+      "s1/frames/007D/2026-08-29.png",
+      "s1/frames/007D/2026-09-04.png",
+      "s1/frames/007D/2026-09-10.png",
+      "s1/frames/007D/2026-09-16.png",
+      "s1/frames/007D/2026-09-22.png",
+      "s1/frames/007D/2026-09-28.png",
+      "s1/frames/007D/2026-10-04.png"
+     ],
+     "vmin": -20.0,
+     "vmax": 20.0,
+     "units": "mm since first date",
+     "direction": "Descending",
+     "gaps": [],
+     "window": "jul_oct",
+     "saturates": true
+    }
+   },
+   "points": {
+    "029A": "s1/points_029A.json",
+    "007D": "s1/points_007D.json"
+   },
+   "look": "right",
+   "product": "Sentinel-1C/D VV burst InSAR, ASF HyP3 INSAR_ISCE_BURST, 10x2 looks"
+  }
+ },
+ "views": [
+  "change",
+  "rate",
+  "zones",
+  "agreement",
+  "coverage"
+ ],
+ "common_window": [
+  "2026-07-07",
+  "2026-10-04"
+ ],
+ "default": {
+  "sat": "nisar",
+  "view": "coverage",
+  "track": "129A"
+ },
+ "windows": {
+  "jul_oct": "July to October 2026"
+ },
+ "default_window": "jul_oct",
+ "checks": {
+  "pass": 0,
+  "warn": 0,
+  "fail": 0,
+  "info": 1
+ },
+ "egms": {
+  "status": "pending",
+  "label": "EGMS Ortho · 2020 to 2025 · 100 m",
+  "detail": "The E54N25 extracts (05) are not verified yet. EGMS history gives context; it cannot verify a 2026 rate."
+ },
+ "methods": {
+  "s1": "Sentinel-1 IW2 VV bursts 029_060407_IW2 and 007_013694_IW2, processed by ASF HyP3 (10×2 looks, water mask) and inverted on a 40 m grid with coherence-squared weights. Each pair is zeroed on a terrain reference band 3 to 6.5 km from the zone edges; the outer comparison area is 6.5 to 8 km. Not GNSS-calibrated.",
+  "sign": "Line of sight, positive toward the satellite. Red is away from the satellite, blue is toward.",
+  "rate": "A rate is a fitted annualized slope over the window, not a long-term velocity. No per-pixel uncertainty layer is validated yet.",
+  "zones": "Four zone circles from the advisor's starter kit (permission to publish them is still to be confirmed).",
+  "links": [
+   {
+    "label": "Sentinel-1 team handoff",
+    "href": "sentinel1/docs/TEAM_HANDOFF.md"
+   },
+   {
+    "label": "Sentinel-1 analysis notes",
+    "href": "sentinel1/analysis/README.md"
+   },
+   {
+    "label": "NISAR pair list",
+    "href": "data/scenes/ocnele_mari_gunw.csv"
+   },
+   {
+    "label": "ASF NISAR Data User Guide",
+    "href": "https://nisar-docs.asf.alaska.edu/"
+   }
+  ]
+ },
+ "credits": "Contains modified Copernicus Sentinel data 2026, processed by ASF HyP3. NISAR catalog: NASA–ISRO, ASF DAAC (beta and provisional products, not intended for scientific research)."
+}
