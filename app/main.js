@@ -320,7 +320,7 @@ function addMarkers(m) {
     el.title = zoneNote(p) ? `${zoneName(p)} · ${zoneNote(p).label}` : zoneName(p);
     el.setAttribute('aria-label', `${zoneName(p)}: show its history`);
     el.textContent = zoneShort(p);
-    el.addEventListener('click', (e) => { e.stopPropagation(); select({ kind: 'zone', id: p.id }); });
+    el.addEventListener('click', (e) => { e.stopPropagation(); openMenu({ kind: 'zone', id: p.id }); });
     new maplibregl.Marker({ element: el }).setLngLat([p.lon, p.lat]).addTo(m);
   }
   const seen = {};   // one marker per monument: VLC1, VLC2 and their combined mean sit on the same spot
@@ -1319,6 +1319,103 @@ function zoneCompare(id) {
     ${radarsPanel(z)}
     <h3 class="sub-h">Historical context</h3>${egmsPanel()}`;
 }
+// ------------------------------------------------------------------ menu (15 Nov 2026)
+// Pressing on the map opens the menu: a zone button shows that zone; anywhere else shows the area around the press
+// (a square AREA_M wide, outlined on the map). Top half: how the ground moved over time; bottom: the colour scale and
+// the map scale. The floating legend and the dot pop-up are gone.
+const AREA_M = 1000;
+const MENU_LINE = '#1D4ED8';
+function areaSquare([lon, lat], side = AREA_M) {
+  const dLat = side / 2 / 110540, dLon = side / 2 / (111320 * Math.cos(lat * Math.PI / 180));
+  return { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [[[lon - dLon, lat - dLat], [lon + dLon, lat - dLat], [lon + dLon, lat + dLat], [lon - dLon, lat + dLat], [lon - dLon, lat - dLat]]] } };
+}
+function drawSelection() {
+  if (!mapA?.getSource('msel')) {
+    if (!mapA?.isStyleLoaded()) return;
+    mapA.addSource('msel', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+    mapA.addLayer({ id: 'msel', type: 'line', source: 'msel', paint: { 'line-color': MENU_LINE, 'line-width': 2.5 } });
+  }
+  let f = null;
+  if (S.menu?.kind === 'area') f = areaSquare(S.menu.at);
+  if (S.menu?.kind === 'zone') { const z = zones().find(p => p.id === S.menu.id); if (z?.r_m) f = zoneCircle(z); }
+  mapA.getSource('msel').setData({ type: 'FeatureCollection', features: f ? [f] : [] });
+}
+function openMenu(sel) {
+  S.menu = sel; closeMenus();
+  $('#dmenu').hidden = false; document.body.classList.add('dmenu-open');
+  setTimeout(() => mapA?.resize(), 220);
+  drawSelection(); renderMenu();
+}
+function closeMenu() {
+  S.menu = null; $('#dmenu').hidden = true; document.body.classList.remove('dmenu-open');
+  setTimeout(() => mapA?.resize(), 220); drawSelection();
+}
+async function menuSeries() {
+  const sat = S.sat === 'compare' ? 'nisar' : S.sat; const trk = S.track[sat];
+  if (S.menu.kind === 'zone') {
+    const z = S.series.find(p => p.id === S.menu.id); const e = z && entry(z, sat, trk);
+    return { label: `${zoneName(z)} · ${sensors()[sat].label} ${trk}`, pts: e ? e.dates.map((d, i) => [d, e.mm[i]]).filter(([, v]) => v !== null && Number.isFinite(v)) : [] };
+  }
+  const file = pointFile(sat); if (!file) return { label: '', pts: [] };
+  const gj = await loadPoints(file);
+  const sq = areaSquare(S.menu.at).geometry.coordinates[0];
+  const [w, s] = sq[0], [e, n] = sq[2];
+  const inside = gj.features.filter(f => { const [x, y] = f.geometry.coordinates; return x >= w && x <= e && y >= s && y <= n; });
+  const pts = gj.meta.dates.map((d, k) => {
+    const v = inside.map(f => f.properties[`c${k}`]).filter(Number.isFinite).sort((a, b) => a - b);
+    return [d, v.length ? v[Math.floor(v.length / 2)] : null];
+  }).filter(([, v]) => v !== null);
+  return { label: `Area around the press (${AREA_M / 1000} × ${AREA_M / 1000} km, ${inside.length} measured points) · ${sensors()[sat].label} ${trk}`, pts };
+}
+async function renderMenu() {
+  if (!S.menu) return;
+  const want = S.menu;
+  const { label, pts } = await menuSeries();
+  if (S.menu !== want) return;
+  const W = 1000, H = 420, l = 78, r = 24, t = 56, b = 52;
+  let g = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="How the ground moved, mm">
+    <text x="${l}" y="26" font-size="24" font-weight="600">How the ground moved here (mm)</text>
+    <text x="${l}" y="48" font-size="16" class="dm-sub">${esc(label)}</text>`;
+  if (!pts.length) g += `<text x="${W / 2}" y="${H / 2}" text-anchor="middle" font-size="20">No measurement here on this satellite</text>`;
+  else {
+    const ys = pts.map(([, v]) => v);
+    const lo = Math.floor(Math.min(...ys)), hi = Math.ceil(Math.max(...ys));
+    const ymin = Math.min(lo, 0), ymax = Math.max(hi, 0);
+    const t0 = day(pts[0][0]), t1 = Math.max(day(pts[pts.length - 1][0]), t0 + 1);
+    const X = (d) => l + (day(d) - t0) / (t1 - t0) * (W - l - r);
+    const Y = (v) => t + (ymax - v) / Math.max(ymax - ymin, 1) * (H - t - b);
+    const sgn = (v) => v > 0 ? `+${v}` : v < 0 ? `−${Math.abs(v)}` : '0';
+    g += `<line x1="${l}" x2="${l}" y1="${t}" y2="${H - b}" stroke="#1C1917"/><line x1="${l}" x2="${W - r}" y1="${H - b}" y2="${H - b}" stroke="#1C1917"/>`;
+    g += `<line x1="${l}" x2="${W - r}" y1="${Y(0)}" y2="${Y(0)}" stroke="#1C1917" stroke-opacity="0.3"/>`;
+    for (const v of [...new Set([ymax, 0, ymin])]) g += `<text x="${l - 10}" y="${Y(v) + 6}" text-anchor="end" font-size="18">${sgn(v)} mm</text>`;
+    const months = [...new Set(pts.map(([d]) => d.slice(0, 7)))]; const step = Math.max(1, Math.ceil(months.length / 7));
+    months.forEach((m, i) => { if (i % step) return; const x = Math.max(l, X(m + '-01'));
+      g += `<text x="${x}" y="${H - b + 28}" text-anchor="middle" font-size="16">${human(m + '-01').replace(/^1 /, '')}</text>`; });
+    // break the line where the satellite had no acquisitions (a NISAR series restarts at 0 after its gap)
+    const sat_ = S.sat === 'compare' ? 'nisar' : S.sat, gaps = gapsOf(sat_, S.track[sat_]);
+    const segs = [[]];
+    pts.forEach(([d, v], i) => { if (i && gaps.some(([a, b2]) => pts[i - 1][0] <= a && d >= b2)) segs.push([]); segs[segs.length - 1].push([d, v]); });
+    for (const [a, b2] of gaps) if (day(b2) > t0 && day(a) < t1) g += `<rect x="${Math.max(l, X(a))}" y="${t}" width="${Math.max(0, Math.min(W - r, X(b2)) - Math.max(l, X(a)))}" height="${H - t - b}" fill="#1C1917" fill-opacity="0.05"/><text x="${(Math.max(l, X(a)) + Math.min(W - r, X(b2))) / 2}" y="${t + 20}" text-anchor="middle" font-size="15" class="dm-sub">no data</text>`;
+    for (const sg of segs) g += `<polyline fill="none" stroke="#1C1917" stroke-width="2.5" stroke-linejoin="round" points="${sg.map(([d, v]) => `${X(d).toFixed(1)},${Y(v).toFixed(1)}`).join(' ')}"/>`;
+    for (const [d, v] of pts) g += `<circle cx="${X(d).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="${d === S.date ? 6 : 3.5}" fill="${d === S.date ? MENU_LINE : '#1C1917'}"><title>${d}: ${v.toFixed(1)} mm</title></circle>`;
+    g += `<text x="${W - r}" y="${H - 6}" text-anchor="end" font-size="15" class="dm-sub">Below 0: moving away from the satellite (often sinking). Above 0: moving toward it.</text>`;
+  }
+  $('#dm-graph').innerHTML = g + '</svg>';
+  // legend: the colour scale with its mm values, and how much ground one centimetre of screen covers
+  const L = layerFor(S.sat === 'compare' ? 'nisar' : S.sat); const vmax = Math.abs(L?.meta?.vmax ?? 20);
+  const lat = mapA.getCenter().lat, mpp = 40075016.686 * Math.cos(lat * Math.PI / 180) / (512 * 2 ** mapA.getZoom());
+  const cmPx = 96 / 2.54, perCm = mpp * cmPx;
+  const scale = perCm >= 1000 ? `${(perCm / 1000).toFixed(perCm >= 10000 ? 0 : 1)} km` : `${Math.round(perCm / 10) * 10} m`;
+  const unit = S.view === 'rate' ? 'mm/yr' : 'mm';
+  $('#dm-legend').innerHTML = `<svg viewBox="0 0 1000 90" preserveAspectRatio="none" role="img" aria-label="Colour scale and map scale">
+    <defs><linearGradient id="dm-rdbu"><stop offset="0" stop-color="#67001F"/><stop offset=".25" stop-color="#D6604D"/><stop offset=".5" stop-color="#F7F7F7"/><stop offset=".75" stop-color="#4393C3"/><stop offset="1" stop-color="#053061"/></linearGradient></defs>
+    <rect x="20" y="14" width="600" height="22" fill="url(#dm-rdbu)" stroke="#1C1917" stroke-width="1"/>
+    <text x="20" y="62" font-size="18">−${vmax} ${unit}</text><text x="320" y="62" font-size="18" text-anchor="middle">0</text><text x="620" y="62" font-size="18" text-anchor="end">+${vmax} ${unit}</text>
+    <line x1="660" x2="${(660 + cmPx * 2).toFixed(1)}" y1="25" y2="25" stroke="#1C1917" stroke-width="3"/>
+    <line x1="660" x2="660" y1="17" y2="33" stroke="#1C1917" stroke-width="2"/><line x1="${(660 + cmPx * 2).toFixed(1)}" x2="${(660 + cmPx * 2).toFixed(1)}" y1="17" y2="33" stroke="#1C1917" stroke-width="2"/>
+    <text x="660" y="62" font-size="17">1 cm on screen = ${scale} on the map</text></svg>`;
+}
+
 function renderSheet() {
   const sh = $('#sheet'); let html = null;
   if (S.selected?.kind === 'zone' && S.view === 'coverage') html = zoneCoverage(S.selected.id);
@@ -1393,7 +1490,7 @@ function changed(full = true) {
   renderLayersMenu();
   renderCompare(); renderOverlays();
   renderTimeline(); renderStatus(); renderLegend(); renderFlags(); renderSheet();
-  renderContext(); renderZoneChips(); renderFootprint(); renderChecksButton();
+  renderContext(); renderZoneChips(); renderFootprint(); renderChecksButton(); if (S.menu) renderMenu();
   writeHash();
   requestAnimationFrame(measure);
 }
@@ -1427,17 +1524,7 @@ async function main() {
   mapA.on('load', () => { updateBlur(); document.querySelector('#map .maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show'); });
   mapA.on('click', (e) => {
     closeMenus();
-    const live = mapA.getLayer('pts') && mapA.getLayoutProperty('pts', 'visibility') === 'visible'
-      && (S.sat !== 'compare' || e.point.x < window.innerWidth * S.split / 100);
-    const hit = live ? mapA.queryRenderedFeatures([[e.point.x - 4, e.point.y - 4], [e.point.x + 4, e.point.y + 4]], { layers: ['pts'] })[0] : null;
-    if (hit && mapA._ptsWant) {
-      const w = mapA._ptsWant; const v = hit.properties[w.key];
-      new maplibregl.Popup({ closeButton: false, className: 'dot-pop', offset: 8 }).setLngLat(hit.geometry.coordinates)
-        .setHTML(`<b>${fmt(Math.round(v * 10) / 10)} ${esc(w.units)}</b><br>${esc(w.label)} · ${w.key === 'r' ? 'fitted rate' : esc(w.date)}<br><span>${v < 0 ? 'away from' : v > 0 ? 'toward' : 'no change relative to'} the satellite</span>`)
-        .addTo(mapA);
-      return;
-    }
-    if (S.selected) select(null);
+    openMenu({ kind: 'area', at: [e.lngLat.lng, e.lngLat.lat] });
   });
   mapA.on('mouseenter', 'pts', () => { mapA.getCanvas().style.cursor = 'pointer'; });
   mapA.on('mouseleave', 'pts', () => { mapA.getCanvas().style.cursor = ''; });
@@ -1447,8 +1534,10 @@ async function main() {
   wireMenu($('#sat-btn'), $('#sat-menu'));
   wireMenu($('#layers-btn'), $('#layers'));
   document.addEventListener('click', closeMenus);
-  document.addEventListener('keydown', (e) => { if (e.key !== 'Escape') return; closeMenus(); if (!$('#sheet').hidden && !$('#about').open) closeSheet(); });
+  document.addEventListener('keydown', (e) => { if (e.key !== 'Escape') return; closeMenus(); if (S.menu) return closeMenu(); if (!$('#sheet').hidden && !$('#about').open) closeSheet(); });
   $('#sheet-close').addEventListener('click', closeSheet);
+  $('#dm-close').addEventListener('click', closeMenu);
+  mapA.on('zoomend', () => { if (S.menu) renderMenu(); });
   $('#about-btn').addEventListener('click', () => { $('#about').showModal(); $('#about').scrollTop = 0; });
   $('#checks-btn').addEventListener('click', () => {
     $('#about').showModal();
