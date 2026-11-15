@@ -271,3 +271,12 @@ Alexandru's specification: four elements, cream background (#F4ECDB), very dark 
 **Not in this front end** (the data and scripts behind them still exist): the context strip and zone chips, Investigate Zone 4, Copy view link, Reset to site, the Coverage and Compare views and the comparison panel, the split-screen Compare map, processing runs and windows, the Chronos-2 forecast and its slider, stations and their panels, the checks and About panel, EGMS context, the track switch (129A/094D, 029A/007D), Romanian, the Rate view, the basemap and opacity settings, acquisition marks on the timeline, the NISAR gap filler, table export, play, and link (hash) state.
 
 **15 Nov 2026, later:** the previous page (before layout v5) is live again at Alexandru's request. Layout v5 was then removed from the repository as well (Alexandru: forget that change).
+
+## The menu: pressing on the map (15 Nov 2026)
+
+Pressing on the map opens **the menu**, a panel on the right that takes the whole map height and half the app's width (the map shrinks to the left half). A zone button opens that zone; anywhere else opens the area around the press, a 1 × 1 km square outlined in blue on the map. The menu holds:
+
+- **Graph** (top half): "How the ground moved here (mm)": the zone's series, or the median of the measured points inside the square, over time. The Y axis runs from the lowest to the highest value; 0 mm is a faint straight line; the line breaks across periods without acquisitions (NISAR's January to June gap, shaded "no data"); the date shown on the map is highlighted. One sentence explains the sign.
+- **Legend** (bottom 15 %): the colour gradient with its mm values, and "1 cm on screen = N m on the map" for the current zoom.
+
+The floating legend card and the pop-up on a dot are removed. The close button or Escape closes the menu. The zone chips above the map still open the detailed zone panel.
