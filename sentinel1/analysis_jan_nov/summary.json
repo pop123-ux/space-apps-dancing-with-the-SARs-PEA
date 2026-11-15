@@ -247,7 +247,7 @@
           "theil_sen_mm_yr": -8.816749571518574,
           "window_fit_mm": -7.882770873408173,
           "date_fit_omission_range_mm_yr": [
-            -9.804538002760038,
+            -9.80453800276004,
             -8.36622432672003
           ],
           "displacement_mm": [
@@ -495,9 +495,9 @@
         },
         "outer_control": {
           "pixels": 12095,
-          "linear_mm_yr": 3.9132432192473474,
+          "linear_mm_yr": 3.913243219247347,
           "theil_sen_mm_yr": 4.171685144128536,
-          "window_fit_mm": 3.3534431967814364,
+          "window_fit_mm": 3.353443196781436,
           "date_fit_omission_range_mm_yr": [
             3.428023387403266,
             4.441272530239707
@@ -630,9 +630,9 @@
         },
         "zone_2": {
           "pixels": 19,
-          "linear_mm_yr": -13.458816232275272,
+          "linear_mm_yr": -13.45881623227527,
           "theil_sen_mm_yr": -13.009567431277699,
-          "window_fit_mm": -11.533496182620562,
+          "window_fit_mm": -11.53349618262056,
           "date_fit_omission_range_mm_yr": [
             -14.186629661764485,
             -12.670996620929527
@@ -758,12 +758,12 @@
         },
         "zone_4": {
           "pixels": 2,
-          "linear_mm_yr": 0.45284408607895027,
+          "linear_mm_yr": 0.4528440860789502,
           "theil_sen_mm_yr": -1.015978625248437,
-          "window_fit_mm": 0.38806351524356314,
+          "window_fit_mm": 0.3880635152435631,
           "date_fit_omission_range_mm_yr": [
-            -1.2572311003173453,
-            1.3473582443082663
+            -1.257231100317346,
+            1.3473582443082668
           ],
           "displacement_mm": [
             0.0,
@@ -882,9 +882,9 @@
         },
         "outer_control": {
           "pixels": 6999,
-          "linear_mm_yr": 4.54803652182022,
+          "linear_mm_yr": 4.548036521820221,
           "theil_sen_mm_yr": 4.445521975592744,
-          "window_fit_mm": 3.897427601176533,
+          "window_fit_mm": 3.897427601176534,
           "date_fit_omission_range_mm_yr": [
             4.135930071697781,
             4.921970328348849
@@ -1008,12 +1008,12 @@
       "west_reference": {
         "zone_1": {
           "pixels": 5,
-          "linear_mm_yr": -0.20609146870206382,
+          "linear_mm_yr": -0.20609146870206368,
           "theil_sen_mm_yr": -1.0573223348368297,
-          "window_fit_mm": -0.1766095269096399,
+          "window_fit_mm": -0.1766095269096398,
           "date_fit_omission_range_mm_yr": [
             -0.658174921610839,
-            0.5332739625485379
+            0.5332739625485378
           ],
           "displacement_mm": [
             0.0,
@@ -1260,11 +1260,11 @@
         },
         "zone_4": {
           "pixels": 23,
-          "linear_mm_yr": -5.374882105357889,
+          "linear_mm_yr": -5.374882105357888,
           "theil_sen_mm_yr": -6.051463857293129,
-          "window_fit_mm": -4.605990688506555,
+          "window_fit_mm": -4.605990688506554,
           "date_fit_omission_range_mm_yr": [
-            -6.254545335893247,
+            -6.254545335893245,
             -4.759677133025687
           ],
           "displacement_mm": [
@@ -1384,11 +1384,11 @@
         },
         "outer_control": {
           "pixels": 11944,
-          "linear_mm_yr": 7.699264183666557,
+          "linear_mm_yr": 7.699264183666558,
           "theil_sen_mm_yr": 6.968195289689324,
-          "window_fit_mm": 6.597863626249507,
+          "window_fit_mm": 6.597863626249508,
           "date_fit_omission_range_mm_yr": [
-            6.955340324197851,
+            6.95534032419785,
             8.524977514618403
           ],
           "displacement_mm": [
@@ -1510,9 +1510,9 @@
       "east_reference": {
         "zone_1": {
           "pixels": 5,
-          "linear_mm_yr": -15.2154331315799,
+          "linear_mm_yr": -15.215433131579902,
           "theil_sen_mm_yr": -15.024397467778735,
-          "window_fit_mm": -13.038824285241638,
+          "window_fit_mm": -13.03882428524164,
           "date_fit_omission_range_mm_yr": [
             -15.874638510243999,
             -14.46805029660265
@@ -1634,9 +1634,9 @@
         },
         "zone_2": {
           "pixels": 38,
-          "linear_mm_yr": -12.14272878057062,
+          "linear_mm_yr": -12.142728780570621,
           "theil_sen_mm_yr": -11.921688038455553,
-          "window_fit_mm": -10.405678599092687,
+          "window_fit_mm": -10.405678599092688,
           "date_fit_omission_range_mm_yr": [
             -13.134995790106487,
             -11.335082728760042
@@ -1766,7 +1766,7 @@
           "theil_sen_mm_yr": -7.611651785900255,
           "window_fit_mm": -5.4539375490762145,
           "date_fit_omission_range_mm_yr": [
-            -8.112222858553348,
+            -8.11222285855335,
             -5.5699802438606065
           ],
           "displacement_mm": [
@@ -2016,7 +2016,7 @@
           "theil_sen_mm_yr": -8.896730633375283,
           "window_fit_mm": -7.946864731757816,
           "date_fit_omission_range_mm_yr": [
-            -9.559513276368927,
+            -9.559513276368929,
             -8.65265060902691
           ],
           "displacement_mm": [
@@ -2140,7 +2140,7 @@
           "theil_sen_mm_yr": -5.800813393322927,
           "window_fit_mm": -4.715535353019292,
           "date_fit_omission_range_mm_yr": [
-            -6.200138353515847,
+            -6.200138353515846,
             -4.829954593090379
           ],
           "displacement_mm": [
@@ -2264,12 +2264,12 @@
         },
         "zone_4": {
           "pixels": 26,
-          "linear_mm_yr": 4.947912706506848,
+          "linear_mm_yr": 4.9479127065068464,
           "theil_sen_mm_yr": 3.8812060203027277,
-          "window_fit_mm": 4.240100416527429,
+          "window_fit_mm": 4.240100416527428,
           "date_fit_omission_range_mm_yr": [
             4.362416562744107,
-            5.627747930521726
+            5.627747930521725
           ],
           "displacement_mm": [
             0.0,
@@ -2514,12 +2514,12 @@
       "weather_model": {
         "zone_1": {
           "pixels": 5,
-          "linear_mm_yr": -13.335806719330568,
+          "linear_mm_yr": -13.335806719330566,
           "theil_sen_mm_yr": -12.833496498554311,
-          "window_fit_mm": -11.428083513074519,
+          "window_fit_mm": -11.428083513074517,
           "date_fit_omission_range_mm_yr": [
-            -13.680138160925734,
-            -12.633803552733873
+            -13.680138160925736,
+            -12.633803552733871
           ],
           "displacement_mm": [
             0.0,
@@ -2643,7 +2643,7 @@
           "window_fit_mm": -10.36252367835507,
           "date_fit_omission_range_mm_yr": [
             -12.686925005143417,
-            -11.33991013933443
+            -11.339910139334428
           ],
           "displacement_mm": [
             0.0,
@@ -2894,7 +2894,7 @@
           "theil_sen_mm_yr": 1.2988430762290955,
           "window_fit_mm": 1.103898760828904,
           "date_fit_omission_range_mm_yr": [
-            0.8937964883119351,
+            0.8937964883119353,
             1.7829609727458209
           ],
           "displacement_mm": [
@@ -3155,7 +3155,7 @@
           "theil_sen_mm_yr": 16.929819158981182,
           "window_fit_mm": 14.086395584458515,
           "date_fit_omission_range_mm_yr": [
-            16.460352887380914,
+            16.46035288738091,
             17.284511944095538
           ],
           "displacement_mm": [
@@ -3302,7 +3302,7 @@
           "theil_sen_mm_yr": 16.930276820985537,
           "window_fit_mm": 14.41935301567149,
           "date_fit_omission_range_mm_yr": [
-            16.90863133919709,
+            16.908631339197093,
             17.571589813788297
           ],
           "displacement_mm": [
@@ -3728,7 +3728,7 @@
           "theil_sen_mm_yr": 12.970206573696956,
           "window_fit_mm": 10.750308180277173,
           "date_fit_omission_range_mm_yr": [
-            12.567602818730217,
+            12.567602818730215,
             13.093302417610413
           ],
           "displacement_mm": [

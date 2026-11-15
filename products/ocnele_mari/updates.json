@@ -1,45 +1,21 @@
 {
- "checked": "2026-11-14T22:01:06+00:00",
+ "checked": "2026-11-15T08:33:40+00:00",
  "s1": {
   "029A": {
-   "last_fitted": "20261005",
-   "new": [
-    "20261011",
-    "20261017",
-    "20261023",
-    "20261029",
-    "20261104",
-    "20261110"
-   ],
-   "granules": [
-    "S1_060407_IW2_20261011T161651_VV_66EF-BURST",
-    "S1_060407_IW2_20261017T161638_VV_1A15-BURST",
-    "S1_060407_IW2_20261023T161651_VV_A1D0-BURST",
-    "S1_060407_IW2_20261029T161638_VV_082F-BURST",
-    "S1_060407_IW2_20261104T161651_VV_B4B8-BURST",
-    "S1_060407_IW2_20261110T161638_VV_0681-BURST"
-   ]
+   "last_fitted": "20261110",
+   "new": [],
+   "granules": []
   },
   "007D": {
-   "last_fitted": "20261004",
+   "last_fitted": "20261109",
    "new": [
-    "20261010",
-    "20261016",
-    "20261022",
-    "20261028",
-    "20261103",
-    "20261109"
+    "20261115"
    ],
    "granules": [
-    "S1_013694_IW2_20261010T042924_VV_AE71-BURST",
-    "S1_013694_IW2_20261016T042911_VV_3E54-BURST",
-    "S1_013694_IW2_20261022T042924_VV_2398-BURST",
-    "S1_013694_IW2_20261028T042911_VV_8245-BURST",
-    "S1_013694_IW2_20261103T042924_VV_BDB7-BURST",
-    "S1_013694_IW2_20261109T042910_VV_3517-BURST"
+    "S1_013694_IW2_20261115T042923_VV_25CC-BURST"
    ]
   }
  },
  "nisar": [],
- "summary": "12 new acquisitions since the fits: Sentinel-1 029A: 6 (after 20261005); Sentinel-1 007D: 6 (after 20261004). Not fitted yet."
+ "summary": "1 new acquisitions since the fits: Sentinel-1 007D: 1 (after 20261109). Not fitted yet."
 }

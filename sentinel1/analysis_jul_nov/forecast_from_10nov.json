@@ -253,7 +253,7 @@
           4.001485258340836
         ],
         "gaussian_process": [
-          0.4926482136917103,
+          0.4926482136917102,
           1.5491757666988109,
           2.44976778826873,
           3.277533154122925,
@@ -343,7 +343,7 @@
         ],
         "gaussian_process": [
           1.8867575637947498,
-          3.0708707294346476,
+          3.070870729434648,
           3.2278715767017907,
           3.0434300750658094,
           2.7703215479106555
@@ -433,9 +433,9 @@
           -2.7288103103637695
         ],
         "gaussian_process": [
-          0.21824710732274777,
-          -0.2773758321914396,
-          -0.8293108837020574,
+          0.21824710732274766,
+          -0.2773758321914397,
+          -0.8293108837020575,
           -1.3788266216038862,
           -1.9257236719467974
         ],
@@ -606,7 +606,7 @@
           -1.6170896860686215
         ],
         "gaussian_process": [
-          -0.6302323278123378,
+          -0.6302323278123376,
           -0.8744341200235106,
           -1.1602183933845442,
           -1.4727994977098697,
@@ -688,11 +688,11 @@
           -2.4123564958572388
         ],
         "gaussian_process": [
-          -0.24554289558726183,
-          -0.4133114744310187,
-          -0.791843726570282,
-          -1.2473875280602895,
-          -1.7235841443676236
+          -0.2455428955872616,
+          -0.41331147443101846,
+          -0.7918437265702818,
+          -1.2473875280602893,
+          -1.7235841443676234
         ],
         "long_term": [
           -0.09001831861492056,
@@ -946,11 +946,11 @@
           -2.4509918689727783
         ],
         "gaussian_process": [
-          0.0671478555790519,
-          0.09776178177086892,
-          -0.2255966687085098,
-          -0.6730620062945241,
-          -1.1533618947912725
+          0.06714785557905167,
+          0.0977617817708687,
+          -0.22559666870851003,
+          -0.6730620062945243,
+          -1.1533618947912727
         ],
         "long_term": [
           -0.09001831861492056,
@@ -1036,10 +1036,10 @@
           -1.5536430647427386
         ],
         "gaussian_process": [
-          -1.321484457970624,
-          -2.899170801225466,
-          -3.6265650110048124,
-          -4.0450703966053325,
+          -1.3214844579706235,
+          -2.8991708012254658,
+          -3.626565011004812,
+          -4.045070396605332,
           -4.380892905783456
         ],
         "long_term": [
@@ -1119,131 +1119,6 @@
       "adopted": false,
       "note": "Past-only rain and soil-moisture covariates did not lower the error, so the export uses Chronos-2 without covariates. Known-future weather (not available for a real forecast) helped only at 88 days."
     }
-  },
-  "previous_check": {
-    "forecast_issued_from": "2026-10-05",
-    "forecast_model": "chronos2",
-    "checked_through": "2026-11-10",
-    "new_dates": 6,
-    "zone": "z4",
-    "track": "029A",
-    "scenario": "baseline",
-    "pixels_connected": 31,
-    "pixels_in_forecast": 34,
-    "pairs": 41,
-    "rows": [
-      {
-        "date": "2026-10-11",
-        "days_after": 6,
-        "measured_change_mm": 8.04,
-        "predicted_change_mm": {
-          "persistence": 0.0,
-          "theil_sen": -0.49,
-          "gaussian_process": 0.07,
-          "long_term": -0.09,
-          "chronos2": 1.63
-        },
-        "chronos2_interval_mm": [
-          -1.45,
-          8.29
-        ],
-        "inside_chronos2_interval": true
-      },
-      {
-        "date": "2026-10-17",
-        "days_after": 12,
-        "measured_change_mm": 4.48,
-        "predicted_change_mm": {
-          "persistence": 0.0,
-          "theil_sen": -0.98,
-          "gaussian_process": 0.1,
-          "long_term": -0.18,
-          "chronos2": 2.15
-        },
-        "chronos2_interval_mm": [
-          -1.97,
-          11.29
-        ],
-        "inside_chronos2_interval": true
-      },
-      {
-        "date": "2026-10-23",
-        "days_after": 18,
-        "measured_change_mm": 5.24,
-        "predicted_change_mm": {
-          "persistence": 0.0,
-          "theil_sen": -1.47,
-          "gaussian_process": -0.23,
-          "long_term": -0.27,
-          "chronos2": 2.38
-        },
-        "chronos2_interval_mm": [
-          -2.22,
-          12.85
-        ],
-        "inside_chronos2_interval": true
-      },
-      {
-        "date": "2026-10-29",
-        "days_after": 24,
-        "measured_change_mm": 2.39,
-        "predicted_change_mm": {
-          "persistence": 0.0,
-          "theil_sen": -1.96,
-          "gaussian_process": -0.67,
-          "long_term": -0.36,
-          "chronos2": 2.51
-        },
-        "chronos2_interval_mm": [
-          -2.47,
-          13.69
-        ],
-        "inside_chronos2_interval": true
-      },
-      {
-        "date": "2026-11-04",
-        "days_after": 30,
-        "measured_change_mm": 4.79,
-        "predicted_change_mm": {
-          "persistence": 0.0,
-          "theil_sen": -2.45,
-          "gaussian_process": -1.15,
-          "long_term": -0.45,
-          "chronos2": 2.59
-        },
-        "chronos2_interval_mm": [
-          -2.59,
-          14.69
-        ],
-        "inside_chronos2_interval": true
-      },
-      {
-        "date": "2026-11-10",
-        "days_after": 36,
-        "measured_change_mm": 3.53,
-        "predicted_change_mm": {
-          "persistence": 0.0,
-          "theil_sen": -2.94,
-          "gaussian_process": -1.64,
-          "long_term": -0.54,
-          "chronos2": 2.69
-        },
-        "chronos2_interval_mm": [
-          -2.83,
-          15.51
-        ],
-        "inside_chronos2_interval": true
-      }
-    ],
-    "mae_mm": {
-      "persistence": 4.75,
-      "theil_sen": 6.46,
-      "gaussian_process": 5.33,
-      "long_term": 5.06,
-      "chronos2": 2.46
-    },
-    "chronos2_inside_80pct": "6 of 6",
-    "note": "Measured change since the forecast was issued, from a 7 Jul to 2026-11-10 re-inversion of the 029A summer pair design (baseline run). One forecast checked on 6 later dates; the dates share one reference, so they are not independent."
   },
   "intervals": {
     "chronos2": {

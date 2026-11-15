@@ -13,7 +13,7 @@
   "max_abs_zone_difference": 1.7763568394002505e-15,
   "grid": {
    "finite_pattern_equal": true,
-   "max_abs_displacement_mm": 9.5367431640625e-07
+   "max_abs_displacement_mm": 1.9073486328125e-06
   }
  },
  "007D": {
@@ -27,7 +27,7 @@
    5.952404975891113,
    5.95240592956543
   ],
-  "max_abs_zone_difference": 3.552713678800501e-15,
+  "max_abs_zone_difference": 0.0,
   "grid": {
    "finite_pattern_equal": true,
    "max_abs_displacement_mm": 4.76837158203125e-07
