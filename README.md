@@ -1,7 +1,5 @@
 # Dancing on Salt
 
-**Owner:** 01 · Lead and story (Mario)
-
 <img width="474" height="145" alt="Logo" src="https://github.com/user-attachments/assets/dd8b923a-0575-47a9-9471-942fd5a546a3" />
 
 **AI-Disclosure:** https://docs.google.com/spreadsheets/d/124X3eaWHZTHrb_MgZriIy63Y4Zvm6VaW4JnVFfrDwhg/edit?usp=sharing
