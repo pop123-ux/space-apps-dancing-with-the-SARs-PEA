@@ -5,6 +5,7 @@ data/work
 data/raw
 sentinel1/assets
 sentinel1/assets_jan_oct
+sentinel1/assets*
 sentinel1/provenance
 notebooks
 tests
