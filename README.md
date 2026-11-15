@@ -163,7 +163,7 @@ vercel.json  .vercelignore                                  hosting
 
 ## How we used AI
 
-Each of the six of us ran Claude Code (Anthropic) for our own role, under shared rules in [CLAUDE.md](CLAUDE.md). ChatGPT (OpenAI) helped summarise the advisor's material before the event and with some Sentinel-1 and forecast work; Figma Make gave a first visual design that was replaced, and ChatGPT's image model generated the team logo (labelled AI-generated). The prediction comes from Chronos-2, a pretrained machine-learning forecasting model, used without retraining. The radar measurements and checks come from our scripts on open data. The validator (05) owns the checks and edits no science code. Every substantive use, and what a person checked, is logged in [AI-DISCLOSURE.md](AI-DISCLOSURE.md).
+Each of the six of us ran Claude Code (Anthropic) for our own role, under shared rules in [CLAUDE.md](CLAUDE.md). ChatGPT (OpenAI) helped summarise the advisor's material before the event and with some Sentinel-1 and forecast work; Figma Make gave a first visual design that was replaced. The prediction comes from Chronos-2, a pretrained machine-learning forecasting model, used without retraining. The radar measurements and checks come from our scripts on open data. The validator (05) owns the checks and edits no science code. Every substantive use, and what a person checked, is logged in [AI-DISCLOSURE.md](AI-DISCLOSURE.md).
 
 ## Next steps
 

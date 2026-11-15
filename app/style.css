@@ -729,7 +729,3 @@ details.src-more .src-what { margin-top: 5px; color: var(--ink); font-size: 13px
 body.dmenu-open #legend-scale { display: none !important; }   /* the menu has its own scale */
 @media (max-width: 700px) { #flags > .legend-scale:not([hidden]) { width: 210px; padding: 8px 10px; } .legend-scale .legend-title { font-size: 12px; } }
 
-/* the logo is AI-generated: a visible label, as the Space Apps rules require */
-.logo-wrap { position: relative; display: inline-flex; flex: none; }
-.ai-tag { position: absolute; left: 50%; bottom: -7px; transform: translateX(-50%); font-size: 7.5px; font-weight: 700; line-height: 1; padding: 1px 3px;
-  background: #1C1917; color: #FAFAF9; border-radius: 3px; white-space: nowrap; letter-spacing: .02em; }
