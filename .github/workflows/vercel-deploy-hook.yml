@@ -1,0 +1,20 @@
+# Owner: shared · announce changes; 01 reviews
+# Vercel's Hobby plan blocks deployments of commits whose author is not the account owner, so pushes by teammates
+# (Matei, Paul, bots) to main never go live. A Vercel Deploy Hook is not subject to that check: on every push to main
+# this workflow calls it, and Vercel builds the current main. The hook URL is a secret (VERCEL_DEPLOY_HOOK); without it
+# the workflow does nothing.
+name: vercel-deploy-hook
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger the Vercel production build of main
+        env:
+          HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then echo "VERCEL_DEPLOY_HOOK secret not set; nothing to do"; exit 0; fi
+          curl -fsS -X POST "$HOOK" > /dev/null && echo "Vercel build of main requested"
