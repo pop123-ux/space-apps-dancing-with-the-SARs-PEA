@@ -27,6 +27,42 @@ function passInfo(s, t) {
   const north = dir === 'Ascending'; const fromEast = (LOOK[s] === 'left') === north;
   return { when, from: fromEast ? 'east' : 'west', north, utc, dir };
 }
+// Orbits (nominal, both sun-synchronous with a 12-day repeat): Sentinel-1 175 orbits per cycle, inclination 98.18°;
+// NISAR 173 orbits per cycle, 98.4°. Sentinel-1C and 1D share the orbit half a cycle apart (6 days). The reference
+// passes are acquisition start times over Ocnele Mari in ASF's catalogue (checked 15 Nov 2026).
+const ORBIT = {
+  // side_km: a radar looks sideways, so at the reference pass the satellite is east (NISAR, left-looking, flying north)
+  // or west (Sentinel-1, right-looking) of the town by altitude x tan(mid-swath incidence). Checked against the known
+  // descending passes (30 Oct NISAR, 15 Nov Sentinel-1): right side, 470 to 530 km out, 180 to 310 km along track.
+  nisar: { orbits: 173, inc: 98.4, side_km: 747 * Math.tan(39 * Math.PI / 180), t0: '2026-11-02T03:20:13Z', dir: 'Ascending', sats: [{ name: 'NISAR', shift: 0 }] },
+  s1: { orbits: 175, inc: 98.18, side_km: -693 * Math.tan(37 * Math.PI / 180), t0: '2026-11-10T16:16:38Z', dir: 'Ascending', sats: [{ name: 'Sentinel-1C/D', shift: 0 }, { name: 'Sentinel-1C/D', shift: 0.5 }] },
+};
+const TOWN = [24.2935, 45.0880];
+function satPos(key, when, shift = 0) {   // [lon, lat] of the sub-satellite point
+  const o = ORBIT[key], rad = Math.PI / 180, inc = o.inc * rad;
+  const P = 12 / o.orbits;                                            // days per orbit
+  const dt = (when - Date.parse(o.t0)) / 864e5 + shift * 12;          // days since the reference pass (second satellite: half a cycle)
+  const ref = [TOWN[0] + o.side_km / (111.32 * Math.cos(TOWN[1] * rad)), TOWN[1]];   // where the satellite was at the reference pass
+  const u0 = Math.asin(Math.sin(ref[1] * rad) / Math.sin(inc));       // argument of latitude there, flying north
+  const u = (o.dir === 'Ascending' ? u0 : Math.PI - u0) + 2 * Math.PI * dt / P;
+  const L = (x) => Math.atan2(Math.cos(inc) * Math.sin(x), Math.cos(x));
+  let lon = ref[0] + (L(u) - L(o.dir === 'Ascending' ? u0 : Math.PI - u0)) / rad - 360 * dt;   // Earth turns 360°/day under a sun-synchronous orbit
+  lon = (((lon % 360) + 540) % 360) - 180;
+  return [lon, Math.asin(Math.sin(inc) * Math.sin(u)) / rad];
+}
+function repeatDays(s, t) {   // the most common gap between acquisitions: 12 days for NISAR, 6 for Sentinel-1 (two satellites)
+  const ds = (S.sens?.windows?.all?.frames?.[t] || frames(s)[t] || {}).dates || frames(s)[t]?.dates || [];
+  const c = {}; for (let i = 1; i < ds.length; i++) { const g = Math.round(day(ds[i]) - day(ds[i - 1])); c[g] = (c[g] || 0) + 1; }
+  return +Object.entries(c).sort((a, b) => b[1] - a[1])[0]?.[0] || 12;
+}
+function nextPass(s, t, now = Date.now()) {
+  const ds = (S.sens?.windows?.all?.frames?.[t]?.dates) || frames(s)[t]?.dates || []; const utc = PASS_UTC[s]?.[dirOf(s, t)];
+  if (!ds.length || !utc) return null;
+  const step = repeatDays(s, t) * 864e5; let tt = Date.parse(`${ds.at(-1)}T${utc}:00Z`);
+  while (tt < now) tt += step;
+  return tt;
+}
+const roTime = (ms, opts = {}) => new Date(ms).toLocaleString('en-GB', { timeZone: 'Europe/Bucharest', ...opts });
 const passShort = (s, t) => { const p = passInfo(s, t); return p ? `${p.when} pass, from the ${p.from}` : t; };
 const passTitle = (s, t) => { const p = passInfo(s, t); return p ? `Track ${t} (${p.dir.toLowerCase()}): flies ${p.north ? 'north' : 'south'} at about ${p.utc} UTC and sees the slopes from the ${p.from}. Each pass sees a different side of the hills, so the two can show different values.` : `Track ${t}`; };
 const trackText = (s, t) => `${sensors()[s]?.label || s} · ${passShort(s, t)}`;
@@ -467,6 +503,10 @@ function wireMenu(btn, menu) {
 function closeMenus() { document.querySelectorAll('.menu').forEach(m => m._close?.()); }
 
 // ------------------------------------------------------------------------------------------------ top bar
+function passLine(s) {   // "about 05:20 (morning, from the east) and 19:30 (evening, from the west), every 12 days"
+  return tracksOf(s).map(t => { const p = passInfo(s, t); const n = nextPass(s, t); return p && n ? `${roTime(n, { hour: '2-digit', minute: '2-digit' })} ${p.when}, from the ${p.from}` : ''; }).filter(Boolean).join(' · ')
+    + ` · every ${Math.min(...tracksOf(s).map(t => repeatDays(s, t)))} days`;
+}
 function renderSat() {
   const sn = sensors();
   const cur = S.sat === 'compare'
@@ -479,7 +519,7 @@ function renderSat() {
     const state = !m ? 'Not exported yet' : measured(k) ? [m.agency, `${m.band}, ${m.wavelength_cm} cm`, m.status].join(' · ') : `${m.band}, ${m.wavelength_cm} cm · catalog coverage · displacement fit pending`;
     return {
       key: k, cls: 'item', disabled: m ? null : `${SATS[k].name} is not in this products set`,
-      html: `<span class="mk ${SATS[k].cls}" aria-hidden="true">${SATS[k].mark}</span><span><span class="t">${esc(m?.label || SATS[k].name)}</span><span class="d">${esc(state)}</span></span><span class="tick" aria-hidden="true">✓</span>`,
+      html: `<span class="mk ${SATS[k].cls}" aria-hidden="true">${SATS[k].mark}</span><span><span class="t">${esc(m?.label || SATS[k].name)}</span><span class="d">${esc(state)}</span>${m ? `<span class="d pass">Over Romania: ${passLine(k)}</span>` : ''}</span><span class="tick" aria-hidden="true">✓</span>`,
     };
   });
   const ready = compareReady();
@@ -1948,28 +1988,79 @@ function closeSheet() {
 }
 
 // ------------------------------------------------------------------------------------------------ about dialog
+let trkMap = null, trkTimer = 0;
+function renderTracker() {
+  const now = Date.now();
+  const rows = [];
+  for (const s of ['nisar', 's1']) for (const t of tracksOf(s)) {
+    const n = nextPass(s, t, now); if (!n) continue; const d = n - now;
+    const cd = `${Math.floor(d / 864e5)} d ${String(Math.floor(d / 36e5) % 24).padStart(2, '0')} h ${String(Math.floor(d / 6e4) % 60).padStart(2, '0')} min`;
+    rows.push(`<tr><td><span class="${SATS[s].cls}">${SATS[s].mark}</span> ${trackHtml(s, t)}</td><td>${esc(roTime(n, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }))}</td><td class="num">${cd}</td><td>every ${repeatDays(s, t)} days</td></tr>`);
+  }
+  $('#trk-body').innerHTML = `<h3>Next passes over Ocnele Mari <span class="sub">(Romanian time)</span></h3><table class="data"><thead><tr><th>Pass</th><th>Next</th><th>In</th><th>Repeats</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
+  if (!trkMap?.getSource('sats')) return;
+  const pts = [], lines = [];
+  for (const k of ['nisar', 's1']) for (const sat of ORBIT[k].sats) {
+    pts.push({ type: 'Feature', properties: { name: sat.name, color: SATS[k].color }, geometry: { type: 'Point', coordinates: satPos(k, now, sat.shift) } });
+    let seg = [], prev = null;
+    for (let m = 0; m <= 100; m += 1) {
+      const p = satPos(k, now + m * 6e4, sat.shift);
+      if (prev && Math.abs(p[0] - prev[0]) > 180) { lines.push({ type: 'Feature', properties: { color: SATS[k].color }, geometry: { type: 'LineString', coordinates: seg } }); seg = []; }
+      seg.push(p); prev = p;
+    }
+    lines.push({ type: 'Feature', properties: { color: SATS[k].color }, geometry: { type: 'LineString', coordinates: seg } });
+  }
+  trkMap.getSource('sats').setData({ type: 'FeatureCollection', features: pts });
+  trkMap.getSource('trk').setData({ type: 'FeatureCollection', features: lines });
+}
+function openTracker() {
+  $('#tracker').showModal();
+  if (!trkMap) {
+    trkMap = new maplibregl.Map({ container: 'trk-map', style: BASEMAPS.light.style, center: TOWN, zoom: 1.2, attributionControl: false });
+    trkMap.on('style.load', () => { try { trkMap.setProjection({ type: 'globe' }); } catch (e) { /* older renderer: flat map */ } });
+    trkMap.on('load', () => {
+      trkMap.addSource('trk', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+      trkMap.addLayer({ id: 'trk', type: 'line', source: 'trk', paint: { 'line-color': ['get', 'color'], 'line-width': 1.6, 'line-dasharray': [2, 2] } });
+      trkMap.addSource('sats', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+      trkMap.addLayer({ id: 'sats', type: 'circle', source: 'sats', paint: { 'circle-radius': 7, 'circle-color': ['get', 'color'], 'circle-stroke-color': '#fff', 'circle-stroke-width': 2 } });
+      trkMap.addLayer({ id: 'satn', type: 'symbol', source: 'sats', layout: { 'text-field': ['get', 'name'], 'text-offset': [0, 1.3], 'text-size': 12, 'text-font': ['Noto Sans Regular'] }, paint: { 'text-halo-color': '#fff', 'text-halo-width': 1.5 } });
+      new maplibregl.Marker({ color: '#B2182B', scale: 0.7 }).setLngLat(TOWN).addTo(trkMap);
+      renderTracker();
+    });
+  } else setTimeout(() => trkMap.resize(), 50);
+  renderTracker(); clearInterval(trkTimer); trkTimer = setInterval(() => { if ($('#tracker').open) renderTracker(); else clearInterval(trkTimer); }, 1000);
+}
 function renderAbout() {
   const sn = sensorKeys().map(s => sensors()[s]);
   const n = S.man.checks || {};
   const m = S.man.methods || {};
   const others = (S.index || []).filter(s => s.site !== S.site);
-  $('#about-body').innerHTML = `<h2>Where did the ground move?</h2>
-    <p class="lead">${isPlaceholder(S.man.story) ? esc(S.man.note || '') : esc(S.man.story)}</p>
+  const passRows = sensorKeys().flatMap(s => tracksOf(s).map(tk => { const p = passInfo(s, tk); return p ? `<tr><td>${trackHtml(s, tk)}</td><td>${esc(roTime(Date.parse(`2026-01-15T${p.utc}:00Z`), { hour: '2-digit', minute: '2-digit' }))} in winter, an hour later in summer</td><td>flies ${p.north ? 'north' : 'south'}, every ${repeatDays(s, tk)} days</td></tr>` : ''; })).join('');
+  $('#about-body').innerHTML = `<h2>Terms &amp; Conditions</h2>
     ${S.man.synthetic ? '<div class="verdict na">Simulated, not data. Every number on this site is invented.</div>' : ''}
-    <h3>What this map can and cannot tell you</h3>
-    <p>Ground motion measured by two radar satellites, along each one's line of sight and relative to nearby terrain. <b>It is not a hazard forecast, an evacuation guide or a building safety assessment.</b> For official notices, follow ISU Vâlcea and the Ocnele Mari town hall.</p>
-    <h3 id="checks-h">Checks · ${n.pass ?? 0} pass, ${n.warn ?? 0} warn, ${n.fail ?? 0} fail, ${n.info ?? 0} info</h3>
-    <ul class="checks">${S.checks.map(c => `<li id="chk-${esc(c.id)}" class="${esc(c.status)}"><span class="ic" title="${esc(c.status)}">${STATUS_ICON[c.status] || '·'}</span><details class="more check"><summary>${esc(named(c.title))}</summary><div class="detail">${esc(named(c.detail))}</div></details></li>`).join('') || '<li>No checks yet.</li>'}</ul>
-    ${S.updates ? `<h3>Data freshness</h3><p class="sub">${esc(S.updates.summary)} Checked ${esc(S.updates.checked)}.</p>` : ''}
-    <h3>The two radars</h3>
-    ${sn.map(x => `<p><b>${esc(x.label)}</b> · ${esc(x.agency)} · ${esc(x.band)}, ${esc(x.wavelength_cm)} cm · ${esc(x.status)}${x.look ? ` · looks ${esc(x.look)}` : ''}<br><span class="sub">${esc(x.product || '')}${x.product ? '. ' : ''}Reference: ${esc(x.reference)}</span>${x.pending ? `<br><span class="sub">${esc(x.pending)}</span>` : ''}</p>`).join('')}
-    ${Object.keys(m).length ? more('Methods', `${['s1', 'sign', 'rate', 'zones'].filter(k => m[k]).map(k => `<p class="sub">${esc(m[k])}</p>`).join('')}
-      ${m.links ? `<p>${m.links.map(l => `<a href="${esc(l.href)}" target="_blank" rel="noopener">${esc(l.label)}</a>`).join(' · ')}</p>` : ''}`, 'h') : ''}
-    <h3>Credits</h3>
+    <h3>1. What this page is</h3>
+    <p>A map of how the ground moved around the salt-brine fields of Ocnele Mari, measured from space by two radar satellites, NISAR and Sentinel-1, and a short look ahead.</p>
+    <h3>2. What it is not</h3>
+    <p><b>Not a hazard forecast, an evacuation guide, or a building permit or safety assessment.</b> The "Can you build here?" answer is a screen from satellite data: before building, ask for a geotechnical study. For official notices, follow ISU Vâlcea and the Ocnele Mari town hall.</p>
+    <h3>3. How to read it</h3>
+    <ul class="tc"><li>Each satellite measures movement toward or away from itself, and relative to the terrain a few kilometres around, not absolute height.</li>
+      <li>Red: the ground moved away from the satellite, usually sinking. Blue: it moved toward it.</li>
+      <li>Forest and steep slopes give no measurement, so some places have no dots.</li>
+      <li>The prediction continues today's trend with a forecasting model; it is indicative, not a promise.</li></ul>
+    <h3>4. The satellites and when they pass over Romania</h3>
+    <table class="data"><thead><tr><th>Pass</th><th>Time over Ocnele Mari (Romanian time)</th><th></th></tr></thead><tbody>${passRows}</tbody></table>
+    <p class="sub">${sn.map(x => `<b>${esc(x.label)}</b>: ${esc(x.agency)}, ${esc(x.band)} (${esc(x.wavelength_cm)} cm wavelength), ${esc(x.status)}.`).join(' ')}</p>
+    <h3>5. Data, licences and credits</h3>
     <p class="sub">${esc(S.man.credits)}</p>
     ${sn.map(x => `<p class="sub">${esc(x.credit)}</p>`).join('')}
-    <p class="sub">Maps: ${BASEMAPS.light.attribution}; ${BASEMAPS.satellite.attribution}. Map library: MapLibre GL JS.</p>
-    <p class="sub">Built ${esc(S.man.built)}${others.length ? ` · Other products sets: ${others.map(s => `<a href="#site=${esc(s.site)}" data-site="${esc(s.site)}">${esc(s.name)}${s.synthetic ? ' (simulated)' : ''}</a>`).join(', ')}` : ''}</p>`;
+    <p class="sub">Maps: ${BASEMAPS.light.attribution}; ${BASEMAPS.satellite.attribution}. Building outlines: © OpenStreetMap contributors (ODbL), via OpenFreeMap. Map library: MapLibre GL JS.</p>
+    <h3>6. Use</h3>
+    <p class="sub">Free to view and share with attribution. Provided as is, without warranty, for NASA Space Apps 2026. Built ${esc(S.man.built)}.</p>
+    ${Object.keys(m).length ? more('Methods (for specialists)', `${['s1', 'sign', 'rate', 'zones'].filter(k => m[k]).map(k => `<p class="sub">${esc(m[k])}</p>`).join('')}
+      ${m.links ? `<p>${m.links.map(l => `<a href="${esc(l.href)}" target="_blank" rel="noopener">${esc(l.label)}</a>`).join(' · ')}</p>` : ''}`, 'h') : ''}
+    <details class="more" id="checks-more"><summary id="checks-h">Validation checks (for reviewers) · ${n.pass ?? 0} pass, ${n.warn ?? 0} warn, ${n.fail ?? 0} fail</summary>
+      <ul class="checks">${S.checks.map(c => `<li id="chk-${esc(c.id)}" class="${esc(c.status)}"><span class="ic" title="${esc(c.status)}">${STATUS_ICON[c.status] || '·'}</span><details class="more check"><summary>${esc(named(c.title))}</summary><div class="detail">${esc(named(c.detail))}</div></details></li>`).join('') || '<li>No checks yet.</li>'}</ul></details>
+    ${others.length ? `<p class="sub">Other products sets: ${others.map(s => `<a href="#site=${esc(s.site)}" data-site="${esc(s.site)}">${esc(s.name)}${s.synthetic ? ' (simulated)' : ''}</a>`).join(', ')}</p>` : ''}`;
   $('#about-body').querySelectorAll('[data-site]').forEach(a => a.onclick = (e) => { e.preventDefault(); location.hash = `site=${a.dataset.site}`; location.reload(); });
 }
 
@@ -2048,10 +2139,12 @@ async function main() {
   $('#dm-close').addEventListener('click', closeMenu);
   mapA.on('zoomend', () => { if (S.menu) renderMenu(); });
   $('#about-btn').addEventListener('click', () => { $('#about').showModal(); $('#about').scrollTop = 0; });
+  $('#track-btn').addEventListener('click', openTracker);
   $('#checks-btn').addEventListener('click', () => {
     $('#about').showModal();
     const id = $('#checks-btn').dataset.target; const li = id && document.getElementById(`chk-${id}`);
     document.querySelectorAll('.checks li.here').forEach(e => e.classList.remove('here'));
+    $('#checks-more').open = true;
     if (li) { li.classList.add('here'); li.scrollIntoView({ block: 'center' }); } else $('#checks-h').scrollIntoView();
   });
 

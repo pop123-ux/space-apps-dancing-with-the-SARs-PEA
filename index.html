@@ -35,7 +35,8 @@
         <div id="sat-menu" class="menu" role="group" aria-label="Satellite" hidden></div>
       </div>
       <button id="checks-btn" type="button" class="pill quiet" aria-label="Checks"></button>
-      <button id="about-btn" type="button" class="round" aria-label="About this page">i</button>
+      <button id="track-btn" type="button" class="pill quiet" aria-label="Where the satellites are now">🛰 Satellites now</button>
+      <button id="about-btn" type="button" class="pill quiet" aria-label="Terms and conditions">Terms &amp; Conditions</button>
     </div>
   </header>
 
@@ -110,6 +111,14 @@
   <dialog id="table-dlg" class="table-dlg" aria-label="Table">
     <button type="button" class="round small close" aria-label="Close" onclick="this.closest('dialog').close()">✕</button>
     <div id="table-body"></div>
+  </dialog>
+
+  <dialog id="tracker" class="tracker">
+    <button type="button" class="round small close" aria-label="Close" onclick="this.closest('dialog').close()">✕</button>
+    <h2>Where the satellites are now</h2>
+    <p class="lead">Computed in your browser from each satellite's fixed orbit: its last pass over Ocnele Mari in ASF's catalogue, the time it takes to circle the Earth and its 12-day repeat. Accurate to about 300 km. A radar looks sideways, so when it measures Ocnele Mari the satellite is 500 to 600 km to the east or west of the town. The dashed line is the next 100 minutes, about one orbit. Drag the globe to turn it.</p>
+    <div id="trk-map"></div>
+    <div id="trk-body"></div>
   </dialog>
 
   <dialog id="about">
