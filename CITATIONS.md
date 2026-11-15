@@ -57,6 +57,9 @@ These are the data, software, documents and prior work this project uses, with w
 | NISAR GUNW product specification (mask bitfield, spec 1.4) | Linked from the ASF NISAR docs; 02 records the exact version |
 | EuVeM2022 README and paper | doi:10.23701/euvem2022; Steffen et al. 2025, *GJI*, doi:10.1093/gji/ggaf052 |
 | NGL MIDAS | Blewitt, Hammond and Kreemer 2018, *Eos* 99 |
+| Solari et al. 2020, salt solution mining with multi-temporal InSAR (Volterra) | doi:10.3390/rs12233919 (05, `docs/prior-work.md`) |
+| InSAR of partially coherent targets, Maceió salt mine collapse | *Remote Sensing* 16, 3806 (2024), https://www.mdpi.com/2072-4292/16/20/3806 (05, abstract only) |
+| Land degradation monitoring in the Ocnele Mari salt mining area, SPIE 2011 | https://www.researchgate.net/publication/235888900 (05, abstract only) |
 | NASA Space Apps Cluj-Napoca 2026, participant's guide | https://app.notion.com/p/Participant-s-Guide-NASA-Space-Apps-Challenge-Cluj-Napoca-2026-40903dd4dbcc80eab387c2962430efef (Notion; 01 reads it at hour 0) |
 | Cluj-Napoca event at ClujHUB, 14 to 15 Nov 2026 | https://www.romania-insider.com/nasa-space-apps-challenge-registrations-romania-2026 |
 | Space Apps challenge and resources | https://www.spaceappschallenge.org/2026/challenges/dancing-with-the-sars/?tab=resources (unreachable from the setup machine on 14 Nov; 01 adds what we use) |

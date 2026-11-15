@@ -59,6 +59,7 @@ Every file in this repository has an owner role, 01 to 06, or is shared. The own
 | `validate.py` | 05 · Validator (Paul) | Checks 1 to 8, stations.geojson, checks.json; nobody else edits it |
 | `hyp3_order.py` | 05 · Validator (Paul) | Order and fetch Sentinel-1 on HyP3 (hour 0 to 1) |
 | `docs/validation-log.md` | 05 · Validator (Paul) | HyP3 orders, station screening, red-team notes, frozen-build rerun |
+| `docs/prior-work.md` | 05 · Validator (Paul) | Earlier work at Ocnele Mari and salt sites, and what this project adds |
 
 ## 06 · App developer (Darius)
 
