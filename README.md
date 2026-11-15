@@ -2,6 +2,8 @@
 
 <img width="474" height="145" alt="Logo" src="https://github.com/user-attachments/assets/dd8b923a-0575-47a9-9471-942fd5a546a3" />
 
+*Logo: AI-generated (ChatGPT image model, 14 Nov 2026).*
+
 **AI-Disclosure:** https://docs.google.com/spreadsheets/d/124X3eaWHZTHrb_MgZriIy63Y4Zvm6VaW4JnVFfrDwhg/edit?usp=sharing
 
 *Our submission to NASA Space Apps 2026, challenge [Dancing with the SARs](https://www.spaceappschallenge.org/2026/challenges/dancing-with-the-sars/). The submission text is in [SUBMISSION.md](SUBMISSION.md).*
@@ -161,7 +163,7 @@ vercel.json  .vercelignore                                  hosting
 
 ## How we used AI
 
-Each of the six of us ran Claude Code (Anthropic) for our own role, under shared rules in [CLAUDE.md](CLAUDE.md). ChatGPT (OpenAI) helped summarise the advisor's material before the event and with some Sentinel-1 and forecast work; Figma Make gave a first visual design that was replaced. The prediction comes from Chronos-2, a pretrained forecasting model, used without retraining. The radar measurements and checks come from our scripts on open data. The validator (05) owns the checks and edits no science code; the current check results were run by the 02/03 session and are marked as a draft until 05 reviews them. Every substantive use, and what a person checked, is logged in [AI-DISCLOSURE.md](AI-DISCLOSURE.md).
+Each of the six of us ran Claude Code (Anthropic) for our own role, under shared rules in [CLAUDE.md](CLAUDE.md). ChatGPT (OpenAI) helped summarise the advisor's material before the event and with some Sentinel-1 and forecast work; Figma Make gave a first visual design that was replaced, and ChatGPT's image model generated the team logo (labelled AI-generated). The prediction comes from Chronos-2, a pretrained machine-learning forecasting model, used without retraining. The radar measurements and checks come from our scripts on open data. The validator (05) owns the checks and edits no science code. Every substantive use, and what a person checked, is logged in [AI-DISCLOSURE.md](AI-DISCLOSURE.md).
 
 ## Next steps
 
@@ -172,4 +174,4 @@ Each of the six of us ran Claude Code (Anthropic) for our own role, under shared
 
 ## License
 
-[MIT](LICENSE). Space Apps distributes submission content under Apache 2.0, so 01 checks the 2026 guide. Third-party data are linked and credited, not redistributed: contains modified Copernicus Sentinel data 2025 to 2026, processed by ASF HyP3; NISAR data courtesy of NASA and ISRO, via ASF DAAC.
+[MIT](LICENSE). Third-party data are linked and credited, not redistributed: contains modified Copernicus Sentinel data 2025–2026, processed by ASF HyP3; NISAR data courtesy of NASA and ISRO, via ASF DAAC.

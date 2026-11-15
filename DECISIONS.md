@@ -314,3 +314,7 @@ A decision recorded here is not a question. Nobody blocks on one. If a line look
   - **The pin's hint and title** no longer promise a build answer.
   - **Removed:** the 11 screenshots of the old interface (`docs/figures/ui-review-14nov/`).
   - **Moved:** `ocnele-mari-geography.md` to `docs/geography.md`.
+- 2026-11-15 (all, via Alexandru): Fixed what the independent submission review found in the repo and page:
+  - **SUBMISSION.md:** the Canva demo link, a References section, and a working EuVeM2022 link. The Sentinel-1 result is called the baseline fit, with how the other processing choices change it. The 2029 noise date is a rough estimate. Only the Sentinel-1 forecast cells are tested. The validation wording no longer overstates. Copernicus, NASA–ISRO and EGMS attribution is added.
+  - **The logo:** it was AI-generated with ChatGPT's image model (its content credentials say so). It now carries an "AI-generated" label on the page and in the README, and AI-DISCLOSURE.md is resolved.
+  - **Smaller fixes:** credits say Sentinel data 2025–2026; a page typo; the Sentinel-1 row in CITATIONS.md; two internal to-dos removed from the README.

@@ -637,7 +637,7 @@ def run(site_key: str) -> None:
                    dict(label="Sentinel-1 analysis notes", href="sentinel1/analysis/README.md"),
                    dict(label="NISAR pair list", href="data/scenes/ocnele_mari_gunw.csv"),
                    dict(label="ASF NISAR Data User Guide", href="https://nisar-docs.asf.alaska.edu/")]),
-        credits="Contains modified Copernicus Sentinel data 2026, processed by ASF HyP3. NISAR catalog: NASA–ISRO, ASF DAAC "
+        credits="Contains modified Copernicus Sentinel data 2025–2026, processed by ASF HyP3. NISAR catalog: NASA–ISRO, ASF DAAC "
                 "(beta and provisional products, not intended for scientific research).",
     ))
     idx = C.PRODUCTS / "index.json"
