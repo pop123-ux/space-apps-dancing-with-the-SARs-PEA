@@ -270,4 +270,4 @@ Alexandru's specification: four elements, cream background (#F4ECDB), very dark 
 
 **Not in this front end** (the data and scripts behind them still exist): the context strip and zone chips, Investigate Zone 4, Copy view link, Reset to site, the Coverage and Compare views and the comparison panel, the split-screen Compare map, processing runs and windows, the Chronos-2 forecast and its slider, stations and their panels, the checks and About panel, EGMS context, the track switch (129A/094D, 029A/007D), Romanian, the Rate view, the basemap and opacity settings, acquisition marks on the timeline, the NISAR gap filler, table export, play, and link (hash) state.
 
-**15 Nov 2026, later:** the previous page (before layout v5) is live again at Alexandru's request. Layout v5 is kept in `app/v5/` (open `app/v5/index.html`) as a source of features to bring over one at a time.
+**15 Nov 2026, later:** the previous page (before layout v5) is live again at Alexandru's request. Layout v5 was then removed from the repository as well (Alexandru: forget that change).
