@@ -27,6 +27,7 @@ These are the data, software, documents and prior work this project uses, with w
 | NGL station list (`llh.out`) | Finding open stations near the town | `https://geodesy.unr.edu/NGLStationPages/llh.out`, read 14 Nov 2026 | 05 |
 | ASF Search API, Sentinel-1 SLC and NISAR catalogues | The 2026 third-witness search | `https://api.daac.asf.alaska.edu/services/search/param`, point 45.08846 N 24.29666 E, from 2026-01-01, queried 14 Nov 2026 | 05 |
 | NISAR L3 SME2 soil moisture, beta and provisional (`NISAR_L3_SME2_BETA_V1`, `NISAR_L3_SME2_PROVISIONAL_V1`), 200 m | Red-team screen: does the Sentinel-1 signal follow soil moisture | ASF, `https://nisar.asf.earthdatacloud.nasa.gov/NISAR/<collection>/`, Earthdata login; 25 granules over the town found with the ASF Search API, 14 Nov 2026. NISAR products are beta/provisional, not intended for scientific research | 05 |
+| NISAR L2 GSLC, provisional (`NISAR_L2_GSLC_PROVISIONAL_V1`), HH, track 094D, 10 dates 20 Jun to 18 Oct 2026 | Our own interferometric pairs for the 094D sign test (`notebooks/02/gslc_pairs_094d.py`); the test still fails | NASA Earthdata search (CMR, `https://cmr.earthdata.nasa.gov/search/granules.json?short_name=NISAR_L2_GSLC_PROVISIONAL_V1`), files from ASF `https://nisar.asf.earthdatacloud.nasa.gov/NISAR/NISAR_L2_GSLC_PROVISIONAL_V1/`, Earthdata login; read 15 Nov 2026 | 02 |
 | ERA5 daily precipitation via the Open-Meteo historical weather API | Red-team screen and the predeclared rain forecast test | `https://archive-api.open-meteo.com/v1/archive`, 45.088 N 24.290 E, 1 May to 31 Oct 2026, read 14 Nov 2026. Hersbach et al. 2020, *QJRMS*, doi:10.1002/qj.3803; Open-Meteo, CC BY 4.0 | 05 |
 | OPERA L4 TROPO-ZENITH v1 (NASA JPL, ECMWF HRES through RAiDER), zenith wet and hydrostatic delay | Independent weather-model troposphere check of the Sentinel-1 stack | ASF, `https://cumulus.asf.earthdatacloud.nasa.gov/OPERA/OPERA_L4_TROPO-ZENITH_V1/`, Earthdata login with the OPERA data licence accepted; 64 maps around the July to October 2026 acquisitions, read 14 Nov 2026. [Product page](https://www.jpl.nasa.gov/go/opera/products/tropo-product/) | 05 |
 | Copernicus GLO-30 DEM | Troposphere slope | `https://copernicus-dem-30m.s3.amazonaws.com/Copernicus_DSM_COG_10_N45_00_E024_00_DEM/…`; [AWS Registry of Open Data](https://registry.opendata.aws/copernicus-dem/) | 02 |
@@ -54,6 +55,10 @@ These are the data, software, documents and prior work this project uses, with w
 | Document | Link |
 | --- | --- |
 | NISAR documentation at ASF, including open-source tools | https://nisar-docs.asf.alaska.edu/ |
+| NISAR mission page (NASA JPL) | https://nisar.jpl.nasa.gov |
+| NISAR data at ASF, NASA's archive for NISAR | https://asf.alaska.edu/nisar/ |
+| ASF Search, the catalogue every acquisition date and pass time on the page comes from | https://search.asf.alaska.edu/ |
+| NASA Earthdata login (required to download NISAR products) | https://urs.earthdata.nasa.gov |
 | NISAR GUNW product specification (mask bitfield, spec 1.4) | Linked from the ASF NISAR docs; 02 records the exact version |
 | EuVeM2022 README and paper | doi:10.23701/euvem2022; Steffen et al. 2025, *GJI*, doi:10.1093/gji/ggaf052 |
 | NGL MIDAS | Blewitt, Hammond and Kreemer 2018, *Eos* 99 |
