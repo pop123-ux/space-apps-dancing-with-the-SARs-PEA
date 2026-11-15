@@ -258,3 +258,25 @@ See [the forecasting handoff](forecast.md) for the January endpoint, Paul’s in
 Choosing Compare opens a panel, "How the two radars differ, and how they fill each other's gaps", built from the products: wavelength, look side, the track pair shown (NISAR 129A with Sentinel-1 007D: same east-west sensitivity), number and spacing of acquisitions, period, grid, reference, pixel noise and, for a zone, usable pixels. It then lists what each adds: Sentinel-1 fills NISAR's January to June gap, NISAR adds earlier dates, the opposite look sides together separate up-down from east-west motion, and the two wavelengths behave differently over vegetation and time.
 
 The old "Still inconclusive" list is replaced by **What already agrees** (whether both radars show the zone moving the same way over the common window, with both rates) and **What would settle it** (more dates, larger comparison areas, one stated assumption about the motion being vertical, and the flagged 094D track). The automatic check still says inconclusive where its tolerance is too wide; the page now says that this is noise, not contradiction.
+
+## Layout v5: full remake, front end only (15 Nov 2026)
+
+Alexandru's specification: four elements, cream background (#F4ECDB), very dark brown (#2A1A0F) for text and lines, Bookman Old Style, square corners everywhere, no pop-ups. The pipeline and `products/` are unchanged; the page only reads them.
+
+1. **Toolbar** (6 % of the height): "Dancing on Salt" on the left; a rectangular "Satellite" setting on the right whose options (NISAR, Sentinel-1) open downward on hover, invert on hover and stay inverted when selected.
+2. **Map** (70 %): satellite imagery, the town boundary, and the measurement dots of the selected satellite at the selected date (Sentinel-1: the longest series, January to October 2026, the track with the most measured points; NISAR: 129A).
+3. **Timeline** (24 %): a toolbar (a quarter) with "Time unit" (Years, Months; options open upward) and a graded line from 2020 to 2026. The selected period is a raspberry rectangle at 70 % opacity; the map shows the last acquisition inside it.
+4. **Menu** (right half, only after a click on the map): a graph (half of its height) of the median line-of-sight change of the dots within 500 m of the click, Y from the lowest to the highest value, a faint dashed 0 mm line; a legend (a tenth of its height) with the square colour scale, the area's median rounded down, and "1 cm on screen = … on the map". Escape closes it.
+
+**Not in this front end** (the data and scripts behind them still exist): the context strip and zone chips, Investigate Zone 4, Copy view link, Reset to site, the Coverage and Compare views and the comparison panel, the split-screen Compare map, processing runs and windows, the Chronos-2 forecast and its slider, stations and their panels, the checks and About panel, EGMS context, the track switch (129A/094D, 029A/007D), Romanian, the Rate view, the basemap and opacity settings, acquisition marks on the timeline, the NISAR gap filler, table export, play, and link (hash) state.
+
+**15 Nov 2026, later:** the previous page (before layout v5) is live again at Alexandru's request. Layout v5 was then removed from the repository as well (Alexandru: forget that change).
+
+## The menu: pressing on the map (15 Nov 2026)
+
+Pressing on the map opens **the menu**, a panel on the right that takes the whole map height and half the app's width (the map shrinks to the left half). A zone button opens that zone; anywhere else opens the area around the press, a 1 × 1 km square outlined in blue on the map. The menu holds:
+
+- **Graph** (top half): "How the ground moved here (mm)": the zone's series, or the median of the measured points inside the square, over time. The Y axis runs from the lowest to the highest value; 0 mm is a faint straight line; the line breaks across periods without acquisitions (NISAR's January to June gap, shaded "no data"); the date shown on the map is highlighted. One sentence explains the sign.
+- **Legend** (bottom 15 %): the colour gradient with its mm values, and "1 cm on screen = N m on the map" for the current zoom.
+
+The floating legend card and the pop-up on a dot are removed. The close button or Escape closes the menu. The zone chips above the map still open the detailed zone panel.
