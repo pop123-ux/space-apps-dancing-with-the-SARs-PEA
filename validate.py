@@ -27,7 +27,7 @@ The checks (DRAFT thresholds from the advisor kit; 05 owns them):
             not judged (a difference is the story, not an error).
 7 truth     synthetic site only: up bias < 1 mm/yr, zones within 15 %.
 8 s1        NISAR against Sentinel-1 (D-004), per zone over the common window (C.COMMON_WINDOW), as zone minus outer
-            reference band until O-19 decides: agree within the combined errors, disagree, or not testable (too few pixels).
+            reference band until the team decides how to compare the two radars: agree within the combined errors, disagree, or not testable (too few pixels).
 
 Choices made in this draft (05 to confirm):
 - Check 1 runs on every fitted track, exported or not (094D is held off the page because of this check).
@@ -41,7 +41,7 @@ Choices made in this draft (05 to confirm):
   about 26 mm/yr on 129A), because the noise is correlated over kilometres.
 - Checks 2 and 8 report warn, not pass or fail, when their tolerance is wider than TOL_DECISIVE (20 mm/yr): a check
   that cannot fail is not evidence, and a "fail" inside noise that large is not evidence either way.
-- Check 8 pairs tracks by look geometry, not by direction (O-19 proposal, 14 Nov 21:45): NISAR looks left and
+- Check 8 pairs tracks by look geometry, not by direction (proposal for comparing the radars, 14 Nov 21:45): NISAR looks left and
   Sentinel-1 right, so NISAR 129A (ascending, east +0.62) sees east-west motion like Sentinel-1 007D (descending,
   east +0.64), not like 029A (east -0.64). With EGMS zone east rates of -4.1 to +4.9 mm/yr, pairing by direction put
   -5 to +6 mm/yr of geometry into the difference; pairing by geometry leaves under 0.1 mm/yr. NISAR is still scaled

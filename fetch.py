@@ -33,6 +33,7 @@ Known going in (CMR, 14 Nov 2026; advisor rehearsal, 12 Nov 2026):
 from __future__ import annotations
 
 import argparse
+import csv
 import io
 import json
 import os
@@ -342,12 +343,76 @@ def read_corrections(site: str, track: str, ref: str, sec: str, url: str, token:
     return rf.fetched
 
 
-def synthetic(site: str, seed: int = 7) -> None:
+# synthetic known-answer stack (tests T5 and T6, validator check 7). Truth in mm/yr, LOS geometry as the real tracks.
+SYN_BOWLS = {"z1": -25.0, "z2": -15.0, "z3": -20.0, "z4": -10.0}   # up rate at each zone centre, mm/yr (invented)
+SYN_GEOM = {"129A": dict(e=0.624, n=0.206, u=0.754, direction="Ascending"),
+            "094D": dict(e=-0.62, n=0.21, u=0.76, direction="Descending")}   # NISAR look vectors, target → sensor
+
+
+def synthetic(site: str, seed: int = 7, annual_mm: float = 0.0, out_site: str | None = None, noise: bool = True) -> None:
     """Offline known-answer stack in exactly the real file shapes: truth.npz + per-track meta/geom/pairs.
 
-    Use the real date pattern (including the January–June gap) so the gap handling is tested too.
+    Uses the real NISAR pair pattern from data/scenes/ocnele_mari_gunw.csv (including the January to June 2026 gap).
+    Truth: one Gaussian sinking bowl per zone (SYN_BOWLS, 1.5 × the zone radius), a small eastward drift towards the
+    bowls (a fifth of the up rate), zero elsewhere, plus an optional annual cosine inside the bowls (annual_mm amplitude at the bowl centre, peak 1 Jan).
+    Noise per date: stratified atmosphere (a random slope with height, ±8 mm per 100 m), turbulent atmosphere (smooth
+    field, about 5 mm, 4 km correlation) and coherence holes. The ionosphere is taken as already removed.
     """
-    raise C.todo("02", "write a synthetic stack with known up/east, atmosphere, ionosphere and a planted gap")
+    import numpy as np
+    rng = np.random.default_rng(seed)
+    out = out_site or site
+    s = C.SITES[site]
+    ny = nx = 313; dx = 160.0                         # 50 km window at 160 m: same extent as the real grid, lighter
+    epsg = C.utm_epsg(s["lon"], s["lat"])
+    E, N = C.to_xy(epsg, s["lon"], s["lat"])
+    x0, y0 = E - (nx - 1) / 2 * dx, N + (ny - 1) / 2 * dx
+    X, Y = np.meshgrid(x0 + np.arange(nx) * dx, y0 - np.arange(ny) * dx)
+    dem = 300 + 250 * np.sin(X / 7000.0) * np.cos(Y / 9000.0) + 0.004 * (Y - N)      # hills, 50 to 600 m
+    up = np.zeros_like(X); east = np.zeros_like(X)
+    for z in s["zones"]:
+        zx, zy = C.to_xy(epsg, z["lon"], z["lat"])
+        g = np.exp(-((X - zx) ** 2 + (Y - zy) ** 2) / (2 * (1.5 * z["r_m"]) ** 2))
+        up += SYN_BOWLS[z["id"]] * g
+        east += 0.2 * abs(SYN_BOWLS[z["id"]]) * g * np.sign(zx - X + 1e-9) * np.minimum(1, np.abs(zx - X) / 300)
+    rows = list(csv.DictReader((C.DATA / "scenes" / "ocnele_mari_gunw.csv").open(encoding="utf-8")))
+    k = np.fft.fftfreq(nx, dx)
+    K = np.hypot(*np.meshgrid(k, k))
+    filt = np.exp(-(K * 4000.0) ** 2)
+
+    def turbulent():
+        f = np.real(np.fft.ifft2(np.fft.fft2(rng.standard_normal((ny, nx))) * filt))
+        return 5.0 * f / f.std()
+    for track, gm in SYN_GEOM.items():
+        tdir = C.site_dir(out, track)
+        for f in tdir.glob("*.npz"):
+            f.unlink()
+        pairs = sorted({(r["ref_date"].replace("-", ""), r["sec_date"].replace("-", "")) for r in rows if r["track"] == track})
+        dates = sorted({d for p in pairs for d in p})
+        t = C.years([f"{d[:4]}-{d[4:6]}-{d[6:]}" for d in dates])
+        los_rate = gm["e"] * east + gm["u"] * up
+        atm = {d: (rng.normal(0, 8) / 100 * (dem - dem.mean()) + turbulent()) if noise else np.zeros_like(dem) for d in dates}
+        bowl = np.abs(up) / np.abs(up).max()          # the annual term lives in the bowls (a uniform one would be referenced away)
+        disp = {d: los_rate * ti + gm["u"] * annual_mm * bowl * np.cos(2 * np.pi * ti) for d, ti in zip(dates, t)}
+        wl = 0.24393
+        meta = dict(epsg=epsg, x0=float(x0), y0=float(y0), dx=dx, dy=-dx, nx=nx, ny=ny, wavelength=wl,
+                    direction=gm["direction"], look="Left", polarization="HH", synthetic=True, height_m=s["height_m"],
+                    centre="x0, y0 are pixel centres", granules={})
+        C.save_json(tdir / "meta.json", meta)
+        np.savez_compressed(tdir / "geom.npz", los_e=np.full((ny, nx), gm["e"], "f4"), los_n=np.full((ny, nx), gm["n"], "f4"),
+                            los_u=np.full((ny, nx), gm["u"], "f4"), incidence=np.full((ny, nx), 41.0, "f4"))
+        np.savez_compressed(tdir / "dem.npz", dem=dem.astype("f4"))
+        for a, b in pairs:
+            mm = (disp[b] - disp[a]) + (atm[b] - atm[a])
+            phase = mm / (-1 * wl / (4 * np.pi) * 1000.0)            # stack.PHASE_SIGN = -1
+            coh = np.clip(0.6 + 0.15 * rng.standard_normal((ny, nx)), 0, 1).astype("f4")
+            hole = (rng.random((ny, nx)) < 0.05) if noise else np.zeros((ny, nx), bool)
+            np.savez_compressed(tdir / f"{a}_{b}.npz", phase=np.where(hole, np.nan, phase).astype("f4"), coh=coh,
+                                iono_used=False, iono_std=np.nan, valid_share=float(1 - hole.mean()),
+                                main_share=float(1 - hole.mean()), iono_interp=0.0, collection="synthetic")
+        np.savez_compressed(tdir / "truth.npz", up=up.astype("f4"), east=east.astype("f4"), los_rate=los_rate.astype("f4"),
+                            annual_mm=annual_mm)
+        print(f"{out} {track}: synthetic {len(pairs)} pairs, {len(dates)} dates, annual {annual_mm} mm, seed {seed}")
+    np.savez_compressed(C.site_dir(out) / "truth.npz", up=up.astype("f4"), east=east.astype("f4"), annual_mm=annual_mm)
 
 
 def main() -> None:
@@ -355,13 +420,14 @@ def main() -> None:
     ap.add_argument("site", choices=C.SITES)
     ap.add_argument("--list", action="store_true", help="search only")
     ap.add_argument("--synthetic", action="store_true", help="offline known-answer stack")
+    ap.add_argument("--annual", type=float, default=0.0, help="synthetic only: annual amplitude in mm (test T6)")
     ap.add_argument("--track", help="only this track, e.g. 129A")
     ap.add_argument("--workers", type=int, default=4, help="parallel streams (tune on the venue Wi-Fi)")
     ap.add_argument("--corrections", action="store_true",
                     help="add NASA's troposphere and solid-earth-tide screens to pairs already on disk")
     a = ap.parse_args()
     if a.synthetic or C.SITES[a.site].get("synthetic"):
-        return synthetic(a.site)
+        return synthetic(a.site, annual_mm=a.annual)
     pairs = search(a.site)
     if a.track:
         pairs = {k: v for k, v in pairs.items() if k[0] == a.track}

@@ -110,3 +110,25 @@ Every GUNW carries hydrostatic and wet troposphere phase screens and solid-earth
 ## Stations after the rerun (15 Nov 2026)
 
 The NISAR chain was rerun with `main`'s partial-series stack (129A: 79 % of pixels with a rate, tie offset −9.09 mm/yr, scatter 41.7 mm/yr; T3 −11.3 mm/yr, pass). At the VLC monument NISAR 129A reads −1.7 mm/yr against GNSS −0.6 (VLC1, NGL 2012 to 2018), +0.3 (VLC2, Muntean 2019 to 2025) and −0.3 mm/yr for their inverse-variance mean: within 2.1 mm/yr. The checks say "warn", not "pass", because a station-sized box of NISAR pixels scatters by about ±55 mm/yr on stable ground (correlated noise), so the test cannot confirm. HORE now has comparisons (box grown to 280 m): NISAR 129A +21.8 against −1.1 mm/yr, inside ±55.5. Sentinel-1 at VLC (relative to its terrain band, GNSS model subtracted): 029A +31.8, 007D +25.7 mm/yr, inside ±40.7: inconclusive.
+
+## Synthetic test stack and the early tests for gaps, summer-only data and troposphere (15 Nov 2026)
+
+`python fetch.py demo` writes a known-answer stack in the real file shapes: the real NISAR pair patterns (including the January to June 2026 gap), a sinking bowl at each zone with a small eastward drift, height-dependent and patchy (turbulent) atmosphere, coherence holes, and optionally (`--annual 5`) a seasonal cycle inside the bowls. `notebooks/03/t5_t6_synthetic.py` runs the early tests with their rules as written in `prompts/early-tests.md`, noise-free (testing the method) and with realistic noise (three seeds):
+
+| Test | Method (noise-free) | Realistic noise |
+| --- | --- | --- |
+| Rate across the January to June gap (T5) | **Pass**: bias 0.0 mm/yr, zones exact | stable bias under 0.7 mm/yr; single zones miss by more than 15 % (noise-limited) |
+| Summer-only dates with a seasonal cycle (T6) | **Fail**: the zone rate shifts by 57 % | fail (40 %) |
+| Seasonal term forced on the 0.95-year 129A series | works (exact; the plain line errs by 49 %) | **not allowed**: errors up to 20× |
+
+So: the gap handling is right; 094D (June to October only) is labelled "summer to autumn only" on the page, as the test's rule says; the seasonal term stays off until a series spans 1.5 years (`stack.py --annual` can force it, for tests only).
+
+Troposphere test (T4) on NISAR: the per-pair height correction removes the dependence of the rate on height on stable ground (094D −14.1 → +0.5 mm/yr per 100 m, r −0.59 → 0.03; 129A −1.1 → +0.6). `notebooks/03/t4_troposphere.json`.
+
+## 094D rebuilt from NISAR's raw single-look data, GSLC (15 Nov 2026)
+
+`notebooks/02/gslc_pairs_094d.py` read the HH channel of all 10 GSLC files for 094D (NISAR_L2_GSLC_PROVISIONAL_V1, 20 Jun to 18 Oct 2026; about 12 GB each, 286 MB read in a 12 x 12 km box around the zones; the GSLC frame is in UTM 34N, the GUNW in 35N), multilooked to 80 m and formed every pair up to 36 days apart: 16 closure triplets, which NASA's single chain of interferograms does not have. The same `stack.py` cleaning, inversion and the unchanged phase-sign rule (T3) followed.
+
+- Checks pass: the sign agrees with NASA's interferogram (correlation +0.59 on the first 12-day pair), 0.1 % of pixels sit near ±π (no unwrapping needed), triplet closure 1.5 mm (median).
+- Zones: Zone 1 −11.1, Zone 2 +16.5, Zone 3 0.0, Zone 4 −3.0 mm/yr; pooled **+3.5 mm/yr** from 33 pixels, against +23.5 from NASA's interferograms.
+- **The phase-sign test still fails on 094D** (it needs below −2 mm/yr). The valley-wide positive signal is much smaller with our own redundant pairs, and two zones now sink, which points at NASA's chain of single pairs for part of the +23.5; the rest stays unexplained with 33 usable zone pixels. 094D remains flagged on the page. A whole-frame rebuild would need about 12 GB per date.

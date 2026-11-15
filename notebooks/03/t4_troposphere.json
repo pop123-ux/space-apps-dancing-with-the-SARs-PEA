@@ -1,0 +1,26 @@
+{
+ "129A": {
+  "without slope": {
+   "slope_mm_yr_per_100m": -1.06,
+   "r": -0.063,
+   "pixels": 300264
+  },
+  "with per-pair slope": {
+   "slope_mm_yr_per_100m": 0.63,
+   "r": 0.038,
+   "pixels": 300264
+  }
+ },
+ "094D": {
+  "without slope": {
+   "slope_mm_yr_per_100m": -14.06,
+   "r": -0.591,
+   "pixels": 159387
+  },
+  "with per-pair slope": {
+   "slope_mm_yr_per_100m": 0.54,
+   "r": 0.028,
+   "pixels": 159387
+  }
+ }
+}

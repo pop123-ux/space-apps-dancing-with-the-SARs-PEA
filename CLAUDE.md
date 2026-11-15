@@ -100,6 +100,8 @@ This is the team repo for NASA Space Apps 2026 (14 to 15 Nov), challenge "Dancin
 
 Write plain sentences. Don't use em-dashes. Every number carries its unit and, for anything that can change, the date it was checked. Link your sources. Say what a result cannot tell you.
 
+**Name things in plain words (team rule, 15 Nov 2026).** Never refer to a decision, test or update by its code alone (O-07, O-19, T3, D-004, ...): nobody can keep track of what the codes mean. Write what it is, and add the code in brackets only if it helps someone find the entry, for example "our own pairs from NISAR's raw GSLC data (open decision O-07)" or "the phase-sign test (T3)". This applies to the page, the slides, commit messages, PR titles, file names and chat summaries. Do not invent new codes or cryptic names for updates, branches or files. In text the page shows, use no codes at all.
+
 ## Git
 
 - **Branches:** one per role and task (`r02/fetch-window`, `r06/slider`). Small PRs to `main`, merged by the owner once `pytest -q` passes. PRs touching `common.py` or the file contracts need 01's review.

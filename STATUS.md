@@ -51,9 +51,9 @@ The tests are defined in [prompts/early-tests.md](prompts/early-tests.md). Each 
 | T1 Venue network | 02 | | |
 | T2 Search and mask | 02 | | |
 | T3 Phase sign | 03, 05 | | |
-| T4 Troposphere | 03 | | |
-| T5 Gap groups (synthetic) | 03 | | |
-| T6 Summer-only bias (synthetic) | 03 | | |
+| T4 Troposphere | 03 | PASS (15 Nov) | Rate against height on stable ground, NISAR: 094D −14.1 → +0.5 mm/yr per 100 m (r −0.59 → 0.03) with the per-pair height correction; 129A −1.1 → +0.6. Sentinel-1: the ECMWF weather model removes 78 % of 029A's height leakage. NASA's own troposphere screens did not improve 094D. `notebooks/03/t4_troposphere.json`, `docs/data.md` |
+| T5 Gap groups (synthetic) | 03 | PASS for the method (15 Nov) | Synthetic stack on the real 129A dates with the January to June gap, one offset per group: noise-free bias 0.0 mm/yr, zones exact. With realistic atmosphere the stable bias stays under 0.7 mm/yr but single-zone rates miss by more than 15 % (zones are a few pixels against about 5 mm of correlated noise per date): zone values are noise-limited, not method-limited. `notebooks/03/t5_t6_synthetic.json` |
+| T6 Summer-only bias (synthetic) | 03 | FAIL (15 Nov) | A 5 mm seasonal cycle in the bowls, sampled on 094D's June to October dates and fitted without a seasonal term, shifts the zone rate by 57 % (noise-free). As the rule says, 094D is labelled "summer to autumn only" on the page. A seasonal term on our 0.95-year 129A series works without noise but fails with realistic noise (errors up to 20×), so it stays off. `notebooks/03/t5_t6_synthetic.json` |
 | T7 Station hold-out | 05 | | |
 | T8 Model swap and EGMS | 04, 05 | PASS WITH NOTE (14 Nov, 16:10) | Swap EuVeM2022 vs EGMS: 0.72 (094D) and 0.70 (129A) mm/yr, under 1 mm/yr (04, on the rehearsal NISAR stack). EGMS stable ground: tie area −0.6 mm/yr, 79 % within ±1.5 mm/yr, moving patches shift it 0.1 mm/yr (05, `docs/validation-log.md`). Rerun on the team's 129A stream (17:40): 0.704 mm/yr, unchanged. Note: 094D still on the rehearsal stack; check 6 is separate. `logs/04-geodesist.md` |
 | T9 Phones | 06 | | |
