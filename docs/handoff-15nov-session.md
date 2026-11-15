@@ -74,3 +74,12 @@ This is a compact summary of one long working session, written so the next agent
 - Test in the browser with Playwright: run `python3 -m http.server 8791` in the background and add `?debug=1` to the URL, which exposes `window.dos`. Load a fresh URL for each test: changing only the hash does not reload the page.
 - `export.py` rewrites PNGs that are pixel-identical but byte-different. Restore unchanged ones by comparing pixels before committing.
 - Commit messages end with the co-author and session lines (see the git log).
+
+## Deploying teammates' merges (added after the session)
+
+Vercel's Hobby plan blocks commits authored by anyone but Alexandru. The fix is `.github/workflows/vercel-deploy-hook.yml`: on every push to `main` it calls a Vercel Deploy Hook, and the hook builds main regardless of who wrote the commit. It needs a one-time setup by Alexandru:
+
+1. In Vercel, open the project's Settings, then Git, then Deploy Hooks. Create a hook named "main" on the branch `main`, and copy its URL.
+2. In GitHub, open the repository's Settings, then Secrets and variables, then Actions. Add a new repository secret named `VERCEL_DEPLOY_HOOK` with that URL.
+
+Until that's done, a blocked teammate merge goes live when Alexandru merges any pull request on GitHub.
