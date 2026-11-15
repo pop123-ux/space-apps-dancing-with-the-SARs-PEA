@@ -227,7 +227,7 @@
    "wavelength_cm": 5.55,
    "status": "operational",
    "reference": "relative to surrounding terrain, a 3 to 6.5 km band (sentinel1/analysis/README.md)",
-   "credit": "Contains modified Copernicus Sentinel data 2026, processed by ASF HyP3",
+   "credit": "Contains modified Copernicus Sentinel data 2025–2026, processed by ASF HyP3",
    "layers": [
     {
      "id": "los_029A",
@@ -480,5 +480,5 @@
    }
   ]
  },
- "credits": "Contains modified Copernicus Sentinel data 2026, processed by ASF HyP3. NISAR catalog: NASA–ISRO, ASF DAAC (beta and provisional products, not intended for scientific research)."
+ "credits": "Contains modified Copernicus Sentinel data 2025–2026, processed by ASF HyP3. NISAR catalog: NASA–ISRO, ASF DAAC (beta and provisional products, not intended for scientific research)."
 }
