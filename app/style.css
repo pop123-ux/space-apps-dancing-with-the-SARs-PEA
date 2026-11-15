@@ -509,3 +509,5 @@ body.dmenu-open .layers-wrap { right: calc(50vw + var(--gap)); }
   #dmenu { width: 100vw; top: auto; height: 55%; }
   body.dmenu-open #stage { right: 0; }
 }
+.dm-zones { padding: 2px; }
+.dm-zones button { padding: 3px 10px; font-size: 13px; }
