@@ -176,7 +176,8 @@ async function load() {
     opt('stations.geojson'), opt('checks.json'), opt('coverage.json'), opt('sensitivity.json'), opt('forecast.json'),
   ]);
   Object.assign(S, { man, series, stations, checks: checks || [], cov, sens, forecast });
-  S.updates = await opt('updates.json');   // update.py --check: acquisitions newer than the fits
+  S.updates = await opt('updates.json');
+  S.fz = await opt('forecast_zones.json');   // forecast_zones.py: Chronos-2 for every zone and track   // update.py --check: acquisitions newer than the fits
   S.window = sens ? (sens.default_window || Object.keys(sens.windows || {})[0]) : null;
   const d = man.default || {};
   S.sat = sensors()[d.sat] ? d.sat : sensorKeys()[0];
@@ -1351,7 +1352,7 @@ function cellBox(pts, spacing) {
 }
 function drawSelection(shape) {
   if (!mapA?.getSource('msel')) {
-    if (!mapA?.isStyleLoaded()) return;
+    if (!mapA) return;
     mapA.addSource('msel', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
     mapA.addLayer({ id: 'msel', type: 'line', source: 'msel', paint: { 'line-color': MENU_LINE, 'line-width': 2.5 } });
   }
@@ -1365,7 +1366,7 @@ function openMenu(sel) {
 }
 function closeMenu() {
   S.menu = null; $('#dmenu').hidden = true; document.body.classList.remove('dmenu-open');
-  setTimeout(() => mapA?.resize(), 220); drawSelection(null);
+  setTimeout(() => mapA?.resize(), 220); drawSelection(null); drawVectors(null);
 }
 const insideBox = (coords, [w, s, e, n]) => coords[0] >= w && coords[0] <= e && coords[1] >= s && coords[1] <= n;
 async function menuData() {
@@ -1393,7 +1394,7 @@ async function menuData() {
   return out;
 }
 // a small chart in the app's own style (the zone panels use the same proportions, fonts and greys)
-function miniChart(series, { from, to, gaps = [], on = null, band = null, extra = [], height = 150, color = '#1C1917' } = {}) {
+function miniChart(series, { from, to, gaps = [], on = null, band = null, extra = [], height = 150, color = '#1C1917', upto = null } = {}) {
   const W = 400, H = height, pl = 40, pr = 8, pt = 10, pb = 20;
   const all = [...series, ...extra.flatMap(x => x.pts), ...(band ? band.flatMap(([d, lo, hi]) => [[d, lo], [d, hi]]) : [])].map(([, v]) => v);
   const lo = Math.floor(Math.min(0, ...all)), hi = Math.ceil(Math.max(0, ...all));
@@ -1412,30 +1413,29 @@ function miniChart(series, { from, to, gaps = [], on = null, band = null, extra 
     pts.forEach(([d, v], i) => { if (i && gaps.some(([a, b]) => pts[i - 1][0] <= a && d >= b)) segs.push([]); segs[segs.length - 1].push([d, v]); });
     for (const s of segs) o.push(`<polyline points="${s.map(([d, v]) => `${X(d).toFixed(1)},${Y(v).toFixed(1)}`).join(' ')}" fill="none" stroke="${c}" stroke-width="${dash ? 1.6 : 2}" stroke-linejoin="round"${dash ? ' stroke-dasharray="4 3"' : ''}/>`);
   };
-  line(series, color, false);
+  const shown = upto ? series.filter(([d]) => d <= upto) : series;   // while Play runs, the line grows date by date
+  line(shown, color, false);
   for (const x of extra) line(x.pts, x.color, x.dash);
-  for (const [d, v] of series) o.push(`<circle cx="${X(d).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="${d === on ? 4 : 2.4}" fill="${d === on ? MENU_LINE : color}" stroke="#fff" stroke-width=".8"><title>${d}: ${v.toFixed(1)} mm</title></circle>`);
+  for (const [d, v] of shown) o.push(`<circle cx="${X(d).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="${d === on ? 4 : 2.4}" fill="${d === on ? MENU_LINE : color}" stroke="#fff" stroke-width=".8"><title>${d}: ${v.toFixed(1)} mm</title></circle>`);
   o.push('</svg>');
   return o.join('');
 }
 function forecastCard(sel) {
-  const f = S.forecast;
-  if (!f?.model_paths_mm?.chronos2) return '';
-  const here = sel.kind === 'zone' && sel.id === f.zone && S.sat === f.sensor && S.track[f.sensor] === f.track;
-  const z = zones().find(p => p.id === f.zone);
-  if (!here) return `<div class="block dm-card"><h3>What the forecast says</h3>
-    <p class="reason">The forecast (Chronos-2, a pretrained time-series model) is computed for one series: ${esc(zoneName(z || { id: f.zone, label: f.zone }))} on ${esc(sensors()[f.sensor]?.label || '')} ${esc(f.track)}, the only one long enough to test it against the past. It is not made for other places yet.</p>
-    <button type="button" class="chip strong" id="dm-go-fc">Show the ${esc(zoneName(z || { label: f.zone }))} forecast</button></div>`;
-  const iv = f.intervals?.chronos2; const last = f.observed_mm.at(-1);
-  const steps = [f.last_observation, ...f.dates];
-  const med = [last, ...f.model_paths_mm.chronos2];
-  const band = iv ? steps.map((d, i) => [d, i ? iv.q10[i - 1] : last, i ? iv.q90[i - 1] : last]) : null;
-  const obs = f.training_dates.map((d, i) => [d, f.observed_mm[i]]);
-  const c30 = f.chronos2?.janoct_30d?.mae_mm;
-  return `<div class="block dm-card"><h3>What the forecast says <span class="badge">Chronos-2</span></h3>
-    ${miniChart(obs, { from: f.training_dates[0], to: f.end_date, band, extra: [{ pts: steps.map((d, i) => [d, med[i]]), color: '#7C3AED', dash: true }], color: SATS.s1.color, height: 130 })}
-    <p class="dm-big">${esc(human(f.end_date))}: <b>${sgn(med.at(-1))} mm</b> <span class="sub">(80 % range ${sgn(band?.at(-1)[1])} to ${sgn(band?.at(-1)[2])} mm, relative to ${esc(human(f.training_dates[0]))})</span></p>
-    <p class="sub small">A pretrained model continuing this series' shape; it knows nothing about salt, weather or the mine.${c30 ? ` Tested on the past, it misses by about ${Number(c30).toFixed(1)} mm a month ahead.` : ''}</p></div>`;
+  const fz = S.fz?.zones; if (!fz) return '';
+  const sat = S.sat === 'compare' ? 'nisar' : S.sat; const key = `${sat}:${S.track[sat]}`;
+  if (!S.fcZone || !fz[S.fcZone]) S.fcZone = sel.kind === 'zone' && fz[sel.id] ? sel.id : (fz.z4 ? 'z4' : Object.keys(fz)[0]);
+  const zf = fz[S.fcZone]; const k = zf[key] ? key : Object.keys(zf)[0]; const f = zf[k];
+  const z = zones().find(p => p.id === S.fcZone);
+  const buttons = zones().map(p => `<button type="button" data-fcz="${esc(p.id)}" aria-pressed="${p.id === S.fcZone}"${fz[p.id] ? '' : ' disabled title="No series on any track"'}>${esc(zoneShort(p))}</button>`).join('');
+  const obs = f.observed_dates.map((d, i) => [d, f.observed_mm[i]]);
+  const last = obs.at(-1);
+  const band = [[last[0], last[1], last[1]], ...f.dates.map((d, i) => [d, f.q10[i], f.q90[i]])];
+  const med = [[last[0], last[1]], ...f.dates.map((d, i) => [d, f.median[i]])];
+  const [s_, trk] = k.split(':');
+  return `<div class="block dm-card"><h3>The prediction <span class="seg dm-zones" role="group" aria-label="Zone">${buttons}</span></h3>
+    <div class="sub small">${esc(zoneName(z))} · ${esc(sensors()[s_]?.label || s_)} ${esc(trk)} · Chronos-2</div>
+    ${miniChart(obs, { from: obs[0][0], to: S.fz.end, band, extra: [{ pts: med, color: '#7C3AED', dash: true }], color: SATS[s_]?.color || '#1C1917', height: 130, upto: S.playing ? S.date : null })}
+    <p class="dm-big">${esc(human(S.fz.end))}: <b>${sgn(f.median.at(-1))} mm</b> <span class="sub">(80 % range ${sgn(f.q10.at(-1))} to ${sgn(f.q90.at(-1))} mm)</span></p></div>`;
 }
 async function arrowsCard(test) {
   const ue = await loadUpEast(); const info = sensors().nisar?.up_east;
@@ -1450,7 +1450,7 @@ async function arrowsCard(test) {
   const noise = Math.abs(up) < su && Math.abs(east) < se;
   const words = noise ? 'At this precision the motion cannot be told apart from zero, in either direction.'
     : `The estimate reads ${Math.abs(up) >= su ? `${up < 0 ? 'sinking' : 'rising'} of about ${Math.abs(up).toFixed(0)} mm a year` : 'no up-down motion beyond the noise'}${Math.abs(east) >= se ? ` and a ${east > 0 ? 'eastward' : 'westward'} shift of about ${Math.abs(east).toFixed(0)} mm a year` : ' and no east-west motion beyond the noise'}. Treat it as unconfirmed: it combines both NISAR tracks, and the descending one failed its sign check.`;
-  return `<div class="block dm-card"><h3>Which way the ground moves <span class="badge warn">experimental</span></h3>
+  return `<div class="block dm-card"><h3>Which way the ground moves</h3>
     <svg class="chart arrows" viewBox="0 0 400 140" role="img" aria-label="Up-down and east-west motion">
       <defs><marker id="dm-ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1C1917"/></marker></defs>
       <line x1="40" x2="200" y1="${cy}" y2="${cy}" stroke="#D6D3D1"/><line x1="${cx}" x2="${cx}" y1="14" y2="126" stroke="#D6D3D1"/>
@@ -1461,33 +1461,50 @@ async function arrowsCard(test) {
       <text x="230" y="44" class="v">Up-down: ${sgn(up)} mm/yr</text><text x="230" y="62">± ${su.toFixed(0)} mm/yr</text>
       <text x="230" y="92" class="v">East-west: ${sgn(east)} mm/yr</text><text x="230" y="110">± ${se.toFixed(0)} mm/yr</text>
     </svg>
-    <p class="dm-big">${esc(words)}</p>
-    <p class="sub small">The dashed circle is the uncertainty: an arrow inside it is not a measurable motion. From NISAR's two tracks, June to October 2026, ${idx.length} points. ${esc(info.note)}</p>
-    <p class="sub small"><b>Not a building-safety assessment.</b> Before building, ask for a geotechnical survey and check with the Ocnele Mari town hall and ISU Vâlcea.</p></div>`;
+    <p class="sub small">Dashed circle: the uncertainty.</p></div>`;
+}
+// arrows inside the selected area: each measured point's east-west motion (length) coloured by up-down (red down, blue up)
+async function drawVectors(test) {
+  if (!mapA) return;
+  if (!mapA.getSource('mvec')) {
+    mapA.addSource('mvec', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+    mapA.addLayer({ id: 'mvec', type: 'line', source: 'mvec', layout: { 'line-cap': 'round' },
+      paint: { 'line-color': ['case', ['<', ['get', 'up'], 0], '#B2182B', '#2166AC'], 'line-width': 2 } });
+  }
+  const ue = test && await loadUpEast();
+  const feats = [];
+  if (ue) for (let i = 0; i < ue.lon.length; i++) {
+    const c = [ue.lon[i], ue.lat[i]]; if (!test(c)) continue;
+    const east = ue.east[i] * ue.scale, up = ue.up[i] * ue.scale;
+    const m = Math.max(-1, Math.min(1, east / 30)) * 60;           // 30 mm/yr or more → 60 m long
+    if (Math.abs(m) < 4) continue;
+    const dl = m / (111320 * Math.cos(c[1] * Math.PI / 180)), hd = dl * 0.35, hh = Math.abs(m) * 0.35 / 110540;
+    const tip = [c[0] + dl, c[1]];
+    feats.push({ type: 'Feature', properties: { up }, geometry: { type: 'MultiLineString', coordinates: [[c, tip], [tip, [tip[0] - hd, tip[1] + hh]], [tip, [tip[0] - hd, tip[1] - hh]]] } });
+  }
+  mapA.getSource('mvec').setData({ type: 'FeatureCollection', features: feats });
 }
 async function renderMenu() {
   if (!S.menu) return;
   const want = S.menu;
   const d = await menuData();
   if (S.menu !== want) return;
-  drawSelection(d.shape);
+  drawSelection(d.shape); drawVectors(d.test);
   let html = `<div class="dm-head"><h2>How the ground moved here</h2><div class="kicker">${esc(d.label)}${d.n ? ` · ${d.n} measured points` : ''}</div></div>`;
   if (!d.pts.length) html += `<div class="block dm-card"><p class="reason">No measurement here on this satellite.</p></div>`;
   else {
     const gaps = gapsOf(d.sat, d.trk);
     const vmin = Math.min(...d.pts.map(p => p[1])), vmax = Math.max(...d.pts.map(p => p[1]));
-    html += `<div class="block dm-card"><h3>Line-of-sight change, mm <span class="badge">${sgn(vmin)} to ${sgn(vmax)} mm</span></h3>
-      ${miniChart(d.pts, { from: d.pts[0][0], to: d.pts.at(-1)[0], gaps, on: S.date, color: SATS[d.sat].color, height: 140 })}
+    html += `<div class="block dm-card"><h3>The trend <span class="badge">${sgn(vmin)} to ${sgn(vmax)} mm</span></h3>
+      <div class="sub small">Line-of-sight change, mm</div>
+      ${miniChart(d.pts, { from: d.pts[0][0], to: d.pts.at(-1)[0], gaps, on: S.date, color: SATS[d.sat].color, height: 140, upto: S.playing ? S.date : null })}
       <p class="sub small">Below 0: moving away from the satellite (often sinking). Above 0: moving toward it. The blue point is the date on the map.</p></div>`;
   }
   html += forecastCard(S.menu);
   html += await arrowsCard(d.test || (() => false));
   if (S.menu !== want) return;
   $('#dm-body').innerHTML = html;
-  $('#dm-go-fc')?.addEventListener('click', () => {
-    const f = S.forecast; S.sat = f.sensor; S.track[f.sensor] = f.track; if (f.window) S.window = f.window; S.scenario = f.scenario || S.scenario;
-    S.view = 'change'; changed(); openMenu({ kind: 'zone', id: f.zone });
-  });
+  document.querySelectorAll('#dm-body [data-fcz]').forEach(btn => btn.addEventListener('click', () => { S.fcZone = btn.dataset.fcz; renderMenu(); }));
   // legend: the colour scale with its mm values, and how much ground one centimetre of screen covers
   const L = layerFor(d.sat); const vm = Math.abs(L?.meta?.vmax ?? 20);
   const lat = mapA.getCenter().lat, mpp = 40075016.686 * Math.cos(lat * Math.PI / 180) / (512 * 2 ** mapA.getZoom());
