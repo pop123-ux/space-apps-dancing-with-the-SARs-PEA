@@ -2,94 +2,176 @@
 
 **Owner:** 01 · Lead and story (Mario)
 
-This is the team repo for NASA Space Apps 2026, challenge **Dancing with the SARs**, on 14 to 15 Nov 2026. Six people, one site: **Ocnele Mari**, Romania.
+*Updated Sun 15 Nov 2026, about 15:45 Europe/Bucharest, by Darius (06) with Claude Code, from `main` at `0457a0c` and the live site. For 01 to review before it is merged.*
 
-## The project
+This is the team repo for NASA Space Apps 2026, challenge **Dancing with the SARs**, on 14 to 15 Nov 2026 in Cluj-Napoca. Six people, one site: **Ocnele Mari**, in Vâlcea county, Romania, where salt has been extracted by dissolving it with water through wells since the 1950s and 1960s, and where the ground above the brine fields has sunk and collapsed before, most visibly in September 2001 at Lacul Țeica ([ocnele-mari-geography.md](ocnele-mari-geography.md)).
 
-We're building a web page that shows anyone how the ground moves above the salt-brine fields of Ocnele Mari, in Vâlcea county.
+**Live app: https://pea-dancingwiththesars.vercel.app** (deployed from `main` by Vercel).
 
-- **Measurement:** NISAR's L-band radar has 22 interferograms over the town, from November 2025 to October 2026.
-- **Reference frame:** the radar is tied to open GNSS velocity models.
-- **Checks:** every number is checked against GPS stations, the European Ground Motion Service and Sentinel-1.
-- **Page:** it opens on the town, plays the ground through time, and says plainly where the radar cannot yet see the motion.
+## The project in one paragraph
 
-Start here:
+We built a web page that shows anyone how the ground moves around Ocnele Mari, as seen from space by two radar satellites: **NISAR** (NASA and ISRO, L-band, 24.4 cm wavelength, its first year of data) and **Sentinel-1** (ESA and Copernicus, C-band, 5.55 cm). The page opens on the town, plays the ground through time, compares the two radars on the same months, checks them against GPS stations and the European Ground Motion Service (EGMS), and says plainly where the radar cannot yet see the motion. Every number on the page comes from `products/ocnele_mari/`, written by our scripts from open data.
 
-- **[docs/synopsis.md](docs/synopsis.md):** the one-page version, to explain the project to the team.
-- **[STATUS.md](STATUS.md):** where the build is right now, what waits on whom, and each role's next step.
-- **[docs/schedule.md](docs/schedule.md):** who does what, hour by hour: one column per role, with the gates and cut lines.
-- **[docs/ui.md](docs/ui.md):** the page's design: the satellite switch (NISAR, Sentinel-1, Compare), the five views, and the honest comparison rules (D-004).
-- **[OWNERS.md](OWNERS.md):** every file and its owner role (01 to 06, or shared), grouped by role. Each file also says its owner in its first lines.
-- **[docs/overview.md](docs/overview.md):** why it matters, the page, the candidate claims and how each could fail, the 7 slides, scope in tiers, the 48 hours, risks and fallbacks.
-- **[docs/build-spec.md](docs/build-spec.md):**
-  - the locked and proposed decisions, and the file contracts between roles;
-  - **each role's steps**, done-criteria per tier and unknowns;
-  - the open team decisions and the change log.
-- **[prompts/setup.md](prompts/setup.md):** a Claude Code prompt that sets up a team member's laptop. Open Claude Code in this folder and say "Read prompts/setup.md and carry it out."
-- **[prompts/early-tests.md](prompts/early-tests.md):** tests T0 to T10 for the first hours, each with an owner, a timebox and a fallback.
-- **[prompts/build.md](prompts/build.md):** the Claude Code prompt each person uses to build their role. Say "Read prompts/build.md. I am role 0N."
-- [docs/rehearsal.md](docs/rehearsal.md): what the advisor's rehearsal on real data found, and what it changes.
-- [docs/data.md](docs/data.md): the NISAR pairs, the references and the data traps.
-- [DECISIONS.md](DECISIONS.md): the decision log. [CITATIONS.md](CITATIONS.md): sources, prior work and advisor help.
-- **[AI-DISCLOSURE.md](AI-DISCLOSURE.md):** how we used AI tools: the text for the submission, and the running log everyone appends to.
-- [CLAUDE.md](CLAUDE.md): the rules and conventions for Claude Code sessions in this repo.
-- [INFO.md](INFO.md): the team's site notes (in Romanian).
+## What we found
 
-## Status (Sat 14 Nov, 13:30 Europe/Bucharest)
+Checked 15 Nov 2026 against `products/ocnele_mari/`.
 
-**Skeleton.** The plan, the rules, the pipeline interfaces and the working tools are in place. The pipeline steps are stubs, and there is no page yet.
+- **The ground has moved here before.** EGMS (Sentinel-1, 2020 to 2025, 100 m cells) shows Zone 3, Ocnița · Goruniș, sinking about 18.9 mm/yr (6 cells). Zones 1, 2 and 4 sink 2.5 to 3.9 mm/yr, and stable ground about 0.5 mm/yr.
+- **NISAR cannot see it yet.** On stable ground a salt zone's NISAR rate varies by about ±21 mm/yr (morning pass, 129A), so the zones' rates against the ground around them (−3.9 to −12.4 mm/yr) are all inside the noise. As processed now, a 25 mm/yr sink would become visible around May 2029 (a rough estimate, `noise_floor.json`). The evening pass (094D) failed the phase-sign test and is shown only for inspection.
+- **Sentinel-1 sees part of it.** Over May 2025 to November 2026, the evening pass (029A) shows Zones 1, 2 and 4 moving away from the satellite relative to their surroundings, by 9.7, 4.9 and 5.9 mm/yr (4, 36 and 22 pixels). Zone 3 has no connected series there. The morning pass (007D) keeps no zone pixel connected through both winters.
+- **Checks:** 5 pass, 6 warn, 1 fail, 12 info (`checks.json`, 15 Nov). The warnings are real limits, not errors: NISAR scatters about 39 mm/yr per pixel on stable ground, and only 6 NISAR dates fall in the months both satellites cover (7 Jul to 4 Oct 2026).
 
-Two decisions are locked:
+So the page is an honest screen of what the two radars can and cannot see today, not a warning system.
 
-- **D-001:** Ocnele Mari is the only site.
-- **D-002:** the map opens on the town, with Romania blurred when you zoom out.
-- **D-003:** the submission is a 7-slide PowerPoint, with no video.
-- **D-004:** two radars, one switch. We fit both NISAR and Sentinel-1, and the page switches between them and shows the same trend several ways (`docs/ui.md`). Sentinel-1 is already fitted in `sentinel1/`.
+## What the page does
 
-Everything else is proposed until the hour-2 review.
+What is live on https://pea-dancingwiththesars.vercel.app, checked 15 Nov 2026, about 15:40.
+
+| Part | What it does |
+| --- | --- |
+| **Map** | Opens on Ocnele Mari with the town boundary, the four salt zones (1 Lacul Țeica, 2 Țeica east, 3 Ocnița · Goruniș, 4 Slătioarele), the GNSS stations HORE and VLC with their own motion, and one coloured dot per measured spot. A colour scale sits top left. The background is a light map or satellite imagery, with adjustable overlay opacity. A click on a dot shows its value |
+| **Satellite menu** | NISAR, Sentinel-1, or Compare (side by side, same months only: 7 Jul to 4 Oct 2026), each with its pass times over Romania |
+| **Views** | Motion (change since the first date, or the yearly rate), Coverage (when each satellite looked and how many usable pixels each zone has), Compare (the two radars side by side, paired by viewing geometry) |
+| **Morning and evening passes** | NISAR 129A (morning, from the east) and 094D (evening, from the west, flagged); Sentinel-1 007D (morning) and 029A (evening) |
+| **Timeline** | Every acquisition, gaps marked; Play steps through the dates. Sentinel-1 fills NISAR's January to June 2026 gap |
+| **Side buttons** | Zoom. The pin: drop it on a spot to see that spot's history and how it moves against the ground 300 m around; it says "below the noise" unless the difference is larger than the measured noise floor. The compass: the map rotates, and the compass resets north. The house picker: press a building outline. The area tool: drag a rectangle, or press once for a 1 km square |
+| **Side menu** | Opens when you press a zone, a building or an area. It shows the trend over time, the prediction (Chronos-2 to 1 Jan 2029, with the result of its 60-day test), "Which way the ground moves" (an experimental up-down and east-west estimate) and "In plain words", a short summary written from the area's own numbers |
+| **Arrows and Buildings** | An arrow field inside the selection, and building outlines from zoom 14 |
+| **Satellites now** | A globe with estimated satellite positions and the next passes over Ocnele Mari |
+| **Terms & Conditions** | What the page is and is not, how to read red and blue, pass times, official sources, credits, and the validation checks |
+| **Header and zone row** | Reset to site, the main check for the current view, the zone buttons, Copy view link, and a one-line note on what the dots mean |
+
+Red means the ground moved away from the satellite (usually sinking), blue toward it.
+
+**Words used here.** *Line of sight:* a radar measures motion only along the line from the ground to the satellite, not straight up and down. *Interferogram:* the difference between two radar images of the same place, which shows how far the ground moved between the two dates. *Morning and evening pass:* each satellite sees the town from the east in the morning and from the west in the evening; the codes (129A, 094D, 029A, 007D) are the orbit tracks. *Phase-sign test:* a check that the salt zones come out sinking, as they should; a track that fails it is not trusted. *Noise floor:* how much the numbers vary on ground that does not move; anything smaller cannot be told apart from no motion.
+
+## Data
+
+Every source below was checked on 15 Nov 2026 (`logs/06-app.md`, the data audit).
+
+| Data | What we use | Where it comes from |
+| --- | --- | --- |
+| NISAR L2 GUNW interferograms (beta and provisional) | 22 pairs: 129A, 13 pairs over 15 dates, 7 Nov 2025 to 21 Oct 2026, with no pair from 18 Jan to 23 Jun 2026; 094D, 9 pairs over 10 dates, 20 Jun to 18 Oct 2026 | NASA CMR and ASF DAAC (`data/scenes/ocnele_mari_gunw.csv`); all 22 found in NASA's catalog |
+| Sentinel-1 burst interferograms | 374 jobs: 029A, 94 dates, 6 May 2025 to 10 Nov 2026; 007D, 96 dates, 5 May 2025 to 15 Nov 2026 | ASF HyP3 (`sentinel1/provenance/`, with a checksum for every product); every acquisition on the two bursts since May 2025 |
+| GNSS velocities | HORE (2012 to 2020) and VLC1 (2012 to 2018) from NGL MIDAS; VLC2 (2019 to 2025) from Muntean et al. 2026 | HORE and VLC1 match NGL's public file to 0.01 mm/yr |
+| GNSS velocity model | EuVeM2022, to tie NISAR to a Eurasia-fixed frame; EGMS's model as the swap test | `refs.py` (04) |
+| EGMS Ortho, 2020 to 2025 | The zones' history and the stable-ground check | Copernicus Land Monitoring Service; cut by `egms_cut.py` (05) |
+| Chronos-2 (`amazon/chronos-2`) | The prediction, used zero-shot | Hugging Face, Apache 2.0 |
+| Maps | OpenFreeMap (OpenStreetMap data), Esri World Imagery, OpenStreetMap buildings and the town boundary | Credited on the map and in Terms |
+
+Full list with links and licences: [CITATIONS.md](CITATIONS.md).
+
+## How it works
+
+One script per step, run as `python <step>.py ocnele_mari`. Settings, zones and stations come from `common.py`.
+
+| Step | Script (owner) | What it does |
+| --- | --- | --- |
+| NISAR search and download | `fetch.py` (02) | Streams the town window from each NISAR interferogram, decodes the mask, subtracts the ionosphere screen |
+| NISAR time series | `stack.py` (03) | Coherence 0.35 or more, removes elevation slope and a stable-ground reference per pair, small-baseline inversion with one group per side of the January to June gap |
+| GNSS references | `refs.py` (04) | EuVeM2022, NGL MIDAS and the published station rates |
+| Tie | `calibrate.py` (04) | Ties each NISAR track to EuVeM2022 on stable ground (offset −9.09 mm/yr on 129A, −15.15 on 094D) |
+| Up and east | `split.py` (03) | Experimental combination of the two NISAR passes |
+| Noise floor | `noise_floor.py` (04) | 1,000 fake zones and pins on stable ground: how big a motion NISAR can show |
+| Validation | `validate.py` (05) | Phase sign, held-out stations, tie scatter, model swap, gaps, NISAR against Sentinel-1. Nobody else edits it |
+| Sentinel-1 | `sentinel1/scripts/` (03) | Order and download HyP3 jobs, fit each window on a 40 m grid (`fit.py`), weather-model troposphere, forecasts |
+| Prediction | `sentinel1/scripts/forecast_area.py`, `forecast_zones.py` (03) | Chronos-2 per 240 m cell of the town and per zone, each tested on its last 60 days |
+| Page products | `export.py` (06) | Writes `products/ocnele_mari/`: map layers, dots, frames, zone series, coverage, manifest |
+| The page | `index.html`, `app/` (06) | MapLibre GL JS; reads only `products/<site>/` |
+| Checks | `checkpoint.py` (01), `tests/` | File contracts and the smoke test |
+
+Still stubs: the synthetic known-answer site (`demo`), the EGMS stable-ground check inside `validate.py`, and `hyp3_order.py` (Sentinel-1 jobs were ordered with `sentinel1/scripts/order_all.py` instead).
+
+## What the page cannot tell you
+
+- **NISAR is beta and provisional,** "not intended for scientific research" (NASA and ISRO). Read zones and areas, not single dots.
+- **Line of sight only.** The up and east card combines both NISAR passes, and the evening one failed its sign test: treat it as unconfirmed.
+- **Sentinel-1 is relative** to the terrain 3 to 6.5 km around the zones, not tied to GNSS.
+- **A rate is the slope over the window shown,** not a long-term velocity. A few summer months can read several times faster than the 2020 to 2025 history.
+- **The prediction is indicative.** On its last 60 days Chronos-2 beat a "no change" guess in 49 % of the town's 029A cells and 78 % of the 007D cells; 2029 is much further ahead than anything tested, and NISAR has too few dates to test at all.
+- **It is not a hazard or building assessment.** For official notices: the emergency inspectorate (ISU Vâlcea, part of IGSU) and the Ocnele Mari town hall. Before building, a geotechnical study.
+
+## Run it yourself
+
+```bash
+python -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+pytest -q                                   # must pass before every push
+python export.py ocnele_mari                # rebuilds products/ocnele_mari/ (about 2 minutes)
+python checkpoint.py ocnele_mari            # checks the products against the file contracts
+python -m http.server 8000                  # then open http://localhost:8000
+```
+
+- **Sentinel-1** rebuilds exactly from what is committed (checked 15 Nov 2026: all 192 images pixel for pixel, all numbers).
+- **NISAR** needs a free [Earthdata](https://urs.earthdata.nasa.gov) token in `.env` (see `.env.example`) and the intermediate stacks in `data/work/`, which are not in git. That file and folder never go in the repo.
+- **The prediction** needs `chronos-forecasting` 2 or later and PyTorch on CPU; a run takes about 15 seconds.
+- **Hosting:** [docs/deploy.md](docs/deploy.md).
 
 ## Team
 
 | # | Role | Who | Owns |
 | --- | --- | --- | --- |
-| 01 | Lead and story | Mario | scope, cut lines, checkpoints, story, the 7-slide deck, submission; `checkpoint.py` |
-| 02 | NISAR data | Alexandru and Eric | search, streamed windows, masks, ionosphere; `fetch.py` |
-| 03 | InSAR analyst | Alexandru and Eric | time series, rates with errors, up and east; `stack.py`, `split.py` |
-| 04 | Geodesist | Matei | references, frame, tie, model swap; `refs.py`, `calibrate.py` |
-| 05 | Validator | Paul | stations, EGMS, Sentinel-1, checks, red team; `validate.py`, `hyp3_order.py` |
-| 06 | App developer | Darius | products, the page, map, slider, pins, story mode; `export.py`, `mock_products.py` |
+| 01 | Lead and story | Mario | Scope, story, the 7-slide deck, the submission; `checkpoint.py` |
+| 02 | NISAR data | Alexandru and Eric | Search, streamed windows, masks, ionosphere; `fetch.py`, `update.py` |
+| 03 | InSAR analyst | Alexandru and Eric | Time series, rates, up and east, Sentinel-1 fits and forecasts; `stack.py`, `split.py`, `sentinel1/` |
+| 04 | Geodesist | Matei | References, frame, tie, model swap, noise floor; `refs.py`, `calibrate.py`, `noise_floor.py` |
+| 05 | Validator | Paul | Stations, EGMS, checks, red team; `validate.py`, `egms_cut.py`, `hyp3_order.py` |
+| 06 | App developer | Darius | The page, products and hosting; `index.html`, `app/`, `export.py`, `mock_products.py` |
 
-## Layout
+Every file says its owner in its first lines; the full list is [OWNERS.md](OWNERS.md).
+
+## Decisions the whole team made
+
+- **One site:** Ocnele Mari only (decision D-001).
+- **The map opens on the town,** with Romania blurred when you zoom out (D-002).
+- **The submission is a 7-slide PowerPoint,** with no video (D-003).
+- **Two radars, one switch:** NISAR and Sentinel-1 are both fitted, and the page switches between them, comparing them only on the same months, each in its own line of sight (D-004).
+
+Smaller choices are logged with their reasons in [DECISIONS.md](DECISIONS.md).
+
+## Repository layout
 
 ```
-STATUS.md (01)  OWNERS.md (01)  DECISIONS.md  CITATIONS.md  AI-DISCLOSURE.md (all)  CLAUDE.md (01)  README.md (01)
-common.py               shared: site, zones, stations, thresholds, helpers
-refs.py (04) fetch.py (02) stack.py (03) calibrate.py (04) split.py (03) validate.py (05) hyp3_order.py (05) export.py (06)
-                        the pipeline, one script per owner (stubs with fixed interfaces)
-checkpoint.py           01: is products/<site>/ complete? (works)
-run_all.py              shared: runs the steps in order and stops cleanly at the first stub (works)
-mock_products.py        06: invented products/mock/ on the real acquisition dates (works)
-tests/                  shared: smoke test and owner check; must pass before every push
-data/scenes/            02: the 22 NISAR pairs over the town (CMR, 14 Nov)
-data/work/              local intermediates, git-ignored
-products/<site>/        what the page reads (written by scripts only)
-prompts/                01: Claude Code prompts: setup, early tests, build
-docs/                   01: synopsis, overview, schedule, build spec, rehearsal · 02: data · 05: validation log
-slides/                 01: the 7-slide PowerPoint (D-003), not created yet
+README.md  STATUS.md  OWNERS.md  CLAUDE.md                  plan, status, owners, rules for Claude Code
+DECISIONS.md  CITATIONS.md  AI-DISCLOSURE.md                logs everyone appends to
+common.py                                                   site, zones, stations, thresholds, helpers
+fetch.py stack.py refs.py calibrate.py split.py             the NISAR pipeline
+noise_floor.py validate.py egms_cut.py update.py            noise, checks, EGMS, new-data check
+export.py mock_products.py checkpoint.py run_all.py         products, mock site, contract check, runner
+index.html  app/                                            the page (MapLibre GL JS)
+products/<site>/                                            what the page reads, written by scripts only
+sentinel1/                                                  Sentinel-1 provenance, fits, grids and scripts
+data/scenes/                                                the 22 NISAR pairs (data/work/ stays local)
+docs/  logs/  notebooks/  prompts/  tests/  .github/        documents, role logs, exploration, prompts, tests, CI
+vercel.json  .vercelignore                                  hosting
 ```
 
-## Quickstart
+## Documents
 
-```bash
-python -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-pytest -q                          # the smoke test
-python mock_products.py            # writes an invented products/mock/ to build the page on
-python checkpoint.py mock          # checks it against the file contracts
-```
+- [STATUS.md](STATUS.md): where each role is.
+- [docs/overview.md](docs/overview.md) and [docs/synopsis.md](docs/synopsis.md): why it matters, the claims and how each could fail.
+- [docs/ui.md](docs/ui.md): the page's design and the honest comparison rules.
+- [docs/data.md](docs/data.md), [docs/rehearsal.md](docs/rehearsal.md), [docs/validation-log.md](docs/validation-log.md), [docs/forecast.md](docs/forecast.md): data, traps, validation and the prediction.
+- [docs/handoff-15nov-session.md](docs/handoff-15nov-session.md): a compact summary of the 15 Nov session.
+- `logs/`: each role's running log. [products/README.md](products/README.md): every product file and who writes it.
+- [CLAUDE.md](CLAUDE.md) and `prompts/`: the rules and prompts for Claude Code. [INFO.md](INFO.md): site notes in Romanian.
 
-Searching ASF needs no login. Reading NISAR needs a free [Earthdata](https://urs.earthdata.nasa.gov) token in `.env` (see `.env.example`), and that file never goes in the repo.
+## How we used AI
+
+Each of the six of us ran Claude Code (Anthropic) for our own role, under shared rules in [CLAUDE.md](CLAUDE.md). ChatGPT (OpenAI) helped summarise the advisor's material before the event and with some Sentinel-1 and forecast work; Figma Make gave a first visual design that was replaced. The prediction comes from Chronos-2, a pretrained forecasting model, used without retraining. The radar measurements and checks come from our scripts on open data. The validator (05) owns the checks and edits no science code; the current check results were run by the 02/03 session and are marked as a draft until 05 reviews them. Every substantive use, and what a person checked, is logged in [AI-DISCLOSURE.md](AI-DISCLOSURE.md).
+
+## Still open before submitting
+
+From `docs/handoff-15nov-session.md` and the 06 data audit (15 Nov 2026):
+
+1. `SUBMISSION.md` and the 7 slides do not exist yet, and the page's one-sentence story is still a placeholder in `common.py` (01).
+2. The numbers on the slides must be copied from the live page or `products/`; the windows changed on 15 Nov.
+3. "Which way the ground moves" uses the evening NISAR pass, which failed its sign test: hide it or say so.
+4. The prediction shows values to 2029 that were tested only 60 days ahead, and NISAR's are not tested at all.
+5. The pin's hint still says "Can I build here?", although the pin no longer answers yes or no.
+6. The NISAR stacks are not in git, so only Sentinel-1 can be rebuilt from the repository.
+7. Test the live site on two phones.
 
 ## License
 
-[MIT](LICENSE). Space Apps distributes submission content under Apache 2.0, so 01 checks the 2026 guide (O-17). Third-party data are linked and credited, not redistributed.
+[MIT](LICENSE). Space Apps distributes submission content under Apache 2.0, so 01 checks the 2026 guide. Third-party data are linked and credited, not redistributed: contains modified Copernicus Sentinel data 2025 to 2026, processed by ASF HyP3; NISAR data courtesy of NASA and ISRO, via ASF DAAC.
