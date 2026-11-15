@@ -86,7 +86,7 @@ const BASEMAPS = {
   satellite: {   // aerial imagery, sharp down to single houses (the earlier Sentinel-2 mosaic is 10 m per pixel and blurs past zoom 15)
     label: 'Satellite',
     tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
-    maxzoom: 19,
+    maxzoom: 17,   // Esri has imagery here to zoom 17 everywhere; 18 is patchy and 19 is placeholder tiles, so deeper zooms enlarge 17
     attribution: 'Imagery <a href="https://www.esri.com/en-us/legal/terms/full-master-agreement" target="_blank" rel="noopener">Esri</a>, Maxar, Earthstar Geographics, and the GIS User Community',
   },
 };
@@ -201,7 +201,7 @@ function applyHash(h) {
   if (h.track) for (const t of h.track.split(',')) for (const s of keys) if (tracksOf(s).includes(t)) S.track[s] = t;
   if (h.view && (S.man.views || []).includes(h.view)) S.view = h.view;
   if (h.date && /^\d{4}-\d{2}-\d{2}$/.test(h.date)) { S.date = h.date; S.dateUser = true; }
-  if (h.exp) S.exp = h.exp === '1';
+
   if (h.zone && zones().some(z => z.id === h.zone)) S.selected = { kind: 'zone', id: h.zone };
   if (h.preset === 'zone4') applyPreset(false);
   if (!viewAllowed(S.view)) S.view = 'coverage';
@@ -514,6 +514,8 @@ function passLine(s) {   // "about 05:20 (morning, from the east) and 19:30 (eve
   return tracksOf(s).map(t => { const p = passInfo(s, t); const n = nextPass(s, t); return p && n ? `${roTime(n, { hour: '2-digit', minute: '2-digit' })} ${p.when}, from the ${p.from}` : ''; }).filter(Boolean).join(' · ')
     + ` · every ${Math.min(...tracksOf(s).map(t => repeatDays(s, t)))} days`;
 }
+// counted from checks.json itself, so the badge always matches the checks list (manifest counts can be older)
+const checkCounts = () => (S.checks || []).reduce((n, c) => (n[c.status] = (n[c.status] || 0) + 1, n), {});
 function renderSat() {
   const sn = sensors();
   const cur = S.sat === 'compare'
@@ -578,7 +580,7 @@ function renderChecksButton() {
   }
   delete $('#checks-btn').dataset.target;
   $('#checks-btn').setAttribute('aria-label', 'All checks');
-  const n = S.man.checks || {};
+  const n = checkCounts();
   $('#checks-btn').innerHTML = `<span class="c-pass">✔ ${n.pass ?? 0}</span><span class="c-warn">! ${n.warn ?? 0}</span><span class="c-fail">✘ ${n.fail ?? 0}</span>${n.info ? `<span class="c-info">· ${n.info}</span>` : ''}`;
   $('#checks-btn').setAttribute('aria-label', `Checks: ${n.pass ?? 0} pass, ${n.warn ?? 0} warn, ${n.fail ?? 0} fail, ${n.info ?? 0} info. Open the list.`);
 }
@@ -586,11 +588,7 @@ function renderLayersMenu() {
   pressGroup($('#base-group'), Object.entries(BASEMAPS).map(([k, b]) => ({ key: k, html: b.label })), k => k === S.basemap, setBasemap);
   $('#opacity').value = Math.round(S.opacity * 100);
   $('#opacity-val').textContent = `${Math.round(S.opacity * 100)}%`;
-  const up = hasUpLayer();
-  $('#exp').disabled = !up;
-  $('#exp').checked = S.exp && up;
-  $('#exp').closest('label').title = up ? '' : 'No supported up/east export yet (open team decision: how to compare the two radars)';
-  $('#exp-why').hidden = up;
+  S.exp = false;   // the up/east map option is removed from the layers menu
 }
 
 // ------------------------------------------------------------------------------------------------ dock: views, tracks, timeline
@@ -1759,11 +1757,11 @@ function forecastCard(sel) {
   if (!S.fcZone || !fz[S.fcZone]) S.fcZone = sel.kind === 'zone' && fz[sel.id] ? sel.id : (fz.z4 ? 'z4' : Object.keys(fz)[0]);
   const zf = fz[S.fcZone]; const z = zones().find(p => p.id === S.fcZone);
   const pickKey = (sat) => zf[`${sat}:${S.track[sat]}`] ? `${sat}:${S.track[sat]}` : Object.keys(zf).find(k => k.startsWith(sat + ':'));
-  // NISAR's forecast is not shown: its backtest covers 30 days only, far short of 2029 (04, 15 Nov 2026)
+  // NISAR's forecast is not shown: its backtest covers weeks, not the years to 2029 (04, 15 Nov 2026)
   const keys = [pickKey('s1')].filter(Boolean);
   if (!keys.length || S.sat === 'nisar') return '';
   const buttons = zones().map(p => `<button type="button" data-fcz="${esc(p.id)}" aria-pressed="${p.id === S.fcZone}"${fz[p.id] ? '' : ' disabled title="No series on any track"'}>${esc(zoneShort(p))}</button>`).join('');
-  const lines = [], marks = [], rows = [];
+  const lines = [], marks = [], rows = [], tests = [];
   let from = null, divider = null;
   for (const k of keys) {
     const f = zf[k]; const [s_, trk] = k.split(':'); const col = SATS[s_]?.color || '#1C1917';
@@ -1775,12 +1773,14 @@ function forecastCard(sel) {
     const vals = YEARS.map(y => fcAt(f, y));
     YEARS.forEach((y, i) => marks.push({ d: y, v: vals[i], color: col, label: `${sgn(vals[i])}` }));
     const rate = (f.median.at(-1) - last[1]) / ((day(f.dates.at(-1)) - day(last[0])) / 365.25);
+    const b = f.backtest;   // forecast_zones.py: the last 60 days forecast from the data before them
+    tests.push(b ? `${esc(sensors()[s_]?.label || s_)}: tested on its last ${b.days} days, off by ${b.mae_chronos.toFixed(1)} mm on average (a "no change" guess: ${b.mae_no_change.toFixed(1)} mm).` : `${esc(sensors()[s_]?.label || s_)}: too few dates to test yet.`);
     rows.push(`<tr><th><span style="color:${col}">●</span> ${esc(sensors()[s_]?.label || s_)} ${esc(trk)}</th>${vals.map(v => `<td>${sgn(v)} mm</td>`).join('')}<td>${sgn(rate)} mm/yr</td></tr>`);
   }
   return `<div class="block dm-card"><h3>The prediction <span class="seg dm-zones" role="group" aria-label="Zone">${buttons}</span></h3>
     <div class="sub small">${esc(zoneName(z))} · forecast, mm</div>
     ${miniChart([], { from, to: S.fz.end, extra: lines, marks, divider, height: 150, upto: S.playing ? S.date : null })}
-    <table class="fc-table"><tr><th></th>${YEARS.map(y => `<th>${esc(human(y))}</th>`).join('')}<th>trend after today</th></tr>${rows.join('')}</table></div>`;
+    <table class="fc-table"><tr><th></th>${YEARS.map(y => `<th>${esc(human(y))}</th>`).join('')}<th>trend after today</th></tr>${rows.join('')}</table><p class="sub small fc-test">${tests.join(' ')}</p></div>`;
 }
 // "Which way the ground moves" is hidden (04, 15 Nov 2026): with 129A and 094D together every up and east component
 // carries 22 to 28 mm/yr of noise, and 094D fails the phase-sign test. What stays is 04's single line for a pressed
@@ -2097,7 +2097,7 @@ function openTracker() {
 }
 function renderAbout() {
   const sn = sensorKeys().map(s => sensors()[s]);
-  const n = S.man.checks || {};
+  const n = checkCounts();
   const m = S.man.methods || {};
   const others = (S.index || []).filter(s => s.site !== S.site);
   const passRows = sensorKeys().flatMap(s => tracksOf(s).map(tk => { const p = passInfo(s, tk); return p ? `<tr><td>${trackHtml(s, tk)}</td><td>${esc(roTime(Date.parse(`2026-01-15T${p.utc}:00Z`), { hour: '2-digit', minute: '2-digit' }))} in winter, an hour later in summer</td><td>flies ${p.north ? 'north' : 'south'}, every ${repeatDays(s, tk)} days</td></tr>` : ''; })).join('');
@@ -2127,7 +2127,7 @@ function renderAbout() {
     ${sn.map(x => `<p class="sub">${esc(x.credit)}</p>`).join('')}
     <p class="sub">Maps: ${BASEMAPS.light.attribution}; ${BASEMAPS.satellite.attribution}. Building outlines: © OpenStreetMap contributors (ODbL), via OpenFreeMap. Map library: MapLibre GL JS.</p>
     <h3>7. Use</h3>
-    <p class="sub">Free to view and share with attribution. Provided as is, without warranty, for NASA Space Apps 2026. Built ${esc(S.man.built)}.</p>
+    <p class="sub">Free to view and share with attribution. Provided as is, without warranty, for NASA Space Apps 2026. Built ${esc(String(S.man.built || '').slice(0, 10))}.</p>
     ${Object.keys(m).length ? more('Methods (for specialists)', `${['s1', 'sign', 'rate', 'zones'].filter(k => m[k]).map(k => `<p class="sub">${esc(m[k])}</p>`).join('')}
       ${m.links ? `<p>${m.links.map(l => `<a href="${esc(l.href)}" target="_blank" rel="noopener">${esc(l.label)}</a>`).join(' · ')}</p>` : ''}`, 'h') : ''}
     <details class="more" id="checks-more"><summary id="checks-h">Validation checks (for reviewers) · ${n.pass ?? 0} pass, ${n.warn ?? 0} warn, ${n.fail ?? 0} fail</summary>
@@ -2248,7 +2248,7 @@ async function main() {
   });
   $('#about').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.close(); });
   $('#table-dlg').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.close(); });
-  $('#exp').addEventListener('change', (e) => { S.exp = e.target.checked; changed(); });
+
   $('#opacity').addEventListener('input', (e) => {
     S.opacity = Number(e.target.value) / 100;
     $('#opacity-val').textContent = `${e.target.value}%`;

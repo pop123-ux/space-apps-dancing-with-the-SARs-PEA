@@ -59,6 +59,20 @@ def main():
         grid = np.arange(0, td[-1] + 1, STEP); yg = np.interp(grid, td, y)
         last = t0 + timedelta(days=float(td[-1]))
         steps = math.ceil((END - last).days / STEP)
+        # backtest: forecast the last 60 days from the data before them; score against the measured values and
+        # against the simplest guess (no further change). Same model and settings as the forecast itself.
+        bt = None
+        cut = td[-1] - 60
+        if (td <= cut).sum() >= 8 and (td > cut).sum() >= 2:
+            gb = grid[grid <= cut]; yb = np.interp(gb, td, y)
+            hb = math.ceil((td[-1] - gb[-1]) / STEP)
+            qb, _ = pipe.predict_quantiles([(yb - yb[-1]).astype(np.float32)], prediction_length=hb, quantile_levels=Q)
+            mb = qb[0][0].numpy()[:, 1] + yb[-1]
+            fx = gb[-1] + STEP * (np.arange(hb) + 1)
+            held = td > cut
+            pred = np.interp(td[held], fx, mb)
+            bt = dict(days=60, n=int(held.sum()), mae_chronos=round(float(np.mean(np.abs(pred - y[held]))), 2),
+                      mae_no_change=round(float(np.mean(np.abs(yb[-1] - y[held]))), 2))
         q, _ = pipe.predict_quantiles([(yg - yg[-1]).astype(np.float32)], prediction_length=steps, quantile_levels=Q)
         q = q[0][0].numpy()
         fd = [(last + timedelta(days=STEP * (k + 1))).isoformat() for k in range(steps)]
@@ -66,10 +80,10 @@ def main():
             observed_dates=[d.isoformat() for d, _ in pts], observed_mm=[round(float(v), 2) for _, v in pts],
             dates=fd, median=[round(float(y[-1] + v), 2) for v in q[:, 1]],
             q10=[round(float(y[-1] + v), 2) for v in q[:, 0]], q90=[round(float(y[-1] + v), 2) for v in q[:, 2]],
-            backtested=(sat == "s1" and trk == "029A" and zid == "z4"))
-        print(zid, sat, trk, f"{len(pts)} dates → {END} median {y[-1] + q[-1, 1]:+.1f} mm")
+            backtested=bt is not None, backtest=bt)
+        print(zid, sat, trk, f"{len(pts)} dates → {END} median {y[-1] + q[-1, 1]:+.1f} mm", f"backtest {bt}")
     (prod / "forecast_zones.json").write_text(json.dumps(dict(model="amazon/chronos-2 (zero-shot)", end=END.isoformat(),
-        level=0.8, note="Zone 4 on 029A is backtested (forecast.json); the others use the same method without their own test.",
+        level=0.8, note="Each series is backtested on its last 60 days (backtest: mean error of Chronos-2 and of a no-change guess, mm).",
         zones=res), indent=1) + "\n")
 
 

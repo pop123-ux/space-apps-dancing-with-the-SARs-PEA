@@ -268,3 +268,18 @@ A decision recorded here is not a question. Nobody blocks on one. If a line look
 13:00 | 06 (Claude Code) | The pin's confidence score, "What went into this answer" and the inside-a-salt-field "Not recommended" are removed; a spot inside a zone gets one plain line saying so | keep them beside the new answer | The score was built on the trend's own fit error (about ± 4 mm/yr), which 04 shows is far too small; a red cross from the outline alone would contradict "too little signal"
 13:00 | 06 (Claude Code) | "What NISAR can't see yet" goes at the end of the Coverage panel ("When each satellite looked") | a new story stop | The page has no story stops yet; Coverage is where NISAR's timing already is
 13:00 | 06 (Claude Code) | A passing "salt zones sink" check is left out of the header's main badge while no zone on that track clears the noise; it stays in the checks list | change the check | The check is 05's; 04 asked 05 to switch it to −2σ
+- 2026-11-15 (03, 05 and 06, via Alexandru): The checks and the prediction.
+  - **The three "NISAR 094D against Sentinel-1 029A" failures** are now "Not compared": 094D failed its own sign check, so its rates can't judge agreement, and the three failures repeated that one fault. The sign failure itself (sign-094D) stays visible as the single "fail". `validate.py` keeps the list of failed tracks from the sign check (SIGN_FAILED). No threshold changed.
+  - **Running the current `validate.py` also turned the four held-out station checks from warn into info.** This comes from a rule already in the code, not from this change: a station check whose tolerance is wider than 20 mm/yr has no decisive answer ("?" on the pin). The committed products were older than that rule.
+  - **Result:** 5 pass, 6 warn, 1 fail, 12 info. The page now counts the badge from `checks.json` itself.
+  - **The remaining warnings cannot honestly be turned into passes with today's data:**
+    - NISAR's per-pixel scatter on stable ground is 38.9 mm/yr (target under 6);
+    - there are only 6 NISAR dates in the shared window;
+    - the fair partner of NISAR's morning pass (Sentinel-1 007D) has no usable town points over the long window.
+    More NISAR passes (one every 12 days) are the fix.
+- 2026-11-15 (03, via Alexandru): Chronos-2 rerun on the longest series (Sentinel-1 029A: 94 dates from May 2025), and every series now backtested on its last 60 days against a "no further change" guess.
+  - **029A:** mean errors 1.0 to 1.9 mm against 1.2 to 2.0 mm for no change.
+  - **007D (July to November):** 1.0 to 2.9 mm against 1.2 to 2.5 mm.
+  - **Verdict:** Chronos-2 is better on 3 of 7 series and about equal on 1; NISAR series (10 dates) are too short to test.
+  - **On the page:** the prediction card shows this test under its table. New 1 Jan 2029 medians on 029A: Zone 1 −28.3 mm, Zone 2 −8.6 mm, Zone 4 −22.2 mm.
+- 2026-11-15 (06, via Alexandru): Removed the "Up and east (experimental)" map option and its "No supported up/east export yet" note, the time from "Built" in Terms & Conditions (date only), and the "70 or more: high…" line in the confidence score. Satellite imagery is requested to zoom 17 only (Esri has imagery there everywhere; zoom 18 is patchy and 19 placeholder tiles), and deeper zooms enlarge zoom-17 tiles, so the map never shows "Map data not yet available".
