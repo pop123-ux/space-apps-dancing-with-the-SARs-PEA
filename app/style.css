@@ -515,3 +515,26 @@ body.dmenu-open .layers-wrap { right: calc(50vw + var(--gap)); }
 .dm-ramp { position: relative; cursor: crosshair; }
 .dm-tip { position: absolute; bottom: 20px; transform: translateX(-50%); background: #1C1917; color: #FAFAF9; font-size: 12px; padding: 4px 8px; white-space: nowrap; display: flex; gap: 6px; align-items: center; pointer-events: none; }
 .dm-tip b { width: 14px; height: 14px; border: 1px solid #FAFAF9; display: inline-block; }
+
+/* town hall: a board-game piece standing on the map */
+.marker.hall { background: none; border: 0; padding: 0; width: 46px; display: grid; justify-items: center; cursor: pointer;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,.35)); transition: transform .15s ease; }
+.marker.hall svg { width: 46px; height: 46px; display: block; }
+.marker.hall span { margin-top: -4px; background: #FAFAF9; color: #1C1917; border: 1.5px solid #1C1917; font-size: 11px; font-weight: 600;
+  padding: 1px 6px; white-space: nowrap; letter-spacing: .02em; }
+.marker.hall:hover { transform: translateY(-3px) scale(1.06); }
+/* the pin button sits in the zoom group, above the compass */
+.maplibregl-ctrl-group .pin-btn { display: grid; place-items: center; }
+.maplibregl-ctrl-group .pin-btn svg { width: 20px; height: 24px; }
+.maplibregl-ctrl-group .pin-btn[aria-pressed="true"] { background: #FEE2E2; box-shadow: inset 0 0 0 2px #DC2626; }
+body.pin-mode #map .maplibregl-canvas-container { cursor: crosshair; }
+.pin-mark svg { width: 34px; height: 41px; display: block; filter: drop-shadow(0 2px 2px rgba(0,0,0,.35)); }
+.dm-card.verdict.ok { border-left: 5px solid #2166AC; }
+.dm-card.verdict.no { border-left: 5px solid #B2182B; }
+.verdict-word { font-size: 22px; font-weight: 700; margin: 6px 0; }
+.verdict.ok .verdict-word { color: #2166AC; }
+.verdict.no .verdict-word { color: #B2182B; }
+.dm-card.verdict { display: block; }
+.dm-card.verdict h3 { display: block; margin-bottom: 4px; }
+.marker.hall { width: 58px; }
+.marker.hall svg { width: 58px; height: 58px; }

@@ -323,7 +323,27 @@ function updateBlur() {
 }
 
 // markers: the salt zones, the stations, and the town label shown when zoomed out
+// Ocnele Mari town hall (Primăria Ocnele Mari, Strada Alexandru Ioan Cuza), OpenStreetMap node 5947938076, checked 15 Nov 2026
+const TOWN_HALL = [24.297756, 45.0881573];
+const HALL_SVG = `<svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="58" rx="20" ry="4" fill="#000" opacity=".28"/>
+  <path d="M10 30 L32 10 L54 30 Z" fill="#B91C1C"/><path d="M32 10 L54 30 L48 30 L32 16 Z" fill="#7F1D1D"/>
+  <rect x="14" y="30" width="36" height="24" fill="#DC2626"/><rect x="40" y="30" width="10" height="24" fill="#991B1B"/>
+  <rect x="14" y="52" width="36" height="4" fill="#7F1D1D"/>
+  <rect x="19" y="35" width="6" height="7" fill="#FEF3C7"/><rect x="29" y="35" width="6" height="7" fill="#FEF3C7"/>
+  <rect x="27" y="44" width="10" height="10" fill="#FEF3C7"/><rect x="31" y="20" width="2" height="8" fill="#FEF3C7"/>
+  <path d="M33 20 L39 22 L33 24 Z" fill="#FEF3C7"/>
+  <path d="M10 30 L32 10 L54 30" fill="none" stroke="#1C1917" stroke-width="2" stroke-linejoin="round"/>
+  <rect x="14" y="30" width="36" height="26" fill="none" stroke="#1C1917" stroke-width="2"/></svg>`;
+function addTownHall(m) {
+  const el = document.createElement('button');
+  el.type = 'button'; el.className = 'marker hall'; el.title = 'Ocnele Mari town hall (Primăria): press for the ground history here';
+  el.setAttribute('aria-label', 'Ocnele Mari town hall: show the ground history and building check here');
+  el.innerHTML = `${HALL_SVG}<span>Town hall</span>`;
+  el.addEventListener('click', (e) => { e.stopPropagation(); openMenu({ kind: 'pin', at: TOWN_HALL, hall: true }); });
+  new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat(TOWN_HALL).addTo(m);
+}
 function addMarkers(m) {
+  addTownHall(m);
   for (const p of zones()) {
     const el = document.createElement('button');
     el.type = 'button'; el.className = 'marker zone'; el.dataset.id = p.id;
@@ -1377,12 +1397,91 @@ function openMenu(sel) {
 }
 function closeMenu() {
   S.menu = null; $('#dmenu').hidden = true; document.body.classList.remove('dmenu-open');
-  setTimeout(() => mapA?.resize(), 220); drawSelection(null); drawVectors(null); changed(false);
+  setTimeout(() => mapA?.resize(), 220); drawSelection(null); drawVectors(null); showPin(null); changed(false);
 }
 const insideBox = (coords, [w, s, e, n]) => coords[0] >= w && coords[0] <= e && coords[1] >= s && coords[1] <= n;
+function setPinMode(on) {
+  S.pinMode = on; const b = $('#pin-btn'); b?.setAttribute('aria-pressed', String(on));
+  if (mapA) mapA.getCanvas().style.cursor = on ? 'crosshair' : '';
+  document.body.classList.toggle('pin-mode', on);
+}
+function showPin(at) {
+  if (S.pinMarker) { S.pinMarker.remove(); S.pinMarker = null; }
+  if (!at || !mapA) return;
+  const el = document.createElement('div'); el.className = 'pin-mark'; el.innerHTML = `<svg viewBox="0 0 40 48" aria-hidden="true"><path d="M20 46 C20 46 4 28 4 18 A16 16 0 0 1 36 18 C36 28 20 46 20 46 Z" fill="#DC2626" stroke="#1C1917" stroke-width="2.4"/><circle cx="20" cy="18" r="10.5" fill="#FFF" stroke="#1C1917" stroke-width="1.6"/><path d="M13.5 19 L20 13 L26.5 19" fill="#7C2D12" stroke="#1C1917" stroke-width="1.2" stroke-linejoin="round"/><rect x="15" y="18.5" width="10" height="7" fill="#C2410C" stroke="#1C1917" stroke-width="1.1"/><rect x="18.6" y="21" width="2.8" height="4.5" fill="#7C2D12"/></svg>`;
+  S.pinMarker = new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat(at).addTo(mapA);
+}
+// the measured point nearest the pin (within 120 m) on the shown satellite and track
+const PIN_RADIUS_M = 120;
+const metres = (a, b) => Math.hypot((a[0] - b[0]) * 111320 * Math.cos(b[1] * Math.PI / 180), (a[1] - b[1]) * 110540);
+async function pinPoint(at, sat) {   // the median of every measured point within 120 m: one radar point alone is too noisy
+  const file = pointFile(sat); if (!file) return null;
+  const gj = await loadPoints(file); const near = []; let bd = Infinity;
+  for (const f of gj.features) { const dd = metres(f.geometry.coordinates, at); if (dd <= PIN_RADIUS_M) near.push(f); bd = Math.min(bd, dd); }
+  if (!near.length) return null;
+  const pts = gj.meta.dates.map((d, k) => [d, median(near.map(f => f.properties[`c${k}`]).filter(v => v != null))]).filter(([, v]) => v != null && Number.isFinite(v));
+  return { n: near.length, dist: bd, pts };
+}
+// straight line through the spot's own history, carried on to 1 Jan 2029 with an 80 % prediction band
+function lineForecast(pts, end = '2029-01-01') {
+  const n = pts.length; if (n < 4) return null;
+  const x = pts.map(([d]) => (day(d) - day(pts[0][0])) / 365.25), y = pts.map(([, v]) => v);
+  const xm = x.reduce((a, b) => a + b) / n, ym = y.reduce((a, b) => a + b) / n;
+  const sxx = x.reduce((a, v) => a + (v - xm) ** 2, 0); if (sxx <= 0) return null;
+  const b = x.reduce((a, v, i) => a + (v - xm) * (y[i] - ym), 0) / sxx, a0 = ym - b * xm;
+  const s = Math.sqrt(y.reduce((a, v, i) => a + (v - a0 - b * x[i]) ** 2, 0) / Math.max(1, n - 2));
+  const last = pts.at(-1)[0], steps = 24, out = [], band = [];
+  for (let k = 0; k <= steps; k++) {
+    const dd = new Date((day(last) + (day(end) - day(last)) * k / steps) * 864e5).toISOString().slice(0, 10);
+    const xx = (day(dd) - day(pts[0][0])) / 365.25, yy = a0 + b * xx;
+    const w = 1.2816 * s * Math.sqrt(1 + 1 / n + (xx - xm) ** 2 / sxx);
+    out.push([dd, yy]); band.push([dd, yy - w, yy + w]);
+  }
+  return { slope: b, sigSlope: s / Math.sqrt(sxx), line: out, band, end };
+}
+// the build check, a yes-or-no rule written out in DECISIONS.md:
+// "Not advised" when the spot lies inside a salt-brine zone, or its own trend moves away from the satellite
+// faster than 10 mm/yr and that is more than twice the trend's own uncertainty; otherwise "No warning sign"
+const BUILD_LIMIT = -10;
+function buildCheck(at, fc) {
+  const z = zones().find(p => metres(at, [p.lon, p.lat]) <= (p.r_m || 250));
+  if (z) return { ok: false, why: `It lies inside ${zoneName(z)}, one of the salt-brine fields where the ground has sunk or collapsed before.` };
+  if (!fc) return null;
+  if (fc.slope <= BUILD_LIMIT && -fc.slope > 2 * fc.sigSlope)
+    return { ok: false, why: `Its own trend moves away from the satellite at ${sgn(fc.slope)} mm/yr (± ${fc.sigSlope.toFixed(1)}), faster than the ${Math.abs(BUILD_LIMIT)} mm/yr limit.` };
+  return { ok: true, why: `It is outside the salt-brine zones and its trend (${sgn(fc.slope)} ± ${fc.sigSlope.toFixed(1)} mm/yr) stays within the ${Math.abs(BUILD_LIMIT)} mm/yr limit.` };
+}
+async function pinCards(d) {
+  const at = S.menu.at; const p = await pinPoint(at, d.sat);
+  if (!p || p.pts.length < 2) {
+    const z = zones().find(q => metres(at, [q.lon, q.lat]) <= (q.r_m || 250));
+    return `<div class="block dm-card"><p class="reason">No measured point within ${PIN_RADIUS_M} m of this spot on ${esc(sensors()[d.sat].label)} ${esc(d.trk)} (forest and steep slopes lose the radar signal). ${z ? `It lies inside ${esc(zoneName(z))}, a salt-brine field: <b>not advised</b> for building.` : 'Try another track or a spot on open ground.'}</p></div>`;
+  }
+  const fc = lineForecast(p.pts); const chk = buildCheck(at, fc);
+  const first = p.pts[0], last = p.pts.at(-1);
+  const gaps = gapsOf(d.sat, d.trk);
+  let html = `<div class="block dm-card"><h3>The history of this spot <span class="badge">${p.pts.length} dates</span></h3>
+    <div class="sub small">Line-of-sight change, mm · median of ${p.n} measured point${p.n > 1 ? 's' : ''} within ${PIN_RADIUS_M} m</div>
+    ${miniChart(p.pts, { from: first[0], to: last[0], gaps, on: S.date, color: SATS[d.sat].color, height: 140, upto: S.playing ? S.date : null })}
+    <p class="dm-big">From ${esc(human(first[0]))} to ${esc(human(last[0]))}: <b>${sgn(last[1] - first[1])} mm</b></p></div>`;
+  if (chk) html += `<div class="block dm-card verdict ${chk.ok ? 'ok' : 'no'}"><h3>Build here?</h3>
+    <p class="verdict-word">${chk.ok ? '✔ No warning sign' : '✘ Not advised'}</p><p class="sub small">${esc(chk.why)}</p>
+    <p class="sub small">A screen from satellite data, not a ground survey: ask for a geotechnical study before building.</p></div>`;
+  if (fc) {
+    const endV = fc.line.at(-1)[1], bb = fc.band.at(-1);
+    html += `<div class="block dm-card"><h3>Where it heads</h3><div class="sub small">This spot's own straight-line trend, carried on to ${esc(human(fc.end))}</div>
+      ${miniChart(p.pts, { from: first[0], to: fc.end, band: fc.band, extra: [{ pts: fc.line, color: '#7C3AED', dash: true }], color: SATS[d.sat].color, height: 130, upto: S.playing ? S.date : null })}
+      <p class="dm-big">${esc(human(fc.end))}: <b>${sgn(endV)} mm</b> <span class="sub">(80 % range ${sgn(bb[1])} to ${sgn(bb[2])} mm)</span></p></div>`;
+  }
+  return html;
+}
 async function menuData() {
   const sat = S.sat === 'compare' ? 'nisar' : S.sat; const trk = S.track[sat];
   const out = { sat, trk, pts: [], label: '', shape: null, test: null };
+  if (S.menu.kind === 'pin') {
+    out.label = `${S.menu.hall ? 'Ocnele Mari town hall' : 'The spot you pinned'} · ${sensors()[sat].label} ${trk}`;
+    return out;
+  }
   if (S.menu.kind === 'zone') {
     const z = S.series.find(p => p.id === S.menu.id); const e = z && entry(z, sat, trk);
     out.label = `${zoneName(z)} · ${sensors()[sat].label} ${trk}`;
@@ -1535,9 +1634,10 @@ async function renderMenu() {
   const want = S.menu;
   const d = await menuData();
   if (S.menu !== want) return;
-  drawSelection(d.shape); drawVectors(d.test);
-  let html = `<div class="dm-head"><h2>How the ground moved here</h2><div class="kicker">${esc(d.label)}${d.n ? ` · ${d.n} measured points` : ''}</div></div>`;
-  if (!d.pts.length) html += `<div class="block dm-card"><p class="reason">No measurement here on this satellite.</p></div>`;
+  drawSelection(d.shape); drawVectors(d.test); showPin(S.menu.kind === 'pin' && !S.menu.hall ? S.menu.at : null);
+  let html = `<div class="dm-head"><h2>${S.menu.kind === 'pin' ? 'This spot' : 'How the ground moved here'}</h2><div class="kicker">${esc(d.label)}${d.n ? ` · ${d.n} measured points` : ''}</div></div>`;
+  if (S.menu.kind === 'pin') html += await pinCards(d);
+  else if (!d.pts.length) html += `<div class="block dm-card"><p class="reason">No measurement here on this satellite.</p></div>`;
   else {
     const gaps = gapsOf(d.sat, d.trk);
     const vmin = Math.min(...d.pts.map(p => p[1])), vmax = Math.max(...d.pts.map(p => p[1]));
@@ -1546,8 +1646,10 @@ async function renderMenu() {
       ${miniChart(d.pts, { from: d.pts[0][0], to: d.pts.at(-1)[0], gaps, on: S.date, color: SATS[d.sat].color, height: 140, upto: S.playing ? S.date : null })}
       <p class="sub small">Below 0: moving away from the satellite (often sinking). Above 0: moving toward it. The blue point is the date on the map.</p></div>`;
   }
-  html += forecastCard(S.menu);
-  html += await arrowsCard(d.test || (() => false));
+  if (S.menu.kind !== 'pin') {
+    html += forecastCard(S.menu);
+    html += await arrowsCard(d.test || (() => false));
+  }
   if (S.menu !== want) return;
   $('#dm-body').innerHTML = html;
   document.querySelectorAll('#dm-body [data-fcz]').forEach(btn => btn.addEventListener('click', () => { S.fcZone = btn.dataset.fcz; renderMenu(); }));
@@ -1669,6 +1771,14 @@ async function main() {
   document.title = `Dancing on Salt · ${cleanLabel(S.man.name)}`;
   mapA = makeMap('map', true);
   mapA.addControl(new maplibregl.NavigationControl({ showCompass: true, visualizePitch: false }), 'top-right');
+  {   // the pin: press it, then press a spot on the map for that spot's history, a build check and where it heads
+    const b = document.createElement('button'); b.type = 'button'; b.id = 'pin-btn'; b.className = 'pin-btn';
+    b.title = 'Pin a spot: its history, whether to build there, and where it heads'; b.setAttribute('aria-label', b.title);
+    b.setAttribute('aria-pressed', 'false');
+    b.innerHTML = `<svg viewBox="0 0 40 48" aria-hidden="true"><path d="M20 46 C20 46 4 28 4 18 A16 16 0 0 1 36 18 C36 28 20 46 20 46 Z" fill="#DC2626" stroke="#1C1917" stroke-width="2.4"/><circle cx="20" cy="18" r="10.5" fill="#FFF" stroke="#1C1917" stroke-width="1.6"/><path d="M13.5 19 L20 13 L26.5 19" fill="#7C2D12" stroke="#1C1917" stroke-width="1.2" stroke-linejoin="round"/><rect x="15" y="18.5" width="10" height="7" fill="#C2410C" stroke="#1C1917" stroke-width="1.1"/><rect x="18.6" y="21" width="2.8" height="4.5" fill="#7C2D12"/></svg>`;
+    b.addEventListener('click', (e) => { e.stopPropagation(); setPinMode(!S.pinMode); });
+    const comp = document.querySelector('#map .maplibregl-ctrl-compass'); comp?.parentNode.insertBefore(b, comp);
+  }
   mapA.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
   addMarkers(mapA);
   // Docked layout (v4): the map shrinks to the space left of the menu column, then redraws at its new size.
@@ -1684,7 +1794,9 @@ async function main() {
   mapA.on('load', () => { updateBlur(); document.querySelector('#map .maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show'); });
   mapA.on('click', (e) => {
     closeMenus();
-    openMenu({ kind: 'area', at: [e.lngLat.lng, e.lngLat.lat] });
+    const at = [e.lngLat.lng, e.lngLat.lat];
+    if (S.pinMode) { setPinMode(false); return openMenu({ kind: 'pin', at }); }
+    openMenu({ kind: 'area', at });
   });
   mapA.on('mouseenter', 'pts', () => { mapA.getCanvas().style.cursor = 'pointer'; });
   mapA.on('mouseleave', 'pts', () => { mapA.getCanvas().style.cursor = ''; });
