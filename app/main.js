@@ -210,9 +210,9 @@ function makeMap(container, interactive) {
     zoom: v.zoom - ZOOM_OFFSET,
     minZoom: (v.min_zoom ?? 6) - ZOOM_OFFSET,
     maxZoom: 16,
-    attributionControl: false, dragRotate: false, pitchWithRotate: false,
+    attributionControl: false, dragRotate: true, pitchWithRotate: false,
   });
-  m.touchZoomRotate?.disableRotation?.();
+  // rotation on: right-drag or Ctrl+drag, two-finger twist; the compass resets north
   m.on('load', () => { addOverlay(m); renderOverlays(); });
   return m;
 }
@@ -1650,7 +1650,7 @@ async function main() {
   $('#site-name').textContent = cleanLabel(S.man.name);
   document.title = `Dancing on Salt · ${cleanLabel(S.man.name)}`;
   mapA = makeMap('map', true);
-  mapA.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+  mapA.addControl(new maplibregl.NavigationControl({ showCompass: true, visualizePitch: false }), 'top-right');
   mapA.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
   addMarkers(mapA);
   // Docked layout (v4): the map shrinks to the space left of the menu column, then redraws at its new size.
