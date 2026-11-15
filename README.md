@@ -4,7 +4,7 @@
 
 <img width="1920" height="950" alt="Frontpage" src="https://github.com/user-attachments/assets/3c0e9fcc-2461-43ca-a3f5-8690c3e09ee4" />
 
-**AI disclosure:** [AI-DISCLOSURE.md](AI-DISCLOSURE.md)
+**AI disclosure (main source):** https://docs.google.com/spreadsheets/d/124X3eaWHZTHrb_MgZriIy63Y4Zvm6VaW4JnVFfrDwhg/edit?usp=sharing. The repository's running log is [AI-DISCLOSURE.md](AI-DISCLOSURE.md).
 
 *Our submission to NASA Space Apps 2026, challenge [Dancing with the SARs](https://www.spaceappschallenge.org/2026/challenges/dancing-with-the-sars/). The submission text is in [SUBMISSION.md](SUBMISSION.md).*
 
@@ -122,7 +122,7 @@ python -m http.server 8000                  # then open http://localhost:8000
 | 05 | Validator | Paul | Stations, EGMS, checks, red team; `validate.py`, `egms_cut.py`, `hyp3_order.py` |
 | 06 | App developer | Darius | The page, products and hosting; `index.html`, `app/`, `export.py`, `mock_products.py` |
 
-Every file says its owner in its first lines; the full list is [OWNERS.md](OWNERS.md).
+Roles changed during the event; the final roles are in the team's AI disclosure sheet linked at the top. The table above, and the owner lines in the files, show who started each part.
 
 ## Decisions the whole team made
 
