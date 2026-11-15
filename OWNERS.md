@@ -50,6 +50,7 @@ Every file in this repository has an owner role, 01 to 06, or is shared. The own
 | `refs.py` | 04 · Geodesist (Matei) | EuVeM2022, NGL MIDAS, published rates; synthetic stand-ins |
 | `calibrate.py` | 04 · Geodesist (Matei) | The tie to the GNSS frame; calib.json; the model swap |
 | `logs/04-geodesist.md` | 04 · Geodesist (Matei) | Running log of role 04: checks, real and synthetic results, what is open |
+| `noise_floor.py` | 04 · Geodesist (Matei) | Zone and pin noise floor, up/east check, and when NISAR can see the zones; writes noise_floor.json and .png |
 
 ## 05 · Validator (Paul)
 
