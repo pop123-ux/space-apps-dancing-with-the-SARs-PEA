@@ -86,6 +86,7 @@ Every file in this repository has an owner role, 01 to 06, or is shared. The own
 | `.env.example` | shared · announce changes; 01 reviews | Template for the Earthdata token; the real .env is never committed |
 | `.github/workflows/tests.yml` | shared · announce changes; 01 reviews | Runs pytest on every push |
 | `.github/workflows/update.yml` | shared · announce changes; 01 reviews | Weekly data check; opens a pull request when new acquisitions exist |
+| `.github/workflows/sentinel1-refit.yml` | shared · announce changes; 01 reviews | Downloads the HyP3 products on a GitHub runner, checks the January to October fit reproduces, refits January to November, scores and re-issues the forecast, commits the results to its branch |
 | `.github/pull_request_template.md` | shared · announce changes; 01 reviews | The checklist on every PR |
 
 ## Everyone

@@ -47,7 +47,7 @@ const PHRASES = [   // longer phrases inside mixed text, applied longest first
   ['mm since the first date of its acquisition group', 'mm de la prima dată a grupului de achiziții'],
   ['click a point to show that date on the map', 'apasă un punct pentru a vedea data pe hartă'],
   ['pixels', 'pixeli'], [' dates', ' date'], [' pairs', ' perechi'], ['only ', 'doar '], ['(validator)', '(validator)'],
-  [': coverage', ': acoperire'], [': compare', ': comparare'], ['January to October 2026', 'ianuarie–octombrie 2026'],
+  [': coverage', ': acoperire'], [': compare', ': comparare'], ['January to October 2026', 'ianuarie–octombrie 2026'], ['January to November 2026', 'ianuarie–noiembrie 2026'],
   ['July to October 2026', 'iulie–octombrie 2026'], ['Salt zone', 'Zonă de sare'], ['GNSS station', 'Stație GNSS'],
   ['against GNSS', 'față de GNSS'], ['against Sentinel-1', 'față de Sentinel-1'], ['against NISAR', 'față de NISAR'],
 ];

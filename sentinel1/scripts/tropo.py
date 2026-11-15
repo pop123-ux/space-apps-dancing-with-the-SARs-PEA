@@ -39,7 +39,7 @@ def fetch(start, end, tries=5):
         try:
             with urlopen(url, timeout=120) as r:
                 return json.load(r)['hourly']
-        except OSError:
+        except (OSError, ValueError):     # ValueError: an empty or cut reply that is not JSON
             if k == tries - 1:
                 raise
             time.sleep(2 ** k)
@@ -88,7 +88,14 @@ def main():
                   location=[LAT, LON], hours_utc=HOURS_UTC, heights_m=HEIGHTS.tolist(),
                   units='mm zenith total delay relative to 2,000 m', tracks={})
     days = sorted(f'{d[:4]}-{d[4:6]}-{d[6:]}' for ds in wanted.values() for d in ds)
-    hourly = fetch(days[0], days[-1])
+    hourly = None   # month by month: one request for ten months came back empty (15 Nov 2026); same hourly values
+    from datetime import date, timedelta
+    start, last = date.fromisoformat(days[0]), date.fromisoformat(days[-1])
+    while start <= last:
+        end = min(last, (start.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1))
+        part = fetch(start.isoformat(), end.isoformat())
+        hourly = part if hourly is None else {k: hourly[k] + part[k] for k in hourly}
+        start = end + timedelta(days=1)
     for track, dates in sorted(wanted.items()):
         result['tracks'][track] = {}
         for d in sorted(dates):

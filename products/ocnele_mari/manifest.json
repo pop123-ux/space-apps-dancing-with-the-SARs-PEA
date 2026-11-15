@@ -387,7 +387,8 @@
  },
  "windows": {
   "jul_oct": "July to October 2026",
-  "jan_oct": "January to October 2026"
+  "jul_nov": "July to November 2026",
+  "jan_nov": "January to November 2026"
  },
  "default_window": "jul_oct",
  "checks": {
@@ -399,7 +400,7 @@
  "zone_notes": {
   "z3": {
    "label": "Historically subsiding · 2026 trend inconclusive",
-   "detail": "EGMS history shows this zone sinking, but the 2026 Sentinel-1 evidence is limited: no connected ascending (029A) series in July to October, and the descending (007D) result changes sign across processing runs. Over January to October no zone pixel stays connected on either track.",
+   "detail": "EGMS history shows this zone sinking, but the 2026 Sentinel-1 evidence is limited: no connected ascending (029A) series in July to October, and the descending (007D) result changes sign across processing runs. Over January to November no zone pixel stays connected on either track.",
    "source": "03 zone review, 14 Nov 2026 (sentinel1/docs/TEAM_HANDOFF.md)"
   }
  },

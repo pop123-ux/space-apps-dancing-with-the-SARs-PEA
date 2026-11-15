@@ -147,9 +147,10 @@ function applyHash(h) {
   if (h.preset === 'zone4') applyPreset(false);
   if (!viewAllowed(S.view)) S.view = 'coverage';
 }
-// "Investigate Zone 4": Sentinel-1 029A, January to October 2026, baseline run, Zone 4 selected (a shareable preset)
+// "Investigate Zone 4": Sentinel-1 029A, the long window (January to November 2026), baseline run, Zone 4 selected
+// (a shareable preset)
 function applyPreset(render = true) {
-  const w = S.sens?.windows?.jan_oct ? 'jan_oct' : S.window;
+  const w = gapFill()?.[0] || S.window;
   S.sat = 's1'; S.track.s1 = tracksOf('s1').includes('029A') ? '029A' : S.track.s1; S.window = w; S.scenario = 'baseline';
   S.view = 'change'; S.selected = { kind: 'zone', id: 'z4' }; S.note = null;
   const ds = datesOf('s1', S.track.s1); S.date = ds[ds.length - 1] || null; S.dateUser = true;
@@ -616,7 +617,7 @@ function gapsFor(s, t, R) {
     return `<div class="gap${covers ? ' filled' : ''}" style="left:${R.x(a)}%;width:${R.x(b) - R.x(a)}%" title="${covers ? `${esc(sensors()[s].label)} did not image the town from ${a} to ${b}; Sentinel-1 covers these months` : `No ${esc(sensors()[s].label)} data from ${a} to ${b}`}">${label}${covers ? `<button type="button" class="gap-fill" data-fill="${esc(a)}|${esc(b)}">Sentinel-1 covers this →</button>` : ''}</div>`;
   }).join('');
 }
-// Show the gap months with Sentinel-1: same direction of flight, its January to October window, a date mid-gap.
+// Show the gap months with Sentinel-1: same direction of flight, its long window, a date mid-gap.
 function fillGap(a, b) {
   const fill = gapFill(); if (!fill) return;
   const [k, w] = fill;
@@ -744,8 +745,8 @@ function renderFlags() {
       n.innerHTML = `<span>No ${esc(sensors()[S.sat].label)} acquisition on ${esc(S.date)}. The nearest is ${esc(near)}.</span><button type="button" data-date="${esc(near)}">Show ${esc(near)}</button>`;
     }
   }
-  // a Sentinel-1 window can hold no pixel over the town for one track (Jan to Oct 007D: none stays connected through
-  // 49 dates of C-band winter decorrelation); say so instead of showing an empty town, and offer the window that has it
+  // a Sentinel-1 window can hold no pixel over the town for one track (the long 007D window: few pixels stay connected
+  // through every date of C-band winter decorrelation); say so instead of showing an empty town, and offer the window that has it
   const cov = S.sat === 's1' && !n.innerHTML ? win()?.town_cover?.[S.track.s1] : null;
   if (cov != null && cov >= 0 && cov < 5) {
     const alt = Object.entries(S.sens?.windows || {}).filter(([k, w]) => k !== S.window && (w.town_cover?.[S.track.s1] ?? -1) >= 5)
@@ -894,7 +895,7 @@ function factRow(point, sat, trk) {
     <span class="tags">${limited ? `<span class="badge warn">Limited coverage · ${esc(e.n_pixels)} px</span>` : ''}${d ? `<span class="badge ${d.cls}">${esc(d.text)}</span>` : ''}${trackNote(point, sat, trk) ? `<span class="badge" title="${esc(trackNote(point, sat, trk).detail)}">${esc(trackNote(point, sat, trk).label)}</span>` : ''}</span>${more('Which run changes it?', caveat ? esc(caveat) : '')}</div>`;
 }
 // the products say how to label a zone with no series in the selected window (sensitivity.json, per window)
-const EMPTY_ZONE_FALLBACK = { jan_oct: 'Insufficient continuous coverage' };   // docs/ui.md, if a products set omits the label
+const EMPTY_ZONE_FALLBACK = { jan_oct: 'Insufficient continuous coverage', jan_nov: 'Insufficient continuous coverage' };   // docs/ui.md, if a products set omits the label
 const emptyZoneLabel = (sat) => (sat === 's1' && (win()?.empty_zone_label || EMPTY_ZONE_FALLBACK[S.window])) || 'No connected series for this zone on this track';
 // which stored runs flip the direction of the selected run, and by how much (from sensitivity.json; after Alexandru's
 // Zone 1 and Zone 2 note in PR #12, generalised so the numbers come from the products)
@@ -929,7 +930,7 @@ function choicesPanel() {
   return `<details class="choices" ${S.choicesOpen ? 'open' : ''}><summary>Explore processing choices <span class="sub">· ${esc(win()?.label || '')} · ${esc(scenarioLabel(S.scenario))}</span></summary>
     <div class="menu-label">Observation window</div>
     <div class="seg" role="group" aria-label="Observation window">${wins.map(([k, w]) => `<button type="button" data-window="${esc(k)}" aria-pressed="${k === S.window}">${esc(w.label || k)}</button>`).join('')}</div>
-    ${wins.length < 2 ? '<p class="sub small">The January to October window is not in this products set yet.</p>' : ''}
+    ${wins.length < 2 ? '<p class="sub small">The January to November window is not in this products set yet.</p>' : ''}
     <div class="menu-label">Processing run</div>
     <div class="radios" role="radiogroup" aria-label="Processing run">${scs.map(([k, l]) => `<label><input type="radio" name="scenario" value="${esc(k)}" ${k === S.scenario ? 'checked' : ''}> ${esc(l)}</label>`).join('')}</div>
     <p class="sub small">${esc(S.sens.note || 'These choose stored results. Maps exist for the baseline run only.')}</p>
@@ -975,6 +976,11 @@ function forecastPanel() {
   const base = Object.entries(f.metrics).filter(([k2]) => k2 !== model && BASE[k2]).map(([k2, v]) => `${BASE[k2]} ${Number(v.mae_mm).toFixed(2)} mm`).join(', ');
   const nc = f.nisar_check;
   const ncText = nc ? `<p class="reason"><b>Check against NISAR</b> (129A, ${esc(nc.dates[0])} to ${esc(nc.dates[1])}, after the forecast started): NISAR ${fmt(nc.nisar_change_mm, 1)} mm, Chronos-2 ${fmt(nc.chronos2_change_mm, 1)} mm. NISAR's own date-to-date scatter here is about ${Number(nc.nisar_step_scatter_mm).toFixed(1)} mm, so this is consistent within noise, not a validation. Scaled into Sentinel-1's line of sight assuming vertical motion only.</p>` : '';
+  // the forecast before this one, scored on Sentinel-1 dates measured after it was issued (forecast_check.py)
+  const pc = f.previous_check;
+  const pcLast = pc?.rows?.at(-1);
+  const pcBase = pc ? Object.entries(pc.mae_mm || {}).filter(([k2]) => k2 !== model && BASE[k2]).map(([k2, v]) => `${BASE[k2]} ${Number(v).toFixed(1)} mm`).join(', ') : '';
+  const pcText = pcLast ? `<p class="reason"><b>How the previous forecast did.</b> Chronos-2 issued from data up to ${esc(human(pc.forecast_issued_from))} expected ${fmt(pcLast.predicted_change_mm.chronos2, 1)} mm of change by ${esc(human(pcLast.date))}; Sentinel-1 then measured ${fmt(pcLast.measured_change_mm, 1)} mm. ${pc.chronos2_inside_80pct ? `On ${esc(pc.chronos2_inside_80pct)} new dates the measurement fell inside its 80 % range. ` : ''}Average error over the ${pc.new_dates} new dates: ${Number(pc.mae_mm.chronos2).toFixed(1)} mm (simple baselines: ${pcBase}). One forecast on a few dates that share one reference, so this is a check, not proof of skill.</p>` : '';
   const btShort = [c.janoct_30d && `${Number(c.janoct_30d.mae_mm).toFixed(1)} mm at 30 days`, c.janoct_88d && `${Number(c.janoct_88d.mae_mm).toFixed(1)} mm at 88 days`].filter(Boolean).join(', ');
   const retro = f.status === 'retrospective' || f.end_date <= new Date().toISOString().slice(0, 10);
   return block('zone-forecast', `${esc(supported.label || f.zone)} · ${retro ? 'Retrospective forecast' : 'Forecast'} · Chronos-2`,
@@ -985,7 +991,7 @@ function forecastPanel() {
           <output id="fc-out" for="fc-range" aria-live="polite">${fcReadout(steps[k], val[k], lo[k], hi[k], iv.level, f.training_dates[0])}</output></div>
         ${keys(lines.slice(0, 3).map((l, i) => i === 2 ? { ...l, label: `${Math.round(iv.level * 100)} % range (backtested)` } : l))}`,
       foot: btShort ? `Typical past error: ${btShort}` : '',
-      after: more('How good is this forecast?', `${ncText}<p class="reason">Backtest error (mean absolute, January to October 2026 series): ${bt}. Over the four summer cutoffs Chronos-2 scored ${Number(f.metrics.chronos2.mae_mm).toFixed(2)} mm against simple baselines (${base}). ${esc(f.interval_reason)}</p>`),
+      after: more('How good is this forecast?', `${pcText}${ncText}<p class="reason">Backtest error (mean absolute, January to October 2026 series): ${bt}. Over the ${f.folds?.length || 'summer'} summer cutoffs Chronos-2 scored ${Number(f.metrics.chronos2.mae_mm).toFixed(2)} mm against simple baselines (${base}). ${esc(f.interval_reason)}</p>`),
     });
 }
 // the forecast exists for one zone, track, window and run: from anywhere else, offer the way there
@@ -1079,7 +1085,7 @@ function agreementSheet() {
   return `${head}<p class="sub small">Each line is the zone minus the terrain 6.5 to 8 km away. NISAR ${esc(nt)} is paired with Sentinel-1 ${esc(st)} because both see east-west motion the same way. A wide tolerance means agreeing proves little yet.</p>
     ${keys(['nisar', 's1'].map(s => ({ label: `${sensors()[s].label} ${trk[s]}`, color: SATS[s].color })))}${blocks.join('')}${radarsPanel()}<h3 class="sub-h">Historical context</h3>${egmsPanel()}`;
 }
-// every exported date of a track across Sentinel-1's windows (Jan to Oct and Jul to Oct), for the coverage overview
+// every exported date of a track across Sentinel-1's windows (Jan to Nov and Jul to Oct), for the coverage overview
 function allDates(s, t) {
   if (s !== 's1' || !S.sens?.windows) return datesOf(s, t);
   return [...new Set(Object.values(S.sens.windows).flatMap(w => w.frames?.[t]?.dates || []))].sort();
@@ -1138,7 +1144,7 @@ function zoneSheet(id) {
   const lines = sats.map(s => lineOf(z, s, S.track[s])).filter(Boolean);
   const ctl = control();
   if (ctl) for (const s of sats) { const l = lineOf(ctl, s, S.track[s], { dash: true, color: '#A8A29E', label: cleanLabel(ctl.label) }); if (l) lines.push(l); }
-  // NISAR has no acquisitions from 18 Jan to 23 Jun 2026: Sentinel-1's January to October series fills those months,
+  // NISAR has no acquisitions from 18 Jan to 23 Jun 2026: Sentinel-1's long series fills those months,
   // in its own line of sight and reference (never spliced onto the NISAR line).
   const fill = S.sat === 'nisar' ? gapFill() : null;
   let fillNote = '';
@@ -1149,7 +1155,7 @@ function zoneSheet(id) {
       lines.push({ label: `Sentinel-1 ${st}, ${fill[1].label} (fills NISAR's gap)`, color: SATS.s1.color, shape: SATS.s1.shape,
         dates: e.dates, mm: e.mm, gaps: [], n: e.n_pixels, dash: false });
       fillNote = `<p class="reason">The purple line is Sentinel-1 ${esc(st)}, which kept imaging the town while NISAR had no acquisitions. It is in Sentinel-1's own line of sight and reference, so read its shape, not its offset from the NISAR line.</p>`;
-    } else if (st) fillNote = `<p class="reason">Sentinel-1 ${esc(st)} has no continuous January to October series in this zone, so NISAR's gap stays empty here.</p>`;
+    } else if (st) fillNote = `<p class="reason">Sentinel-1 ${esc(st)} has no continuous ${esc(fill[1].label)} series in this zone, so NISAR's gap stays empty here.</p>`;
   }
   html += fillNote;
   html += block(`d-${z.id}`, 'Change over time, mm', '', lines, { foot: `${lines.filter(l => !l.dash).map(l => `${l.label}: ${l.n ?? 'n/a'} pixels`).join(' · ')} · click a point to show that date on the map` });

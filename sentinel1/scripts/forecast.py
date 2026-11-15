@@ -23,7 +23,8 @@ from scipy.stats import theilslopes
 
 from fit import FACTOR, geometry, read_product, solve
 
-START, END = date(2026, 7, 7), date(2026, 10, 5)
+START, END = date(2026, 7, 7), date(2026, 10, 5)   # END moves with --last-date (15 Nov: 2026-11-10, 41 pairs)
+SUMMER_END, SUMMER_PAIRS = date(2026, 10, 5), 29
 HORIZON = 30
 MIN_HISTORY, MIN_PIXELS = 8, 10
 MODELS = ('persistence', 'theil_sen', 'gaussian_process', 'long_term')
@@ -108,8 +109,10 @@ def observations(raw, tropo=None):
         d -= np.median(d[ref & valid])
         pairs.append((a,b,np.where(valid[zone],d[zone],np.nan),
                       np.where(valid[zone],p['coh'][zone]**2,0.)))
-    if len(pairs)!=29 or len({(a,b) for a,b,*_ in pairs})!=29:
-        raise ValueError('Expected the 29 unique summer 029A pairs')
+    if (END == SUMMER_END and len(pairs) != SUMMER_PAIRS) or len({(a,b) for a,b,*_ in pairs}) != len(pairs):
+        raise ValueError(f'Expected {SUMMER_PAIRS} unique summer 029A pairs' if END == SUMMER_END else 'Duplicate pairs')
+    if END not in {b for _, b, *_ in pairs}:
+        raise ValueError(f'No pair ends on the last date {END}')
     return pairs, look
 
 
@@ -177,7 +180,7 @@ def build(raw, as_of, end_date=None, rain_csv=None, tropo=None):
         raise ValueError('Forecast end date must follow the last acquisition')
     ahead = np.array([*range(6, horizon, 6), horizon])
     pred = forecasts(t,hist,ahead,lt_rate)
-    return dict(zone='z4', track='029A', sensor='s1', window='jul_oct', scenario='baseline' if tropo is None else 'weather_model',
+    return dict(zone='z4', track='029A', sensor='s1', window='jul_oct' if END == SUMMER_END else f'jul_{END:%b}'.lower(), scenario='baseline' if tropo is None else 'weather_model',
                 last_observation=last.isoformat(), end_date=end.isoformat(), as_of=as_of.isoformat(),
                 status='retrospective' if end<=as_of else 'experimental',
                 horizon_days=horizon, backtest_horizon_days=HORIZON, connected_pixels=int(keep.sum()), model=candidate,
@@ -210,5 +213,8 @@ if __name__=='__main__':
     parser.add_argument('--end-date',type=date.fromisoformat)
     parser.add_argument('--rain-csv',type=Path,help='notebooks/05/z4_screen_inputs.csv (05)')
     parser.add_argument('--tropo',type=Path,help='tropo.json: forecast the weather_model scenario instead of baseline')
+    parser.add_argument('--last-date',type=date.fromisoformat,help='last acquisition used (default 2026-10-05, the summer window)')
     args=parser.parse_args()
+    if args.last_date:
+        END = args.last_date
     args.output.write_text(json.dumps(build(args.raw,args.as_of,args.end_date,args.rain_csv,json.loads(args.tropo.read_text()) if args.tropo else None),indent=2,allow_nan=False)+'\n')

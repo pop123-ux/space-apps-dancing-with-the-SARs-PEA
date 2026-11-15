@@ -28,7 +28,7 @@ Written 15 Nov 2026, 00:50 Europe/Bucharest, at the end of the 02/03 Claude Code
 
 1. **094D:** decide whether a local (1 to 3 km) reference is acceptable for T3, or test another way. Until then Compare and Agreement stay off (`manifest.compare`).
 2. **Stations:** VLC1/VLC2 disagree with NISAR 129A (+3.9 vs −0.6/+0.3 mm/yr); the tolerance treats neighbouring pixels as independent, so it is too tight. Revisit with a correlated-noise σ.
-3. **Sentinel-1:** process the six 029A acquisitions after 5 Oct (to 10 Nov): shortens the forecast horizon from 88 to 52 days. Recover granules and checksums for the Jan to Oct jobs from their HyP3 job IDs.
+3. **Sentinel-1:** done 15 Nov: six new dates per track to 10 Nov, forecast horizon 52 days, Jan to Oct job links and checksums recovered ([sentinel1/analysis_jan_nov/README.md](../sentinel1/analysis_jan_nov/README.md)). Next date: 007D 15 Nov; rerun with `.github/workflows/sentinel1-refit.yml` after adding jobs to `sentinel1/provenance/hyp3_jobs_jan_nov.csv`.
 4. **Zone 3:** no continuous series on either radar.
 5. **Stale branches:** eight merged branches still need deleting by a person (this session could not delete branches).
 6. **Slides and SUBMISSION.md** (01) and the story sentence (`manifest.story` is still TODO(01)).
