@@ -172,3 +172,18 @@ A decision recorded here is not a question. Nobody blocks on one. If a line look
   - Pressing: it straightens point-down and drops. The placed pin lands with a bounce and carries the verdict as a badge on the map.
   - The menu: the verdict comes first, across the whole menu, in large type: "✘ Not recommended" or "✔ No warning sign" (the earlier "Not advised" was renamed).
   - Legend: the menu's colour scale now uses the lowest and highest values of whatever is selected (the pin's 120 m circle, a zone or a pressed area), also in the rate and coverage views.
+
+- 2026-11-15 (03 and 06, via Alexandru), the page:
+  - Prediction card: shows the Chronos-2 median only (no 80 % band, by request), with a "measured | predicted" divider, the value marked at 1 Jan 2027, 2028 and 2029, and a table of those values plus the trend after today.
+  - Compare: one chart per card with NISAR (orange) and Sentinel-1 (purple) overlaid. The trend card uses only the months both radars measured, with both set to 0 on the first shared date, each in its own line of sight (the honest-comparison rules); the prediction card overlays both forecasts.
+  - Readability: the legend says what red and blue mean in plain words; the status line shows one plain sentence, with the technical details behind "About this data"; the link keeps the Sentinel-1 window only when someone chose it.
+  - Town hall marker removed (not needed).
+- 2026-11-15 (06, via Alexandru): The build check follows the "Where it heads" card. "Not recommended" if the spot is inside a salt-brine zone, or if its own straight-line trend, carried on to 1 Jan 2029, moves it a further 15 mm or more away from the satellite and the trend is more than twice its uncertainty. The 15 mm limit is our choice, not a standard. Each verdict now has a confidence line:
+  - High: 5 or more radar points and 30 or more dates.
+  - Medium: 2 or more points and 12 or more dates.
+  - Low: anything less.
+  - One level lower if the trend is within twice its uncertainty, or if the other radar's trend at the spot points the opposite way.
+- 2026-11-15 (06, via Alexandru): Arrows are drawn only inside the selected area (square, zone or pin circle), on the area's own grid: one arrow per about 70 screen pixels of the area, so 1 or 2 arrows when zoomed out. The terrain around the area (a ring as wide as the area, 32 samples) gives two things:
+  - Its median value is the local reference, so colours are relative to the surroundings.
+  - The 80th percentile of its plane slopes is the random variation the terrain shows anyway. Arrows no steeper than that are drawn faded, without the moving pulse, and the note counts how many stand out.
+- 2026-11-15 (03, via Alexandru): Ordered 160 more Sentinel-1 burst pairs on HyP3 (`sentinel1/scripts/order_all.py`) so the stack covers every acquisition ASF holds on both bursts from May 2025 to 15 Nov 2026: 95 dates on 029A and 97 on 007D, against 55 before. It uses the same job type and parameters, and the same 6- and 12-day pairs linked to the existing stack. The Sentinel-1 archive goes back to 2014; we stopped at May 2025, a full year before our window. A ten-year C-band stack loses the town to winter decorrelation and would need thousands of jobs.
