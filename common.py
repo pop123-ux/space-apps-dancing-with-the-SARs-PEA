@@ -75,7 +75,7 @@ SENSORS = {
         label="NISAR", agency="NASA–ISRO", band="L-band", wavelength_cm=24.4, look="left",
         product="NISAR L2 GUNW, frequency A, HH (beta and provisional)", status="beta/provisional",
         tracks={"129A": "Ascending", "094D": "Descending"},
-        reference="tied to the EuVeM2022 velocity model (04; DRAFT until the tie exists)",
+        reference="tied to the EuVeM2022 velocity model, Eurasia-fixed (04; offset and scatter per track in calib.json)",
         credit="NISAR L2 GUNW (NASA–ISRO, ASF DAAC); beta and provisional products, not intended for scientific research",
         fitted_by="fetch.py (02) → stack.py (03) → calibrate.py (04)"),
     "s1": dict(
