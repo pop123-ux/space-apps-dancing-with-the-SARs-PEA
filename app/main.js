@@ -112,7 +112,7 @@ async function getJSON(url) {
 // ------------------------------------------------------------------------------------------------ state
 const S = {
   site: null, base: 'products/', dir: '', man: null, series: [], stations: null, checks: [], cov: null, sens: null,
-  sat: 'nisar', track: {}, view: 'change', date: null, exp: false, basemap: 'satellite', window: null, scenario: 'baseline',
+  sat: 'nisar', track: {}, view: 'change', date: null, exp: false, basemap: 'light', window: null, scenario: 'baseline',
   split: 50, selected: null, playing: null, tables: new Set(), opacity: 0.7, note: null,
 };
 let mapA = null, mapB = null;
@@ -1678,7 +1678,7 @@ async function menuData(satArg) {
     out.test = (c) => Math.hypot((c[0] - z.lon) * Math.cos(z.lat * Math.PI / 180), c[1] - z.lat) <= r;
     return out;
   }
-  const box = squareDeg(S.menu.at); out.test = (c) => insideBox(c, box);
+  const box = S.menu.box || squareDeg(S.menu.at); out.test = (c) => insideBox(c, box);
   const file = pointFile(sat);
   if (file) {
     const gj = await loadPoints(file);
@@ -1687,7 +1687,8 @@ async function menuData(satArg) {
     out.n = inside.length;
     out.shape = cellBox(inside.map(f => f.geometry.coordinates), gj.meta.spacing || 80) || { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [[[box[0], box[1]], [box[2], box[1]], [box[2], box[3]], [box[0], box[3]], [box[0], box[1]]]] } };
   }
-  out.label = `${AREA_M / 1000} km square · ${trackText(sat, trk)}`;
+  const kmW = metres([box[0], box[1]], [box[2], box[1]]) / 1000, kmH = metres([box[0], box[1]], [box[0], box[3]]) / 1000;
+  out.label = `${S.menu.box ? `${kmW.toFixed(kmW < 1 ? 2 : 1)} × ${kmH.toFixed(kmH < 1 ? 2 : 1)} km area` : `${AREA_M / 1000} km square`} · ${trackText(sat, trk)}`;
   return out;
 }
 // a small chart in the app's own style (the zone panels use the same proportions, fonts and greys)
@@ -2109,7 +2110,7 @@ async function renderMenu() {
   const L = layerFor(d.sat); const rng = await areaRange(d, L);
   const vm = Math.abs(L?.meta?.vmax ?? 20); let lo = -vm, hi = vm;
   $('#dm-legend').style.removeProperty('--ramp');
-  if (rng) { [lo, hi] = rng; if (S.view !== 'coverage') mapA.setPaintProperty('pts', 'circle-color', rangeExpr(rng.key, lo, hi)); $('#dm-legend').style.setProperty('--ramp', rampCss(lo, hi)); }
+  if (rng) { [lo, hi] = rng; if (S.view !== 'coverage' && mapA.getLayer('pts')) mapA.setPaintProperty('pts', 'circle-color', rangeExpr(rng.key, lo, hi)); $('#dm-legend').style.setProperty('--ramp', rampCss(lo, hi)); }
   S.menuRange = rng ? [lo, hi] : null; field.refresh();
   const f1 = (v) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toFixed(1)}`;
   const lat = mapA.getCenter().lat, mpp = 40075016.686 * Math.cos(lat * Math.PI / 180) / (512 * 2 ** mapA.getZoom());
@@ -2295,7 +2296,7 @@ async function main() {
     hb.addEventListener('click', (e) => { e.stopPropagation(); setHouseMode(!S.houseMode); });
     comp?.parentNode.insertBefore(hb, comp.nextSibling);
     const ab = document.createElement('button'); ab.type = 'button'; ab.id = 'area-btn'; ab.className = 'pin-btn';
-    ab.title = 'Select an area: press the map to study a 1 km square'; ab.setAttribute('aria-label', ab.title); ab.setAttribute('aria-pressed', 'false');
+    ab.title = 'Select an area: drag a rectangle on the map (or press once for a 1 km square)'; ab.setAttribute('aria-label', ab.title); ab.setAttribute('aria-pressed', 'false');
     ab.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" fill="rgba(29,78,216,.12)" stroke="#1D4ED8" stroke-width="2" stroke-dasharray="3.5 2.5"/></svg>`;
     ab.addEventListener('click', (e) => { e.stopPropagation(); setAreaMode(!S.areaMode); });
     hb.parentNode.insertBefore(ab, hb.nextSibling);
@@ -2336,9 +2337,36 @@ async function main() {
       setHouseMode(false); return openMenu({ kind: 'pin', at: c, house: { type: 'Polygon', coordinates: poly } });
     }
     if (S.pinMode) { dropPinCursor(e); S.pinMode = false; setTimeout(() => { setPinMode(false); openMenu({ kind: 'pin', at }); }, 330); return; }
-    if (S.areaMode) { setAreaMode(false); return openMenu({ kind: 'area', at }); }
+    if (S.areaMode) { if (areaDrag.done) { areaDrag.done = false; return; } setAreaMode(false); return openMenu({ kind: 'area', at }); }
+    // a press outside the selected area clears it (and closes its panel); a press inside still shows that dot
+    if (S.menu?.kind === 'area' && !insideBox(at, S.menu.box || squareDeg(S.menu.at))) { closeMenu(); return; }
     dotPopup(e);
   });
+  // area tool: press where one corner should be, drag to the opposite corner and let go; a plain press still gives a 1 km square
+  const areaDrag = { start: null, el: null, done: false };
+  mapA.on('mousedown', (e) => {
+    if (!S.areaMode || e.originalEvent.button !== 0) return;
+    e.preventDefault(); mapA.dragPan.disable();
+    areaDrag.start = e.point; areaDrag.startLL = e.lngLat; areaDrag.done = false;
+    if (!areaDrag.el) { areaDrag.el = document.createElement('div'); areaDrag.el.className = 'area-drag'; areaDrag.el.style.cssText = `position:absolute;pointer-events:none;z-index:3;border:2px solid ${MENU_LINE};background:rgba(29,78,216,.12)`; mapA.getContainer().append(areaDrag.el); }
+    areaDrag.el.style.display = 'none';
+  });
+  mapA.on('mousemove', (e) => {
+    if (!areaDrag.start) return;
+    const a = areaDrag.start, b = e.point, el = areaDrag.el;
+    el.style.display = 'block'; el.style.left = `${Math.min(a.x, b.x)}px`; el.style.top = `${Math.min(a.y, b.y)}px`;
+    el.style.width = `${Math.abs(b.x - a.x)}px`; el.style.height = `${Math.abs(b.y - a.y)}px`;
+  });
+  const endDrag = (e) => {
+    if (!areaDrag.start) return;
+    const a = areaDrag.start, b = e.point, A = areaDrag.startLL, B = e.lngLat;
+    areaDrag.start = null; areaDrag.el.style.display = 'none'; mapA.dragPan.enable();
+    if (Math.abs(b.x - a.x) < 8 || Math.abs(b.y - a.y) < 8) return;   // a plain press: the click handler gives the 1 km square
+    areaDrag.done = true; setAreaMode(false);
+    const box = [Math.min(A.lng, B.lng), Math.min(A.lat, B.lat), Math.max(A.lng, B.lng), Math.max(A.lat, B.lat)];
+    openMenu({ kind: 'area', at: [(box[0] + box[2]) / 2, (box[1] + box[3]) / 2], box });
+  };
+  mapA.on('mouseup', endDrag);
   mapA.on('mouseenter', 'pts', () => { mapA.getCanvas().style.cursor = 'pointer'; });
   mapA.on('mouseleave', 'pts', () => { mapA.getCanvas().style.cursor = ''; });
   if (S.sat === 'compare') ensureMapB();
