@@ -1914,7 +1914,7 @@ const rampCss = (lo, hi) => `linear-gradient(90deg, ${rangeStops(lo, hi).map(([v
 // legend's colour for the value at the node; its length grows with the steepness, relative to the steepest in view.
 // A light pulse runs along each arrow, like a wind map. Nodes with fewer than 4 points nearby (forest) get no arrow.
 const field = (() => {
-  let canvas = null, arrows = [], raf = 0, busy = 0;
+  let canvas = null, arrows = [], raf = 0, busy = 0, lastSig = null, lastArea = null;
   const shownKey = (sat) => {
     const L = layerFor(sat); const f = frames(sat)?.[S.track[sat]];
     if (!L) return null;
@@ -1933,6 +1933,7 @@ const field = (() => {
     canvas = document.createElement('canvas'); canvas.className = 'field-canvas';
     const cc = mapA.getCanvasContainer(); cc.insertBefore(canvas, mapA.getCanvas().nextSibling);
     mapA.on('moveend', () => refresh()); mapA.on('resize', () => refresh());
+    mapA.on('move', () => { if (S.arrows && !raf) raf = requestAnimationFrame(draw); });
   }
   let area = null;
   const pointsIn = (b, lon, lat, rad, key, keep) => {   // points within rad metres of (lon, lat), as local metres and value
@@ -1959,6 +1960,8 @@ const field = (() => {
     ensureCanvas();
     const sat = S.sat === 'compare' ? 'nisar' : S.sat; const file = pointFile(sat); const key = shownKey(sat);
     if (!file || !key) { arrows = []; return; }
+    // the arrows don't depend on the view, so panning or zooming keeps them (and their motion)
+    const sig = `${file}|${key}`; if (arrows.length && lastSig === sig && lastArea === area) { if (!raf) raf = requestAnimationFrame(draw); return; }
     const job = ++busy; const b = await index(file); if (job !== busy) return;
     const st = stops(sat);
     // the selection's bounding box, in degrees and on screen
@@ -1981,50 +1984,94 @@ const field = (() => {
     }
     const ref = around.length ? median(around.map(p => p.val)) : 0;
     const noise = around.length >= 5 ? around.map(p => p.g).sort((a2, b2) => a2 - b2)[Math.floor(around.length * 0.8)] : null;
-    const out = [];
-    for (let i = 0; i < cells; i++) for (let j = 0; j < cells; j++) {
-      const lon = w + (i + 0.5) * cw, lat = s + (j + 0.5) * ch;
-      if (cells > 1 && !area.test([lon, lat])) continue;
-      const pl = plane(pointsIn(b, lon, lat, Math.max(120, cellM * 0.75), key, area.test)); if (!pl || !(pl.g > 0)) continue;
-      const head = [lon - pl.gx / pl.g * 10 / (111320 * Math.cos(lat * Math.PI / 180)), lat - pl.gy / pl.g * 10 / 110540];
-      const v = pl.val - ref;
-      out.push({ at: [lon, lat], head, g: pl.g, cell: [cw, ch], weak: noise != null && pl.g <= noise, col: colourAt(st, Math.max(st[0][0], Math.min(st.at(-1)[0], v))), ph: Math.random() });
+    // one arrow per measured dot, starting at the dot's centre. Like a vector-field
+    // animation, the field morphs through every radar date in a loop: at each date a plane is fitted to that date's
+    // change around the dot, and the arrow eases from one date's slope to the next.
+    const gj = await loadPoints(file); const spacing = gj.meta.spacing || 80; const nd = gj.meta.dates.length; const out = [];
+    let dots = gj.features.filter(f => f.properties[key] != null && area.test(f.geometry.coordinates));
+    const step = Math.max(1, Math.ceil(dots.length / 700)); dots = dots.filter((_, i) => i % step === 0);
+    const rad = Math.max(spacing * 2.2, 150), all = [];
+    for (const f of dots) {
+      const [lon, lat] = f.geometry.coordinates, kx = Math.floor(lon / 0.002), ky = Math.floor(lat / 0.0015), nb = [];
+      for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) for (const g2 of b.get(`${kx + i},${ky + j}`) || []) {
+        if (!area.test(g2.geometry.coordinates)) continue;
+        const dx = (g2.geometry.coordinates[0] - lon) * 111320 * Math.cos(lat * Math.PI / 180), dy = (g2.geometry.coordinates[1] - lat) * 110540;
+        if (dx * dx + dy * dy <= rad * rad) nb.push([dx, dy, g2.properties]);
+      }
+      const gx = new Float32Array(nd), gy = new Float32Array(nd); let any = false;
+      for (let k = 0; k < nd; k++) {
+        const pl = plane(nb.filter(x => x[2][`c${k}`] != null).map(x => [x[0], x[1], x[2][`c${k}`]]));
+        if (pl) { gx[k] = pl.gx; gy[k] = pl.gy; all.push(pl.g); any = true; } else if (k) { gx[k] = gx[k - 1]; gy[k] = gy[k - 1]; }
+      }
+      const sm = (arr) => { const o = new Float32Array(nd); for (let k = 0; k < nd; k++) { let t = 0, c = 0; for (let j = Math.max(0, k - 3); j <= Math.min(nd - 1, k + 3); j++) { const wj = 4 - Math.abs(j - k); t += arr[j] * wj; c += wj; } o[k] = t / c; } return o; };
+      if (any) out.push({ at: [lon, lat], v: f.properties[key], gx: sm(gx), gy: sm(gy), spacing, mPerDegX: 111320 * Math.cos(lat * Math.PI / 180) });
     }
-    const gmax = Math.max(...out.map(a2 => a2.g), 1e-9);
-    for (const a2 of out) a2.rel = 0.45 + 0.45 * Math.min(1, a2.g / gmax);
-    arrows = out; const strong = out.filter(a2 => !a2.weak).length;
+    all.sort((x, y) => x - y); const gref = all.length ? all[Math.floor(all.length * 0.95)] || 1e-9 : 1e-9;
+    for (const a2 of out) a2.gref = gref;
+    const kShown = key.startsWith('c') ? Math.min(nd - 1, Math.max(0, +key.slice(1))) : nd - 1;
+    S.vf = { dates: gj.meta.dates, k: kShown }; sp.last = null;
+    { const prev = new Map(arrows.map(a2 => [a2.at.join(), a2])); for (const a2 of out) { const o = prev.get(a2.at.join()); if (o) { a2.s = o.s; a2.ph = o.ph; a2.vis = o.vis; } } }
+    lastSig = sig; lastArea = area;
+    arrows = out; const strong = out.length;
     S.fieldInfo = { cells, shown: out.length, strong, noise, ref };
     const note = document.querySelector('.arrow-note');
-    if (note) note.innerHTML = `<div class="an-head"><b>Arrows</b><span class="an-count">${noise == null ? "can't tell" : `${strong} of ${out.length} clear`}</span></div>
-      <div class="an-row"><svg viewBox="0 0 30 10" aria-hidden="true"><path d="M2 5H24M18 1L25 5L18 9" fill="none" stroke="#B2182B" stroke-width="2.4" stroke-linecap="round"/></svg>points to where the ground sank more</div>
-      <div class="an-row"><svg viewBox="0 0 30 10" aria-hidden="true"><circle cx="15" cy="5" r="3.6" fill="none" stroke="#57534E" stroke-width="1.8"/></svg>${noise == null ? 'too few points around to judge, so all are drawn as arrows' : 'measured, but no clear direction (within normal wobble)'}</div>
-      <div class="an-row muted">Colour follows the legend, relative to the ground around the area.</div>`;
+    if (note) note.innerHTML = `<div class="an-head"><b>Arrows</b><span class="an-count vf-date"></span></div>
+      <div class="an-row"><svg viewBox="0 0 30 10" aria-hidden="true"><path d="M2 5H24M18 1L25 5L18 9" fill="none" stroke="#B2182B" stroke-width="2" stroke-linecap="round"/></svg>points to where the ground sank more</div>
+      <div class="an-row"><svg viewBox="0 0 30 10" aria-hidden="true"><path d="M2 5H12M8 2L13 5L8 8" fill="none" stroke="#B2182B" stroke-width="2" stroke-linecap="round"/></svg>short: a weak difference, likely within the terrain's normal wobble</div>
+      <div class="an-row muted">Arrows start at each dot and point to where the ground had sunk more by the date shown (move the timeline to change it). Colour follows the legend (the dot's own value); longer = steeper difference.</div>`;
     if (!raf) raf = requestAnimationFrame(draw);
   }
+  // the arrows hold still on the shown date. They float: when the map moves, their tips carry a
+  // little momentum in the same direction, swing a few pixels and bob back with a soft bounce; the base stays on the dot.
+  // One underdamped spring for the whole field; each arrow scaled 0.85 to 1.15 so the bounce looks natural, not busy.
+  const sp = { last: null, t: 0 }, sel = { z: null, arr: null };
   function draw(now) {
     raf = 0; if (!S.arrows || !canvas) return;
     const r = mapA.getContainer().getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
     if (canvas.width !== Math.round(r.width * dpr)) { canvas.width = Math.round(r.width * dpr); canvas.height = Math.round(r.height * dpr); }
     const ctx = canvas.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, r.width, r.height);
-    ctx.lineCap = 'round';
-    for (const a of arrows) {
-      const p = mapA.project(a.at), q = mapA.project(a.head); let ux = q.x - p.x, uy = q.y - p.y; const u = Math.hypot(ux, uy) || 1; ux /= u; uy /= u;
-      const cp = mapA.project([a.at[0] + a.cell[0], a.at[1] + a.cell[1]]); a.len = Math.max(18, Math.min(Math.abs(cp.x - p.x), Math.abs(cp.y - p.y)) * a.rel);
-      const sx = p.x - ux * a.len / 2, sy = p.y - uy * a.len / 2, ex = p.x + ux * a.len / 2, ey = p.y + uy * a.len / 2;
-      const hx = -uy, hy = ux, hl = Math.min(14, Math.max(7, a.len * 0.22));
-      const path = () => { ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.moveTo(ex - ux * hl + hx * hl * 0.55, ey - uy * hl + hy * hl * 0.55); ctx.lineTo(ex, ey); ctx.lineTo(ex - ux * hl - hx * hl * 0.55, ey - uy * hl - hy * hl * 0.55); };
-      if (a.weak) {   // measured, but no slope beyond the terrain's own wobble: a hollow circle, no direction
-        ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, 7); ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(12,10,9,.45)'; ctx.stroke();
-        ctx.lineWidth = 1.8; ctx.strokeStyle = '#FAFAF9'; ctx.stroke(); continue;
-      }
-      ctx.strokeStyle = 'rgba(12,10,9,.55)'; ctx.lineWidth = 4.5; path(); ctx.stroke();
-      const lw = Math.max(2.4, Math.min(6, a.len / 18));
-      ctx.lineWidth = lw + 2.5; ctx.strokeStyle = 'rgba(12,10,9,.55)'; path(); ctx.stroke();
-      ctx.strokeStyle = a.col; ctx.lineWidth = lw; path(); ctx.stroke();
-      const k = ((now / 1400) + a.ph) % 1, px = sx + (ex - sx) * k, py = sy + (ey - sy) * k;   // the travelling pulse
-      ctx.fillStyle = `rgba(255,255,255,${(0.85 * Math.sin(Math.PI * k)).toFixed(2)})`; ctx.beginPath(); ctx.arc(px, py, 2.2, 0, 7); ctx.fill();
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    const dotPx = arrows.length ? (() => { const a = arrows[0], p = mapA.project(a.at), q = mapA.project([a.at[0] + a.spacing / a.mPerDegX, a.at[1]]); return Math.abs(q.x - p.x); })() : 20;
+    const k0 = S.vf?.k ?? 0;
+    const lab = document.querySelector('.vf-date'); if (lab && S.vf) lab.textContent = human(S.vf.dates[k0]);
+    const dt = Math.min(3, sp.t ? (now - sp.t) / 16.7 : 1); sp.t = now;
+    const anc = arrows.length ? mapA.project(arrows[0].at) : null;
+    const ix = anc && sp.last ? (anc.x - sp.last.x) * 0.05 : 0, iy = anc && sp.last ? (anc.y - sp.last.y) * 0.05 : 0; sp.last = anc;
+    let active = false;
+    const stD = stops(S.sat === 'compare' ? 'nisar' : S.sat);   // the legend's gradient: each arrow takes its dot's colour
+    // which arrows show is fixed on the ground per zoom level (one per ~26 px cell at that zoom),
+    // so panning never swaps arrows; when the zoom level changes, arrows fade in or out instead of popping
+    const cellPx = 26, zl = Math.floor(mapA.getZoom());
+    if (arrows.length && (sel.z !== zl || sel.arr !== arrows)) {
+      const lat0 = arrows[0].at[1], mpp = 40075016 * Math.cos(lat0 * Math.PI / 180) / (512 * 2 ** zl), cellM = cellPx * mpp, taken = new Set();
+      for (const a of arrows) { const ck = `${Math.floor(a.at[0] * a.mPerDegX / cellM)},${Math.floor(a.at[1] * 110540 / cellM)}`; a.on = !taken.has(ck); taken.add(ck); }
+      sel.z = zl; sel.arr = arrows;
     }
-    raf = requestAnimationFrame(draw);
+    for (const a of arrows) {   // shaft from the dot's centre, filled head; length, colour and opacity by strength
+      const gx = a.gx[k0], gy = a.gy[k0], g = Math.hypot(gx, gy); if (!(g > 0)) continue;
+      const rel = Math.min(1, g / a.gref);
+      const p0 = mapA.project(a.at), ph = a.ph ?? (a.ph = Math.random()), p = p0;
+      // each tip has its own spring: slightly different stiffness, and a sideways (curl) pull that varies smoothly across
+      // the map, so after a drag the tips trace small loops that swirl in neighbouring directions, as in a vector field
+      const st = a.s || (a.s = { ox: 0, oy: 0, vx: 0, vy: 0 }), kk = 0.04 * (0.7 + 0.6 * ph), cu = 0.09 * Math.sin(p0.x / 110 + 1.3 * Math.cos(p0.y / 130));
+      st.vx += ix * (0.8 + 0.4 * ph); st.vy += iy * (0.8 + 0.4 * ph);
+      for (let i = 0; i < 2; i++) { const ax = -kk * st.ox - 0.1 * st.vx - cu * st.vy, ay = -kk * st.oy - 0.1 * st.vy + cu * st.vx; st.vx += ax * dt / 2; st.vy += ay * dt / 2; st.ox += st.vx * dt / 2; st.oy += st.vy * dt / 2; }
+      { const om = Math.hypot(st.ox, st.oy); if (om > 6) { st.ox *= 6 / om; st.oy *= 6 / om; } }
+      if (Math.hypot(st.ox, st.oy, st.vx, st.vy) > 0.02) active = true; else { st.ox = st.oy = st.vx = st.vy = 0; } a.vis = (a.vis ?? 0) + ((a.on ? 1 : 0) - (a.vis ?? 0)) * Math.min(1, 0.12 * dt); if (Math.abs((a.on ? 1 : 0) - a.vis) > 0.01) active = true; else a.vis = a.on ? 1 : 0; if (a.vis < 0.01) continue;
+      const q = mapA.project([a.at[0] - gx / g * 10 / a.mPerDegX, a.at[1] - gy / g * 10 / 110540]);
+      let ux = q.x - p0.x, uy = q.y - p0.y; const u = Math.hypot(ux, uy) || 1; ux /= u; uy /= u;
+      const len = Math.max(10, Math.max(dotPx, cellPx) * 1.2 * (0.2 + 0.8 * rel)); const ex = p.x + ux * len + st.ox, ey = p.y + uy * len + st.oy;   // the base stays on the dot; only the tip floats
+      { const d = Math.hypot(ex - p.x, ey - p.y) || 1; ux = (ex - p.x) / d; uy = (ey - p.y) / d; }
+      const hl = Math.max(5, Math.min(10, len * 0.32)), hw = hl * 0.55, bx = ex - ux * hl, by = ey - uy * hl;
+      const col = colourAt(stD, Math.max(stD[0][0], Math.min(stD.at(-1)[0], a.v))); ctx.globalAlpha = (0.6 + 0.4 * rel) * a.vis;
+      const shaft = () => { ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(bx, by); };
+      const tip = () => { ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(bx - uy * hw, by + ux * hw); ctx.lineTo(bx + uy * hw, by - ux * hw); ctx.closePath(); };
+      ctx.strokeStyle = 'rgba(12,10,9,.7)'; ctx.lineWidth = 4.6; shaft(); ctx.stroke(); ctx.lineWidth = 2.4; tip(); ctx.stroke();
+      ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 2.4; shaft(); ctx.stroke(); tip(); ctx.fill();
+      ctx.beginPath(); ctx.arc(p.x, p.y, 2.2, 0, 7); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    if (active) raf = requestAnimationFrame(draw); else sp.t = 0;
   }
   return { refresh: () => refresh(), setArea: (x) => { area = x; refresh(); }, redraw: () => { if (S.arrows && !raf) raf = requestAnimationFrame(draw); } };
 })();
