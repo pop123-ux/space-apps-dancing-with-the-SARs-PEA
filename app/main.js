@@ -1459,10 +1459,32 @@ function lineForecast(pts, end = '2029-01-01') {
 // faster than 10 mm/yr and that is more than twice the trend's own uncertainty; otherwise "No warning sign"
 const BUILD_LIMIT = -10;    // kept for older notes; the rule below uses the 2029 projection
 const SINK_LIMIT = -15;    // mm of further line-of-sight change from the last measurement to 1 Jan 2029
-function buildCheck(at, fc) {
+// the ground around the spot: 8 spots on a 300 m ring, each the median series of its points within 120 m, each with its
+// own straight-line trend. Their median is how the area moves as a whole; their robust spread (1.4826 x the median
+// absolute deviation) is the random variation the terrain shows anyway. A house is hurt by moving differently from
+// the ground around it (uneven settling), so a spot that differs from its surroundings by more than twice that spread,
+// and by at least 5 mm/yr, is "Not recommended".
+const RING_M = 300, DIFF_MIN = 5;
+async function surroundings(at, sat) {
+  const k = [];
+  for (let i = 0; i < 8; i++) {
+    const a = i / 8 * 2 * Math.PI;
+    const c = [at[0] + Math.cos(a) * RING_M / (111320 * Math.cos(at[1] * Math.PI / 180)), at[1] + Math.sin(a) * RING_M / 110540];
+    const p = await pinPoint(c, sat); const f = p && lineForecast(p.pts); if (f) k.push(f.slope);
+  }
+  if (k.length < 4) return null;
+  const med = median(k); const spread = 1.4826 * median(k.map(v => Math.abs(v - med)));
+  return { med, spread, n: k.length };
+}
+function buildCheck(at, fc, around) {
   const z0 = zones().find(p => metres(at, [p.lon, p.lat]) <= (p.r_m || 250));
   if (z0) return { ok: false, why: `It lies inside ${zoneName(z0)}, one of the salt-brine fields where the ground has sunk or collapsed before.` };
   if (!fc) return null;
+  if (around) {
+    const diff = fc.slope - around.med;
+    if (Math.abs(diff) >= DIFF_MIN && Math.abs(diff) > 2 * around.spread)
+      return { ok: false, why: `It moves differently from the ground around it: ${sgn(fc.slope)} mm/yr here against ${sgn(around.med)} mm/yr around (the surroundings vary by ± ${around.spread.toFixed(1)} mm/yr). Uneven settling like this is what cracks a house.` };
+  }
   const further = fc.line.at(-1)[1] - fc.line[0][1], sure = Math.abs(fc.slope) > 2 * fc.sigSlope;
   if (further <= SINK_LIMIT && sure)
     return { ok: false, why: `Its own trend (${sgn(fc.slope)} ± ${fc.sigSlope.toFixed(1)} mm/yr), carried on to ${human(fc.end)}, moves it a further ${sgn(further)} mm away from the satellite: more than the ${Math.abs(SINK_LIMIT)} mm limit.` };
@@ -1484,7 +1506,7 @@ async function pinCards(d) {
     if (z) return `<div class="block dm-card verdict hero no"><div class="verdict-q">Can you build here?</div><p class="verdict-word">✘ Not recommended</p><p>It lies inside ${esc(zoneName(z))}, one of the salt-brine fields where the ground has sunk or collapsed before. No radar point within ${PIN_RADIUS_M} m to show more.</p></div>`;
     return `<div class="block dm-card"><p class="reason">No measured point within ${PIN_RADIUS_M} m of this spot on ${esc(sensors()[d.sat].label)} ${esc(d.trk)} (forest and steep slopes lose the radar signal). ${z ? `It lies inside ${esc(zoneName(z))}, a salt-brine field: <b>not advised</b> for building.` : 'Try another track or a spot on open ground.'}</p></div>`;
   }
-  const fc = lineForecast(p.pts); const chk = buildCheck(at, fc);
+  const fc = lineForecast(p.pts); const around = fc ? await surroundings(at, d.sat) : null; const chk = buildCheck(at, fc, around);
   // confidence: how many radar points and dates, how noisy, and whether the other radar points the same way
   const other = d.sat === 's1' ? 'nisar' : 's1'; const po = sensors()[other] ? await pinPoint(at, other) : null; const fo = po && lineForecast(po.pts);
   let level = p.n >= 5 && p.pts.length >= 30 ? 2 : p.n >= 2 && p.pts.length >= 12 ? 1 : 0;
@@ -1497,6 +1519,7 @@ async function pinCards(d) {
   pinBadge(chk);
   let html = chk ? `<div class="block dm-card verdict hero ${chk.ok ? 'ok' : 'no'}"><div class="verdict-q">Can you build here?</div>
     <p class="verdict-word">${chk.ok ? '✔ No warning sign' : '✘ Not recommended'}</p><p>${esc(chk.why)}</p>${conf}
+    ${around && fc ? `<p class="conf"><b>Against the ground around it</b> (${around.n} spots ${RING_M} m away): ${sgn(fc.slope - around.med)} mm/yr different; the surroundings vary by ± ${around.spread.toFixed(1)} mm/yr, so this ${Math.abs(fc.slope - around.med) > 2 * around.spread ? '<b>stands out</b>' : 'is within that variation'}.</p>` : ''}
     <p class="sub small">A screen from satellite data, not a ground survey: ask for a geotechnical study before building.</p></div>` : '';
   html += `<div class="block dm-card"><h3>The history of this spot <span class="badge">${p.pts.length} dates</span></h3>
     <div class="sub small">Line-of-sight change, mm · median of ${p.n} measured point${p.n > 1 ? 's' : ''} within ${PIN_RADIUS_M} m</div>
