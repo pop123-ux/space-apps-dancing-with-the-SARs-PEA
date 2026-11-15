@@ -592,3 +592,76 @@ dialog.tracker { width: min(900px, 94vw); }
 #trk-map { width: 100%; height: min(380px, 45vh); border: 1px solid #D6D3D1; margin: 8px 0 12px; }
 #trk-body td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 ul.tc { padding-left: 18px; } ul.tc li { margin: 3px 0; }
+
+/* map controls in the lower left: pills like the rest of the app */
+.arrow-ctrl button { border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink); box-shadow: var(--shadow); padding: 8px 14px; font-size: 13.5px; }
+.arrow-ctrl button[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+.arrow-ctrl #bldg-btn small { color: var(--warn); }
+.arrow-ctrl #bldg-btn[aria-pressed="true"] small { color: #FDE68A; }
+.arrow-note { max-width: 270px; background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 10px 12px; font-size: 12.5px; line-height: 1.35; display: grid; gap: 5px; }
+.arrow-note[hidden] { display: none; }
+.an-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.an-count { background: var(--soft); border-radius: 999px; padding: 1px 8px; font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.an-row { display: flex; align-items: center; gap: 8px; }
+.an-row svg { width: 26px; height: 10px; flex: none; }
+.an-row.muted { color: var(--muted); }
+/* the window choice wraps instead of cutting a button */
+.choices .seg { flex-wrap: wrap; overflow: visible; border-radius: 18px; }
+#about a { color: #1D4ED8; text-decoration: underline; }
+
+/* the menu as a column: content scrolls, the legend sits below it at its own height (no overlap at any width) */
+#dmenu:not([hidden]) { display: flex; flex-direction: column; }
+#dmenu #dm-body { position: relative; inset: auto; flex: 1 1 auto; min-height: 0; }
+#dmenu #dm-legend { position: relative; inset: auto; height: auto; min-height: 15%; flex: none; }
+.lbl-short { display: none; }
+@media (max-width: 700px) {
+  #track-btn .lbl, #about-btn .lbl { display: none; }
+  #about-btn .lbl-short { display: inline; }
+  .bar-right { min-width: 0; gap: 6px; }
+  .bar-right .pill { padding: 0 12px; }
+  .trk-from { display: none; }
+  #dm-legend { padding: 8px 12px; }
+  .dm-leg { flex-wrap: wrap; gap: 6px 16px; }
+  .dm-scale { display: none; }
+  #pin-hint { font-size: 12px; max-width: 150px; white-space: normal; top: 70px; right: 50px; padding: 5px 8px; }
+  .arrow-note { max-width: 210px; font-size: 11.5px; }
+}
+/* phone: the zoom buttons stay hidden (pinch zooms), but the pin and the compass are needed */
+@media (max-width: 700px) {
+  .maplibregl-ctrl-top-right { display: block !important; top: 8px; }
+  .maplibregl-ctrl-top-right .maplibregl-ctrl-zoom-in, .maplibregl-ctrl-top-right .maplibregl-ctrl-zoom-out { display: none; }
+  .maplibregl-ctrl-group .pin-btn { width: 40px; height: 40px; }
+  .maplibregl-ctrl-group .pin-btn svg { width: 24px; height: 29px; }
+  #pin-hint { top: 14px; right: 54px; }
+}
+/* map credits: lower right, beside the layers button (the old offset still counted the dock, which the map no longer spans) */
+.maplibregl-ctrl-bottom-left { left: auto !important; right: 78px; bottom: 16px !important; }
+@media (max-width: 700px) { .maplibregl-ctrl-bottom-left { right: 70px; bottom: 12px !important; } }
+.cov-head .month.m1, .cov-head .month.m2 { display: none; }   /* the sheet spans 19 months: label every third */
+
+/* pin verdict: one sentence, four facts, the rest behind "Why?" */
+.verdict-say { font-size: 16px; font-weight: 600; margin: 0 0 10px; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
+.fact { background: rgba(255,255,255,.75); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; display: grid; }
+.fact b { font-size: 16px; } .fact span { font-size: 11.5px; color: var(--muted); }
+details.why { margin-top: 10px; font-size: 13px; color: var(--muted); }
+details.why summary { cursor: pointer; color: var(--ink); font-weight: 600; }
+details.why p { margin: 6px 0 0; }
+/* "In plain words": words fade in one after another */
+.dm-card.plain { background: linear-gradient(135deg, #FFFFFF 0%, #F5F3FF 100%); border-color: #DDD6FE; }
+.dm-card.plain h3 { color: #5B21B6; }
+.dm-card.plain .spark { display: inline-block; animation: spark 2.4s ease-in-out infinite; }
+@keyframes spark { 0%, 100% { transform: scale(1) rotate(0); opacity: .8; } 50% { transform: scale(1.25) rotate(20deg); opacity: 1; } }
+.pw p { margin: 0 0 8px; font-size: 14.5px; line-height: 1.5; }
+.dm-card.plain.typing .tk { opacity: 0; animation: tk-in .25s ease-out forwards; animation-delay: calc(var(--i) * 45ms); }
+@keyframes tk-in { from { opacity: 0; filter: blur(3px); } to { opacity: 1; filter: none; } }
+@media (prefers-reduced-motion: reduce) { .dm-card.plain.typing .tk { animation: none; opacity: 1; } }
+/* tracker: the rotate hint sits on the globe and pulses */
+.trk-wrap { position: relative; }
+.trk-hint { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); background: #1D4ED8; color: #fff; font-weight: 700; font-size: 14px;
+  padding: 8px 16px; border-radius: 999px; box-shadow: 0 4px 14px rgba(29,78,216,.45); pointer-events: none; white-space: nowrap; animation: hint-pulse 1.8s ease-in-out infinite; }
+.trk-hand { display: inline-block; animation: hint-spin 1.8s linear infinite; }
+@keyframes hint-pulse { 0%, 100% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.06); } }
+@keyframes hint-spin { to { transform: rotate(360deg); } }
+.dm-card.plain h3 { justify-content: flex-start; gap: 8px; }
+.fact b { font-family: var(--sans); font-weight: 700; }
