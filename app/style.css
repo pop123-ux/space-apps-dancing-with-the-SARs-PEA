@@ -709,3 +709,15 @@ details.src-more > summary { cursor: pointer; display: inline-block; font-size: 
 details.src-more > summary::-webkit-details-marker { display: none; }
 details.src-more[open] > summary { background: #EFF6FF; }
 details.src-more .src-what { margin-top: 5px; color: var(--ink); font-size: 13px; }
+
+/* the radar's noise (noise_floor.json, 04, 15 Nov 2026): grey when there is too little signal, amber when the
+   spot moves against its surroundings; no green tick anywhere */
+.dm-card.verdict.hero.grey { background: var(--soft); border: 2px solid #A8A29E; border-left-width: 8px; }
+.dm-card.verdict.hero.amber { background: #FFFBEB; border: 2px solid #B45309; border-left-width: 8px; }
+.verdict.grey .verdict-word { color: #57534E; }
+.verdict.amber .verdict-word { color: #92400E; }
+.pin-badge.grey { background: #78716C; }
+.pin-badge.amber { background: #B45309; }
+.badge.noise { background: #F5F5F4; color: #57534E; border: 1px solid #D6D3D1; align-self: flex-start; margin-top: 2px; }
+.noise-box .fact { gap: 3px; }
+.noise-png { width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; margin: 6px 0; }

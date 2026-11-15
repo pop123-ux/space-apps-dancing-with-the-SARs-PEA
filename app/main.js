@@ -236,6 +236,7 @@ async function load() {
   ]);
   Object.assign(S, { man, series, stations, checks: checks || [], cov, sens, forecast });
   S.updates = await opt('updates.json');
+  S.noise = await opt('noise_floor.json');   // noise_floor.py (04): how big a motion the NISAR rates can show
   S.fz = await opt('forecast_zones.json');   // forecast_zones.py: Chronos-2 for every zone and track   // update.py --check: acquisitions newer than the fits
   S.window = sens ? (sens.default_window || Object.keys(sens.windows || {})[0]) : null;
   if (sens) S.window = longestWindow(tracksOf('s1')[0]);
@@ -559,8 +560,14 @@ function relevantChecks() {
   if (S.sat === 'nisar' || S.view === 'agreement') out.push(...S.checks.filter(c => c.id === `sign-${S.track.nisar}`));
   return out;
 }
+// a passing "salt zones sink" check is not the header's main badge while no zone on that track clears the noise
+// (noise_floor.json, 04, 15 Nov 2026): the check passes at < −2 mm/yr, far inside a zone's noise. It stays in the list.
+function insideNoise(c) {
+  const m = /^sign-(.+)$/.exec(c.id); const nt = m && S.noise?.tracks?.[m[1]];
+  return c.status === 'pass' && !!nt && nt.zones?.length > 0 && nt.zones.every(z => z.significant_ring_1_3km === false);
+}
 function renderChecksButton() {
-  const rel = relevantChecks();
+  const rel = relevantChecks().filter(c => !insideNoise(c));
   const worst = ['fail', 'warn', 'pass', 'info'].find(k => rel.some(c => c.status === k));
   if (rel.length) {
     const c = rel.find(x => x.status === worst);
@@ -1100,6 +1107,22 @@ function fcReadout(d, v, lo, hi, level, ref) {
   return `<b>${esc(d)}</b> · ${fmt(v, 1)} mm <span class="sub">(${Math.round(level * 100)} % range ${fmt(lo, 1)} to ${fmt(hi, 1)} mm) relative to ${esc(ref)}</span>`;
 }
 
+// NISAR's zone rates against the noise (noise_floor.json, 04): each zone's rate relative to a ring of ground around it,
+// with the spread 1,000 fake zones on stable ground show (zone radius 300 m). ring '1_3km' is the zone minus the ground
+// 1 to 3 km away; '6p5_8km' is the zone minus the outer comparison area, used in Compare.
+function noiseBox(z, ring = '1_3km', cls = '') {
+  const tr = S.noise?.tracks; if (!tr || !z) return '';
+  const where = ring === '1_3km' ? 'the ground 1 to 3 km around' : 'the outer comparison area (6.5 to 8 km)';
+  const rows = tracksOf('nisar').map(t => {
+    const nt = tr[t]; const zz = nt?.zones?.find(q => q.id === z.id); const sig = nt?.zone_sigma?.r300m?.[`sigma_ring_${ring}_mm_yr`];
+    if (!zz || !Number.isFinite(sig)) return '';
+    const rel = zz[`rel_ring_${ring}_mm_yr`], sigf = zz[`significant_ring_${ring}`];
+    return `<div class="fact"><b>${esc(sgn(rel))} ± ${esc(sig.toFixed(0))} mm/yr</b><span>NISAR ${esc(t)} · against ${esc(where)}</span>${sigf === false ? '<span class="badge noise">Inside the noise</span>' : ''}</div>`;
+  }).filter(Boolean);
+  if (!rows.length) return '';
+  return `<div class="block noise-box ${cls}"><h3>NISAR against the noise</h3><div class="facts">${rows.join('')}</div>
+    <p class="sub small">The ± is how much a zone's rate varies on stable ground. A zone rate inside it cannot be told apart from no motion yet.</p></div>`;
+}
 function zonesSheet() {
   const sat = S.sat === 'compare' ? null : S.sat;
   const ctl = control();
@@ -1115,7 +1138,7 @@ function zonesSheet() {
     const facts = sat ? tracksOf(sat).map(t => factRow(z, sat, t)).join('') : sats.map(s => factRow(z, s, S.track[s])).join('');
     const lines = linesFor(z);
     const missing = sats.filter(s => !entry(z, s, S.track[s])).length;
-    return block(`z-${z.id}`, esc(zoneName(z)), '', lines, { top: `${notesBox(z, sats, false)}<div class="facts">${facts}</div>`,
+    return block(`z-${z.id}`, esc(zoneName(z)), '', lines, { top: `${notesBox(z, sats, false)}<div class="facts">${facts}</div>${sats.includes('nisar') ? noiseBox(z) : ''}`,
       foot: missing ? `${sats.filter(s => !entry(z, s, S.track[s])).map(s => S.track[s]).join(' and ')}: ${emptyZoneLabel(sat || 's1')}` : `Chart: ${sats.map(s => `${sensors()[s].label} ${S.track[s]}`).join(' and ')}` });
   });
   const ex = zs.length ? linesFor(zs.find(z => linesFor(z).length) || zs[0]) : [];
@@ -1202,7 +1225,19 @@ function coverageSheet() {
     ${!measured('nisar') && s1 ? '<p><button type="button" class="pill dark" data-go="s1">View Sentinel-1 measurements →</button></p>' : ''}
     <div class="cov-row cov-head"><div class="cov-label"></div><div class="tl cov-tl">${monthLabels(R)}</div></div>${rows.join('')}
     ${px.length ? `<h3 class="sub-h">Usable pixels in each zone</h3><table class="data"><thead><tr><th>Track</th>${zones().map(z => `<th>${esc(zoneName(z))}</th>`).join('')}</tr></thead><tbody>${px.join('')}</tbody></table>
-      <p class="sub small">Pixels with a connected series over the whole window. A zone with none has no measurement on that track.</p>` : ''}`;
+      <p class="sub small">Pixels with a connected series over the whole window. A zone with none has no measurement on that track.</p>` : ''}
+    ${nisarHorizon()}`;
+}
+// "What NISAR can't see yet" (04, noise_floor.json and noise_floor.png): today's zone noise on 129A and when a sink of
+// the tested sizes would clear twice that noise, if passes continue every 12 days with the current pair network
+function nisarHorizon() {
+  const det = S.noise?.tracks?.['129A']?.detection; if (!det || !Number.isFinite(det.sigma_now_mm_yr)) return '';
+  const hits = Object.entries(det.chain?.first_2sigma || {}).map(([k, v]) => [Number((/(\d+)/.exec(k) || [])[1]), v.first_date])
+    .filter(([n, d]) => Number.isFinite(n) && d).sort((a, b) => b[0] - a[0]);
+  const when = hits.length ? ` With the current pair network, a ${hits[0][0]} mm/yr sink becomes visible around ${human(hits[0][1])}.` : '';
+  return `<h3 class="sub-h">What NISAR can't see yet</h3>
+    <img class="noise-png" src="${esc(S.dir)}noise_floor.png" alt="How NISAR's zone noise on 129A falls as passes continue every 12 days, and when sinks of 10, 19 and 25 mm/yr would clear it" loading="lazy">
+    <p>Today a zone carries about ±${det.sigma_now_mm_yr.toFixed(0)} mm/yr of noise.${when} Longer pairs would bring it earlier.</p>`;
 }
 // one station panel per monument: every GNSS solution there, each against every radar track that covers it
 function stationSheet(id) {
@@ -1230,7 +1265,7 @@ function zoneSheet(id) {
   let html = `<h2>${esc(zoneName(z))}</h2><div class="kicker">${z.place ? `${esc(z.place)} · ` : 'Salt zone · '}${esc(z.lat)}° N, ${esc(z.lon)}° E${win() && S.sat === 's1' ? ` · ${esc(win().label)}` : ''}</div>`;
   if (!sats.length) return html + `<div class="verdict na">${esc(pendingText(S.sat))}</div>`;
   const facts = S.sat === 'compare' ? sats.map(s => factRow(z, s, S.track[s])).join('') : tracksOf(S.sat).map(t => factRow(z, S.sat, t)).join('');
-  html += `${notesBox(z, S.sat === 'compare' ? sats : [S.sat], true)}<div class="facts">${facts}</div>${choicesPanel()}`;
+  html += `${notesBox(z, S.sat === 'compare' ? sats : [S.sat], true)}<div class="facts">${facts}</div>${sats.includes('nisar') ? noiseBox(z) : ''}${choicesPanel()}`;
   const lines = sats.map(s => lineOf(z, s, S.track[s])).filter(Boolean);
   const ctl = control();
   if (ctl) for (const s of sats) { const l = lineOf(ctl, s, S.track[s], { dash: true, color: '#A8A29E', label: cleanLabel(ctl.label) }); if (l) lines.push(l); }
@@ -1411,6 +1446,7 @@ function zoneCompare(id) {
     <div class="verdict ${c ? esc(c.status) : 'na'}"><span>${c ? STATUS_ICON[c.status] : '?'}</span> ${esc(word)} <span class="sub">(validator)</span></div>
     ${c ? `<p class="reason">${esc(c.detail)} <button type="button" class="linkbtn" data-chk="${esc(c.id)}">Evidence</button></p>` : '<p class="reason">The validator has not reported on this zone.</p>'}
     ${block(`c-${z.id}`, 'Parallel observations, mm', '', lines, { window: w, range: w ? [iso(day(w[0]) - 20), iso(day(w[1]) + 20)] : undefined, foot: lines.map(l => `${l.label}: ${l.n ?? 'n/a'} px`).join(' · ') })}
+    ${noiseBox(z, '6p5_8km')}
     ${settlePanel(z, lines, c)}
     ${radarsPanel(z)}
     <h3 class="sub-h">Historical context</h3>${egmsPanel()}`;
@@ -1421,8 +1457,6 @@ function zoneCompare(id) {
 // says (where one exists), which way the ground moves (experimental up and east), and the legend at the bottom.
 const AREA_M = 1000;
 const MENU_LINE = '#1D4ED8';
-let upEastP = null;
-const loadUpEast = () => { const u = sensors().nisar?.up_east; if (!u) return Promise.resolve(null); upEastP = upEastP || getJSON(S.dir + u.file).catch(() => null); return upEastP; };
 const median = (a) => { const v = a.filter(Number.isFinite).sort((x, y) => x - y); return v.length ? v[Math.floor(v.length / 2)] : null; };
 const sgn = (v, d = 1) => v === null || v === undefined ? 'n/a' : `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toFixed(d)}`;
 function squareDeg([lon, lat], side = AREA_M) {
@@ -1505,8 +1539,8 @@ function showPin(at) {
 function pinBadge(chk) {
   const el = S.pinMarker?.getElement(); if (!el) return;
   el.querySelector('.pin-badge')?.remove(); if (!chk) return;
-  const b = document.createElement('div'); b.className = `pin-badge ${chk.ok ? 'ok' : 'no'}`;
-  b.textContent = chk.ok ? '✔ No warning sign' : '✘ Not recommended'; el.prepend(b);
+  const b = document.createElement('div'); b.className = `pin-badge ${chk.moving ? 'amber' : 'grey'}`;
+  b.textContent = chk.moving ? 'Moving vs. surroundings' : 'Too little signal'; el.prepend(b);
 }
 // the measured point nearest the pin (within 120 m) on the shown satellite and track
 const PIN_RADIUS_M = 120;
@@ -1519,7 +1553,7 @@ async function pinPoint(at, sat) {   // the median of every measured point withi
   const pts = gj.meta.dates.map((d, k) => [d, median(near.map(f => f.properties[`c${k}`]).filter(v => v != null))]).filter(([, v]) => v != null && Number.isFinite(v));
   return { n: near.length, dist: bd, pts };
 }
-// straight line through the spot's own history, carried on to 1 Jan 2029 with an 80 % prediction band
+// straight line through the spot's own history; the pin uses only its slope (no projection is shown)
 function lineForecast(pts, end = '2029-01-01') {
   const n = pts.length; if (n < 4) return null;
   const x = pts.map(([d]) => (day(d) - day(pts[0][0])) / 365.25), y = pts.map(([, v]) => v);
@@ -1536,17 +1570,9 @@ function lineForecast(pts, end = '2029-01-01') {
   }
   return { slope: b, sigSlope: s / Math.sqrt(sxx), line: out, band, end };
 }
-// the build check, a yes-or-no rule written out in DECISIONS.md:
-// "Not advised" when the spot lies inside a salt-brine zone, or its own trend moves away from the satellite
-// faster than 10 mm/yr and that is more than twice the trend's own uncertainty; otherwise "No warning sign"
-const BUILD_LIMIT = -10;    // kept for older notes; the rule below uses the 2029 projection
-const SINK_LIMIT = -15;    // mm of further line-of-sight change from the last measurement to 1 Jan 2029
 // the ground around the spot: 8 spots on a 300 m ring, each the median series of its points within 120 m, each with its
-// own straight-line trend. Their median is how the area moves as a whole; their robust spread (1.4826 x the median
-// absolute deviation) is the random variation the terrain shows anyway. A house is hurt by moving differently from
-// the ground around it (uneven settling), so a spot that differs from its surroundings by more than twice that spread,
-// and by at least 5 mm/yr, is "Not recommended".
-const RING_M = 300, DIFF_MIN = 5;
+// own straight-line trend. Their median is how the area moves as a whole; radarCheck() compares the spot with it.
+const RING_M = 300;
 async function surroundings(at, sat) {
   const k = [];
   for (let i = 0; i < 8; i++) {
@@ -1558,117 +1584,56 @@ async function surroundings(at, sat) {
   const med = median(k); const spread = 1.4826 * median(k.map(v => Math.abs(v - med)));
   return { med, spread, n: k.length };
 }
-function buildCheck(at, fc, around) {
-  const z0 = zones().find(p => metres(at, [p.lon, p.lat]) <= (p.r_m || 250));
-  if (z0) return { ok: false, kind: 'zone', zone: zoneName(z0), why: `It lies inside ${zoneName(z0)}, one of the salt-brine fields where the ground has sunk or collapsed before.` };
-  if (!fc) return null;
-  if (around) {
-    const diff = fc.slope - around.med;
-    if (Math.abs(diff) >= DIFF_MIN && Math.abs(diff) > 2 * around.spread)
-      return { ok: false, kind: 'diff', why: `It moves differently from the ground around it: ${sgn(fc.slope)} mm/yr here against ${sgn(around.med)} mm/yr around (the surroundings vary by ± ${around.spread.toFixed(1)} mm/yr). Uneven settling like this is what cracks a house.` };
-  }
-  const further = fc.line.at(-1)[1] - fc.line[0][1], sure = Math.abs(fc.slope) > 2 * fc.sigSlope;
-  if (further <= SINK_LIMIT && sure)
-    return { ok: false, kind: 'sink', why: `Its own trend (${sgn(fc.slope)} ± ${fc.sigSlope.toFixed(1)} mm/yr), carried on to ${human(fc.end)}, moves it a further ${sgn(further)} mm away from the satellite: more than the ${Math.abs(SINK_LIMIT)} mm limit.` };
-  return { ok: true, kind: 'ok', why: `It is outside the salt-brine zones, and its own trend (${sgn(fc.slope)} ± ${fc.sigSlope.toFixed(1)} mm/yr), carried on to ${human(fc.end)}, ${further >= 0 ? `moves it ${sgn(further)} mm toward the satellite: no sinking ahead` : `moves it a further ${sgn(further)} mm away: less than the ${Math.abs(SINK_LIMIT)} mm limit for sinking`}.` };
+// the noise numbers for a track, from noise_floor.json (04). Sentinel-1 has no noise analysis yet, so it is held
+// to NISAR 129A's numbers, the ones 04 asked the pin to use.
+function noiseFor(sat, trk) {
+  const t = S.noise?.tracks; if (!t) return null;
+  return (sat === 'nisar' && t[trk]) || t['129A'] || null;
 }
-// Shares are the actual weights in the code: the answer comes from the shown satellite's trend (or a salt-field
-// outline), the confidence score is 75 points from the shown satellite and 25 from the other one, and the GNSS
-// stations take no part in a spot's answer: they check the radar where they stand.
-function sourcesBox(d, p, fc, fo, other, agree, parts, chk) {
-  const shown = sensors()[d.sat].label, oth = sensors()[other]?.label || 'other satellite';
-  const zone = chk?.kind === 'zone';
-  const confShown = Math.round(parts.slice(0, 3).reduce((s, x) => s + x[1], 0)), confOther = Math.round(parts[3][1]);
-  const st = (S.stations?.features || []).filter(f => !f.properties.combined).map(f => ({ name: f.properties.station, km: metres(f.geometry.coordinates, S.menu.at) / 1000, up: f.properties.gnss_up }));
-  const row = (color, name, share, what) => `<div class="src-row"><div class="src-name"><i style="background:${color}"></i>${esc(name)}</div>
-    <div class="src-bar"><b style="width:${share}%;background:${color}"></b></div><div class="src-pct">${share}%</div>
-    <details class="src-more"><summary>Extend</summary><div class="src-what">${what}</div></details></div>`;
-  return `<details class="srcs"><summary>What went into this answer ›</summary>
-    <p class="sub small">Share of the yes-or-no answer, and what each source did here.</p>
-    ${zone ? row('#57534E', 'Salt-field outlines', 100, 'This spot is inside a known salt field. That alone gives the answer.') : ''}
-    ${row(SATS[d.sat].color, shown, zone ? 0 : 100, `${zone ? 'Not needed here: the salt field decides. ' : 'This satellite decides the answer. '}${fc ? `It saw the ground move ${sgn(fc.slope)} mm a year here` : 'It has no trend here'}, from ${p.n} radar points and ${p.pts.length} images. It earns ${confShown} of its 75 confidence points.`)}
-    ${row(SATS[other]?.color || '#A8A29E', oth, 0, fo ? `Only a double-check. It saw ${sgn(fo.slope)} mm a year here, which ${agree ? 'agrees, so confidence goes up' : 'disagrees, so confidence goes down'} (${confOther} of 25 points).` : 'It has no measurement at this spot.')}
-    ${row('#0F766E', `GNSS stations (${st.map(s => s.name).join(', ')})`, 0, `Not used for this spot. These are ground stations that check the satellites are measuring correctly. Nearest: ${st.slice().sort((a2, b2) => a2.km - b2.km).map(s => `${s.name}, ${s.km.toFixed(1)} km away`).join('; ')}.${vlcLine()}`)}
-  </details>`;
-}
-function vlcLine() {   // from the validator's VLC check (checks.json): NISAR's morning pass against the station
-  const c = (S.checks || []).find(x => x.id === 'station-VLC-combined'); const m = c && /NISAR 129A: ([+\-−]?[\d.]+) vs GNSS ([+\-−]?[\d.]+)/.exec(c.detail);
-  if (!m) return '';
-  const a = parseFloat(m[1].replace('−', '-')), g = parseFloat(m[2].replace('−', '-'));
-  return ` At VLC, NISAR's morning pass reads ${sgn(a)} mm/yr against the station's ${sgn(g)}: ${Math.abs(a - g).toFixed(1)} mm/yr apart.`;
-}
-function markSvg(ok, draw) {   // a hand-drawn tick or cross; "draw" animates the strokes
-  const path = ok ? '<path d="M5 17 L12 24 L27 7"/>' : '<path d="M7 7 L25 25"/><path class="s2" d="M25 7 L7 25"/>';
-  return `<svg class="vmark${draw ? ' draw' : ''}" viewBox="0 0 32 32" aria-hidden="true">${path}</svg>`;
+// "What does the radar see here?" (04's rule, 15 Nov 2026): the spot's trend (median of the points within 120 m)
+// minus the median trend of the spots about 300 m around it. Below 04's 2-sigma threshold the page says there is too
+// little signal; at or above it, that the radar sees the spot moving against its surroundings. Never a green tick.
+function radarCheck(fc, around, nz) {
+  if (!fc || !around || !nz) return null;
+  const diff = fc.slope - around.med;
+  return { diff, moving: Math.abs(diff) >= nz.pin_threshold_2sigma_mm_yr, sigma: nz.pin_sigma_mm_yr, thr: nz.pin_threshold_2sigma_mm_yr };
 }
 async function pinCards(d) {
   const at = S.menu.at; const p = await pinPoint(at, d.sat);
+  const z = zones().find(q => metres(at, [q.lon, q.lat]) <= (q.r_m || 250));
+  const zoneLine = z ? `<p class="sub small">This spot is inside ${esc(zoneName(z))}, one of the salt-brine fields.</p>` : '';
   if (!p || p.pts.length < 2) {
-    const z = zones().find(q => metres(at, [q.lon, q.lat]) <= (q.r_m || 250));
-    pinBadge(z ? { ok: false } : null);
-    if (z) return `<div class="block dm-card verdict hero no"><p class="verdict-word">${markSvg(false, true)}Not recommended</p><p class="verdict-say">This spot is inside a salt-brine field (${esc(zoneName(z))}), where the ground has sunk before.</p></div>`;
-    return `<div class="block dm-card"><p class="reason">The radar can't see the ground here (forest or steep slope). Try a spot on open ground.</p></div>`;
+    pinBadge(null);
+    return `<div class="block dm-card"><p class="reason">The radar can't see the ground here (forest or steep slope). Try a spot on open ground.</p>${zoneLine}</div>`;
   }
-  const fc = lineForecast(p.pts); const around = fc ? await surroundings(at, d.sat) : null; const chk = buildCheck(at, fc, around);
-  // confidence: how many radar points and dates, how noisy, and whether the other radar points the same way
-  const other = d.sat === 's1' ? 'nisar' : 's1'; const po = sensors()[other] ? await pinPoint(at, other) : null; const fo = po && lineForecast(po.pts);
-  // the two satellites agree if both show no clear movement, or both move clearly in the same direction
-  const still = (f) => Math.abs(f.slope) <= 2 * f.sigSlope;
-  const agree = fo && fc ? (still(fo) && still(fc)) || (!still(fo) && !still(fc) && Math.sign(fo.slope) === Math.sign(fc.slope)) : null;
-  // the score (0 to 100), four parts of up to 25 each:
-  //  radar points: how many measured points the spot's series is the median of (8 or more: full)
-  //  dates: how long the series is (60 or more: full)
-  //  precision: how far the 2029 projection's uncertainty stays inside the 15 mm limit (none left: zero)
-  //  second radar: the other satellite's trend at the same spot points the same way (25), is missing (12.5), or the other way (0)
-  const yrs = fc ? (day(fc.end) - day(fc.line[0][0])) / 365.25 : 0;
-  const parts = [
-    ['Radar points nearby', Math.min(p.n / 8, 1) * 25, `${p.n} (full at 8)`],
-    ['Dates in the series', Math.min(p.pts.length / 60, 1) * 25, `${p.pts.length} (full at 60)`],
-    ['Precision of the trend', fc ? Math.max(0, 1 - (fc.sigSlope * yrs) / Math.abs(SINK_LIMIT)) * 25 : 0, fc ? `± ${(fc.sigSlope * yrs).toFixed(1)} mm by ${human(fc.end).replace(/^1 Jan /, '')}` : 'no trend'],
-    ['Second satellite agrees', agree == null ? 12.5 : agree ? 25 : 0, agree == null ? 'no data there' : agree ? (still(fo) && still(fc) ? 'both: no clear movement' : 'same direction') : 'opposite direction'],
-  ];
-  const score = Math.round(parts.reduce((s, x) => s + x[1], 0));
-  const level = score >= 70 ? 2 : score >= 40 ? 1 : 0;
+  const fc = lineForecast(p.pts); const around = fc ? await surroundings(at, d.sat) : null;
+  const nz = noiseFor(d.sat, d.trk); const chk = radarCheck(fc, around, nz);
   const first = p.pts[0], last = p.pts.at(-1);
   const gaps = gapsOf(d.sat, d.trk);
   pinBadge(chk);
-  const cm = (mm) => Math.abs(mm) >= 10 ? `${(Math.abs(mm) / 10).toFixed(Math.abs(mm) >= 100 ? 0 : 1)} cm` : `${Math.abs(mm).toFixed(1)} mm`;
-  const further = fc ? fc.line.at(-1)[1] - fc.line[0][1] : 0;
-  const say = !chk ? '' : chk.kind === 'zone' ? `This spot is inside a salt-brine field (${chk.zone}), where the ground has sunk before.`
-    : chk.kind === 'sink' ? `The ground here is sinking about ${Math.abs(fc.slope).toFixed(0)} mm a year. By ${human(fc.end, true).replace(/^1 Jan /, '')} that adds up to about ${cm(further)}.`
-    : chk.kind === 'diff' ? `This spot moves differently from the ground around it. Uneven ground like this can crack a house.`
-    : further >= 0 ? `The ground here is not sinking.` : `The ground here sinks only slowly, about ${cm(further)} by ${human(fc.end).replace(/^1 Jan /, '')}.`;
-  const diffOk = around && fc ? Math.abs(fc.slope - around.med) <= 2 * around.spread : null;
-  const facts = [
-    fc && [`${sgn(fc.slope, Math.abs(fc.slope) < 10 ? 1 : 0)} mm/yr`, 'trend'],
-    fc && [`${further < 0 ? '−' : '+'}${cm(further)}`, `by ${human(fc.end).replace(/^1 Jan /, '')}`],
-    diffOk != null && [diffOk ? 'like around it' : 'unlike around it', 'vs. the ground 300 m away'],
-  ].filter(Boolean);
-  const conf = `Confidence ${['low', 'medium', 'high'][level]}: ${p.n} radar point${p.n > 1 ? 's' : ''} within ${PIN_RADIUS_M} m, ${p.pts.length} dates${fo ? `; ${sensors()[other].label} here: ${sgn(fo.slope)} mm/yr, ${agree ? 'same direction' : 'opposite direction'}` : ''}.`;
-  const vkey = `${at.join(',')}|${chk?.ok}`; const fresh = S.verdictLast !== vkey; S.verdictLast = vkey;
-  let html = chk ? `<div class="block dm-card verdict hero ${chk.ok ? 'ok' : 'no'}">
-    <div class="v-top"><p class="verdict-word">${markSvg(chk.ok, fresh)}${chk.ok ? 'No warning sign' : 'Not recommended'}</p>
-      <details class="conf-btn conf-${level}"><summary>Confidence: ${['low', 'medium', 'high'][level]} ›</summary>
-        <div class="conf-pop"><div class="conf-score"><b>${score}</b><span>/ 100</span></div>
-          <div class="conf-bar"><i style="width:${score}%"></i></div>
-          ${parts.map(([k, v, note]) => `<div class="conf-part"><span>${esc(k)}<small>${esc(note)}</small></span><b>${v.toFixed(0)} / 25</b></div>`).join('')}
-          <p class="sub small">70 or more: high · 40 to 69: medium · below 40: low.</p></div></details></div>
+  let html;
+  if (!chk) {
+    const why = !nz ? 'The noise analysis for this satellite is not in the products yet, so the page says nothing about this spot.'
+      : 'Too few radar points around this spot to compare it with its surroundings.';
+    html = `<div class="block dm-card verdict hero grey"><p class="verdict-word">Too little signal to say here</p><p class="verdict-say">${esc(why)}</p>${zoneLine}</div>`;
+  } else {
+    const say = chk.moving
+      ? `The radar sees this spot moving relative to its surroundings (${sgn(chk.diff)} mm/yr). Ask for a ground survey before building.`
+      : `One spot carries about ±${chk.sigma.toFixed(0)} mm/yr of noise; this one differs from its surroundings by ${sgn(chk.diff)} mm/yr.`;
+    html = `<div class="block dm-card verdict hero ${chk.moving ? 'amber' : 'grey'}">
+    <p class="verdict-word">${chk.moving ? 'Moving relative to its surroundings' : 'Too little signal to say here'}</p>
     <p class="verdict-say">${esc(say)}</p>
-    <div class="facts">${facts.map(([v, k]) => `<div class="fact"><b>${esc(v)}</b><span>${esc(k)}</span></div>`).join('')}</div>
-    ${sourcesBox(d, p, fc, fo, other, agree, parts, chk)}
-    <details class="why"><summary>Why?</summary><p>${esc(chk.why)}</p><p>${esc(conf)}</p>
-      ${around && fc ? `<p>Against the ground ${RING_M} m around (${around.n} spots): ${sgn(fc.slope - around.med)} mm/yr different; they vary by ± ${around.spread.toFixed(1)} mm/yr.</p>` : ''}
-      <p>A satellite screen, not a ground survey: ask for a geotechnical study before building.</p></details></div>` : '';
+    <div class="facts"><div class="fact"><b>${esc(sgn(chk.diff))} mm/yr</b><span>vs. the ground ${RING_M} m around</span></div>
+      <div class="fact"><b>${esc(chk.thr.toFixed(0))} mm/yr</b><span>needed to see a spot move</span></div></div>
+    ${zoneLine}
+    <details class="why"><summary>Why?</summary>
+      <p>The spot is the median of ${p.n} radar point${p.n > 1 ? 's' : ''} within ${PIN_RADIUS_M} m; its surroundings are ${around.n} spots ${RING_M} m away. One spot carries about ±${esc(chk.sigma.toFixed(1))} mm/yr of noise, measured on stable ground, so the radar can only say something when the difference is at least ${esc(chk.thr.toFixed(1))} mm/yr (twice that).</p>
+      <p>A satellite screen, not a ground survey: ask for a geotechnical study before building.</p></details></div>`;
+  }
   html += `<div class="block dm-card"><h3>The history of this spot <span class="badge">${p.pts.length} dates</span></h3>
     <div class="sub small">mm · ${p.n} radar point${p.n > 1 ? 's' : ''} nearby</div>
     ${miniChart(p.pts, { from: first[0], to: last[0], gaps, on: S.date, color: SATS[d.sat].color, height: 140, upto: S.playing ? S.date : null })}
     <p class="dm-big">From ${esc(human(first[0]))} to ${esc(human(last[0]))}: <b>${sgn(last[1] - first[1])} mm</b></p></div>`;
-  if (fc) {
-    const endV = fc.line.at(-1)[1], bb = fc.band.at(-1);
-    html += `<div class="block dm-card"><h3>Where it heads</h3><div class="sub small">Its trend, continued to ${esc(human(fc.end))}</div>
-      ${miniChart(p.pts, { from: first[0], to: fc.end, band: fc.band, extra: [{ pts: fc.line, color: '#7C3AED', dash: true }], color: SATS[d.sat].color, height: 130, upto: S.playing ? S.date : null })}
-      <p class="dm-big">${esc(human(fc.end))}: <b>${sgn(endV)} mm</b></p></div>`;
-  }
   return html;
 }
 async function menuData(satArg) {
@@ -1755,13 +1720,13 @@ function plainWords(d, d2) {
     const a = clip(P), b = clip(d2.pts);
     if (a != null && b != null) out.push(`Over the months both satellites watched, NISAR saw ${sgn(a, 0)} mm and Sentinel-1 ${sgn(b, 0)} mm: ${Math.sign(a) === Math.sign(b) ? 'they agree on the direction' : 'they disagree, so treat this place with caution'}.`);
   }
-  const zf = S.fz?.zones?.[S.fcZone]; const sat = d.sat; const k = zf && (zf[`${sat}:${S.track[sat]}`] ? `${sat}:${S.track[sat]}` : Object.keys(zf)[0]);
+  const zf = S.fz?.zones?.[S.fcZone]; const sat = d.sat; const k = zf && sat !== 'nisar' && (zf[`${sat}:${S.track[sat]}`] ? `${sat}:${S.track[sat]}` : Object.keys(zf).find(x => !x.startsWith('nisar:')));
   if (zf && k) {
     const f = zf[k], further = f.median.at(-1) - f.observed_mm.at(-1);
     const z = zones().find(p => p.id === S.fcZone);
     out.push(`For ${zoneName(z)}${S.menu?.kind === 'area' ? ', the nearest salt field' : ''}, ${sensors()[k.split(':')[0]]?.label || ''}'s forecast expects ${Math.abs(further) < 2 ? 'little further change' : `about ${Math.abs(further).toFixed(0)} mm more ${further < 0 ? 'sinking' : 'rising'}`} by ${human(S.fz.end)}. It is a guide, not a promise.`);
   }
-  out.push(clear && Math.abs(rate) >= 15 && net < 0 ? 'Worth a closer look before building: drop the pin on a spot for a yes-or-no check.'
+  out.push(clear && Math.abs(rate) >= 15 && net < 0 ? 'Worth a closer look before building: drop the pin on a spot to see what the radar can say there.'
     : 'Nothing here stands out from normal ground movement. For one exact spot, drop the pin.');
   return out;
 }
@@ -1794,7 +1759,9 @@ function forecastCard(sel) {
   if (!S.fcZone || !fz[S.fcZone]) S.fcZone = sel.kind === 'zone' && fz[sel.id] ? sel.id : (fz.z4 ? 'z4' : Object.keys(fz)[0]);
   const zf = fz[S.fcZone]; const z = zones().find(p => p.id === S.fcZone);
   const pickKey = (sat) => zf[`${sat}:${S.track[sat]}`] ? `${sat}:${S.track[sat]}` : Object.keys(zf).find(k => k.startsWith(sat + ':'));
-  const keys = S.sat === 'compare' ? ['nisar', 's1'].map(pickKey).filter(Boolean) : [pickKey(S.sat) || Object.keys(zf)[0]];
+  // NISAR's forecast is not shown: its backtest covers 30 days only, far short of 2029 (04, 15 Nov 2026)
+  const keys = [pickKey('s1')].filter(Boolean);
+  if (!keys.length || S.sat === 'nisar') return '';
   const buttons = zones().map(p => `<button type="button" data-fcz="${esc(p.id)}" aria-pressed="${p.id === S.fcZone}"${fz[p.id] ? '' : ' disabled title="No series on any track"'}>${esc(zoneShort(p))}</button>`).join('');
   const lines = [], marks = [], rows = [];
   let from = null, divider = null;
@@ -1815,45 +1782,14 @@ function forecastCard(sel) {
     ${miniChart([], { from, to: S.fz.end, extra: lines, marks, divider, height: 150, upto: S.playing ? S.date : null })}
     <table class="fc-table"><tr><th></th>${YEARS.map(y => `<th>${esc(human(y))}</th>`).join('')}<th>trend after today</th></tr>${rows.join('')}</table></div>`;
 }
-async function arrowsCard(test) {
-  const ue = await loadUpEast(); const info = sensors().nisar?.up_east;
-  if (!ue || !info) return '';
-  const idx = []; for (let i = 0; i < ue.lon.length; i++) if (test([ue.lon[i], ue.lat[i]])) idx.push(i);
-  if (!idx.length) return `<div class="block dm-card"><h3>Which way the ground moves</h3><p class="reason">No combined up-down and east-west estimate here: both NISAR tracks need a measurement at the same place.</p></div>`;
-  const pick = (k) => median(idx.map(i => ue[k][i] * ue.scale));
-  const up = pick('up'), east = pick('east'), su = pick('sig_up'), se = pick('sig_east');
-  const S2 = 30, L = 46;                                   // arrow length: 46 px at 30 mm/yr or more
-  const len = (v) => Math.max(-1, Math.min(1, v / S2)) * L;
-  const cx = 120, cy = 70;
-  const noise = Math.abs(up) < su && Math.abs(east) < se;
-  const words = noise ? 'At this precision the motion cannot be told apart from zero, in either direction.'
-    : `The estimate reads ${Math.abs(up) >= su ? `${up < 0 ? 'sinking' : 'rising'} of about ${Math.abs(up).toFixed(0)} mm a year` : 'no up-down motion beyond the noise'}${Math.abs(east) >= se ? ` and a ${east > 0 ? 'eastward' : 'westward'} shift of about ${Math.abs(east).toFixed(0)} mm a year` : ' and no east-west motion beyond the noise'}. Treat it as unconfirmed: it combines both NISAR tracks, and the descending one failed its sign check.`;
-  return `<div class="block dm-card"><h3>Which way the ground moves</h3>
-    <svg class="chart arrows" viewBox="0 0 400 140" role="img" aria-label="Up-down and east-west motion">
-      <line x1="40" x2="200" y1="${cy}" y2="${cy}" stroke="#D6D3D1"/><line x1="${cx}" x2="${cx}" y1="14" y2="126" stroke="#D6D3D1"/>
-      <text x="44" y="${cy - 6}">west</text><text x="196" y="${cy - 6}" text-anchor="end">east</text><text x="${cx + 5}" y="22">up</text><text x="${cx + 5}" y="124">down</text>
-      ${arrowPoly(cx, cy, east, 0, '#57534E')}
-      ${arrowPoly(cx, cy, 0, up, up > 0 ? '#2166AC' : '#B2182B')}
-      <circle cx="${cx}" cy="${cy}" r="3" fill="#1C1917"/>
-      <text x="230" y="44" class="v">Up-down: ${sgn(up)} mm/yr</text><text x="230" y="62">± ${su.toFixed(0)} mm/yr</text>
-      <text x="230" y="92" class="v">East-west: ${sgn(east)} mm/yr</text><text x="230" y="110">± ${se.toFixed(0)} mm/yr</text>
-    </svg>
-    ${S.date ? `<p class="dm-big">By ${esc(human(S.date))}: <b>${sgn(up * elapsedYears())} mm</b> up-down, <b>${sgn(east * elapsedYears())} mm</b> east-west</p>` : ''}
-</div>`;
-}
-// a pointy arrow from (x, y): east > 0 points right, up > 0 points up (screen y runs down). Length 18 px at the
-// smallest, 52 px at 30 mm/yr or more, so a small rate still shows its direction; a dark outline keeps it readable.
-function arrowPoly(x, y, east, up, color) {
-  const v = Math.hypot(east, up); if (v < 0.5) return '';
-  const ux = east / v, uy = -up / v, L = 18 + Math.min(1, v / 30) * 34, hl = 13, hw = 7.5, sw = 2.2;
-  const tx = x + ux * L, ty = y + uy * L, bx = tx - ux * hl, by = ty - uy * hl, px = -uy, py = ux;
-  const pts = [[x + px * sw, y + py * sw], [bx + px * sw, by + py * sw], [bx + px * hw, by + py * hw], [tx, ty], [bx - px * hw, by - py * hw], [bx - px * sw, by - py * sw], [x - px * sw, y - py * sw]];
-  return `<polygon points="${pts.map(([a, b]) => `${a.toFixed(1)},${b.toFixed(1)}`).join(' ')}" fill="${color}" stroke="#1C1917" stroke-width="1.6" stroke-linejoin="miter"/>`;
-}
-function elapsedYears() {   // the up/east rates are NISAR's, over its own window (June to October 2026): count only that time
-  const w = sensors().nisar?.up_east?.window; if (!w || !S.date) return 0;
-  const end = S.date < w[0] ? w[0] : S.date > w[1] ? w[1] : S.date;
-  return Math.max(0, (Date.parse(end) - Date.parse(w[0])) / 3.15576e10);
+// "Which way the ground moves" is hidden (04, 15 Nov 2026): with 129A and 094D together every up and east component
+// carries 22 to 28 mm/yr of noise, and 094D fails the phase-sign test. What stays is 04's single line for a pressed
+// zone: up from 129A alone, assuming no horizontal motion (noise_floor.json, up_east_check).
+function upCard(sel) {
+  if (sel?.kind !== 'zone' || S.sat === 's1') return '';
+  const u = (S.noise?.up_east_check || []).find(q => q.id === sel.id);
+  if (!u || !Number.isFinite(u.up_129A_only_mm_yr)) return '';
+  return `<div class="block dm-card"><h3>Up and down</h3><p>Up, 129A only, assuming no horizontal motion: <b>${esc(sgn(u.up_129A_only_mm_yr))} ± ${esc(u.sig_up_129A_only_mm_yr.toFixed(0))} mm/yr</b></p></div>`;
 }
 // lowest and highest value of the measured points inside the selection, for the layer on the map
 async function areaRange(d, L) {
@@ -2029,7 +1965,7 @@ async function renderMenu() {
   if (S.menu !== want) return;
   drawSelection(d.shape); showPin(S.menu.kind === 'pin' && !S.menu.house ? S.menu.at : null); showHouse(S.menu.house || null);
   field.setArea(d.test && d.shape ? { test: d.test, shape: d.shape } : null);
-  let html = `<div class="dm-head"><h2>${S.menu.house ? 'Is this house on moving ground?' : S.menu.kind === 'pin' ? 'Can you build here?' : 'How the ground moved here'}</h2><div class="kicker">${esc(d.label)}${d.n ? ` · ${d.n} points` : ''}</div></div>`;
+  let html = `<div class="dm-head"><h2>${S.menu.house ? 'What does the radar see at this house?' : S.menu.kind === 'pin' ? 'What does the radar see here?' : 'How the ground moved here'}</h2><div class="kicker">${esc(d.label)}${d.n ? ` · ${d.n} points` : ''}</div></div>`;
   const d2 = S.sat === 'compare' && S.menu.kind !== 'pin' ? await menuData('s1') : null;
   if (S.menu.kind === 'pin') html += await pinCards(d);
   else if (d2 && d.pts.length && d2.pts.length) html += compareTrend(d, d2);
@@ -2041,9 +1977,10 @@ async function renderMenu() {
       <div class="sub small">mm · blue dot: the date on the map</div>
       ${miniChart(d.pts, { from: d.pts[0][0], to: d.pts.at(-1)[0], gaps, on: S.date, color: SATS[d.sat].color, height: 140, upto: S.playing ? S.date : null })}</div>`;
   }
+  if (S.menu.kind === 'zone' && S.sat !== 's1') html += noiseBox(zones().find(q => q.id === S.menu.id), S.sat === 'compare' ? '6p5_8km' : '1_3km', 'dm-card');
   if (S.menu.kind !== 'pin') {
     html += forecastCard(S.menu);
-    html += await arrowsCard(d.test || (() => false));
+    html += upCard(S.menu);
     html += plainCard(d, d2);
   }
   if (S.menu !== want) return;
@@ -2169,7 +2106,7 @@ function renderAbout() {
     <h3>1. What this page is</h3>
     <p>A map of how the ground moved around the salt-brine fields of Ocnele Mari, measured from space by two radar satellites, NISAR and Sentinel-1, and a short look ahead.</p>
     <h3>2. What it is not</h3>
-    <p><b>Not a hazard forecast, an evacuation guide, or a building permit or safety assessment.</b> The "Can you build here?" answer is a screen from satellite data: before building, ask for a geotechnical study. For official notices, follow <a href="https://www.igsu.ro" target="_blank" rel="noopener">the emergency inspectorate (IGSU, which ISU Vâlcea belongs to)</a> and <a href="https://www.ocne.ro" target="_blank" rel="noopener">the Ocnele Mari town hall</a>.</p>
+    <p><b>Not a hazard forecast, an evacuation guide, or a building permit or safety assessment.</b> The "What does the radar see here?" answer is a screen from satellite data: before building, ask for a geotechnical study. For official notices, follow <a href="https://www.igsu.ro" target="_blank" rel="noopener">the emergency inspectorate (IGSU, which ISU Vâlcea belongs to)</a> and <a href="https://www.ocne.ro" target="_blank" rel="noopener">the Ocnele Mari town hall</a>.</p>
     <h3>3. How to read it</h3>
     <ul class="tc"><li>Each satellite measures movement toward or away from itself, and relative to the terrain a few kilometres around, not absolute height.</li>
       <li>Red: the ground moved away from the satellite, usually sinking. Blue: it moved toward it.</li>
@@ -2226,9 +2163,9 @@ async function main() {
   document.title = `Dancing on Salt · ${cleanLabel(S.man.name)}`;
   mapA = makeMap('map', true);
   mapA.addControl(new maplibregl.NavigationControl({ showCompass: true, visualizePitch: false }), 'top-right');
-  {   // the pin: press it, then press a spot on the map for that spot's history, a build check and where it heads
+  {   // the pin: press it, then press a spot on the map for that spot's history and what the radar can say about it
     const b = document.createElement('button'); b.type = 'button'; b.id = 'pin-btn'; b.className = 'pin-btn';
-    b.title = 'Pin a spot: its history, whether to build there, and where it heads'; b.setAttribute('aria-label', b.title);
+    b.title = 'Pin a spot: its history and what the radar sees there'; b.setAttribute('aria-label', b.title);
     b.setAttribute('aria-pressed', 'false');
     b.innerHTML = `<svg viewBox="0 0 40 48" aria-hidden="true"><path d="M20 46 C20 46 4 28 4 18 A16 16 0 0 1 36 18 C36 28 20 46 20 46 Z" fill="#DC2626" stroke="#1C1917" stroke-width="2.4"/><circle cx="20" cy="18" r="10.5" fill="#FFF" stroke="#1C1917" stroke-width="1.6"/><path d="M13.5 19 L20 13 L26.5 19" fill="#7C2D12" stroke="#1C1917" stroke-width="1.2" stroke-linejoin="round"/><rect x="15" y="18.5" width="10" height="7" fill="#C2410C" stroke="#1C1917" stroke-width="1.1"/><rect x="18.6" y="21" width="2.8" height="4.5" fill="#7C2D12"/></svg>`;
     b.addEventListener('click', (e) => { e.stopPropagation(); setPinMode(!S.pinMode); });
@@ -2240,7 +2177,7 @@ async function main() {
     comp?.parentNode.insertBefore(hb, comp.nextSibling);
     let used = false; try { used = localStorage.getItem('dos-pin-used') === '1'; } catch (e) { /* storage blocked */ }
     if (!used) {   // a hint for first-time visitors, gone once the pin has been used
-      const h = document.createElement('div'); h.id = 'pin-hint'; h.textContent = 'Can I build here? Pick up the pin';
+      const h = document.createElement('div'); h.id = 'pin-hint'; h.textContent = 'What does the radar see here? Pick up the pin';
       h.addEventListener('click', (e) => { e.stopPropagation(); setPinMode(true); });
       mapA.getContainer().append(h);
     }

@@ -6,6 +6,21 @@ This is the running log for role 06, newest entry first, so the team can follow 
 
 ---
 
+## Sun 15 Nov 2026, about 13:00 · the page follows 04's noise analysis
+
+Branch `r06/noise-floor`, with 04's `r04/noise-floor` merged in for `products/ocnele_mari/noise_floor.json` and `.png`. Every number below is read from that file.
+
+- **Pin:** now "What does the radar see here?". The spot's trend minus the median trend 300 m around it is compared with `pin_threshold_2sigma_mm_yr` (36 mm/yr on 129A, checked 15 Nov). Below it: grey, "Too little signal to say here". At or above: amber, ask for a ground survey. No green tick, no line carried to 2029, no confidence score. The house picker uses the same answer.
+- **Zones:** each zone shows NISAR's rate against the ground 1 to 3 km around, plus or minus the zone noise (21 mm/yr on 129A, 25 on 094D), with "Inside the noise" where it is not significant (every zone today). Compare uses the 6.5 to 8 km numbers.
+- **Up and east:** the panel is gone; a pressed zone shows 04's single line, up from 129A only, assuming no horizontal motion.
+- **NISAR forecast:** removed from the zone panel and the plain-words card; Sentinel-1's stays.
+- **"What NISAR can't see yet":** 04's chart and caption at the end of the Coverage panel.
+- **Header:** the passing "salt zones sink" check is no longer the main badge while no zone clears the noise.
+
+Checked in the browser at 1400 × 900 (pin, Zone 4, Coverage), no console errors; `pytest -q` 8 passed. Not pushed.
+
+---
+
 ## Sat 14 Nov 2026, about 16:41 · zones 1 to 3 checked; Jan to Oct label pre-wired
 
 Checked zones 1 to 3 against 03's table in `TEAM_HANDOFF.md`: every July to October fitted change and pixel count in `series.json` and `sensitivity.json` matches to 0.01 mm (Zone 1: −8.60 / −5.15 mm; Zone 2: −6.81 / −1.42 mm; Zone 3: no 029A series / +0.23 mm), all five runs are present, and the page shows every label `docs/ui.md` asks for.

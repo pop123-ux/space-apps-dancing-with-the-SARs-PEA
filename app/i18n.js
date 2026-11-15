@@ -32,6 +32,11 @@ const WORDS = {   // whole labels (a text node that is exactly this, ignoring sp
   'Experimental forecast': 'Prognoză experimentală', 'Retrospective forecast': 'Prognoză retrospectivă',
   'Check against NISAR': 'Verificare cu NISAR', 'Ascending': 'Ascendent', 'Descending': 'Descendent', 'operational': 'operațional',
   'beta/provisional': 'beta/provizoriu', 'under review': 'în analiză',
+  'What does the radar see here?': 'Ce vede radarul aici?', 'What does the radar see at this house?': 'Ce vede radarul la această casă?',
+  'Too little signal to say here': 'Semnal prea slab pentru a spune ceva aici', 'Moving relative to its surroundings': 'Se mișcă față de terenul din jur',
+  'Too little signal': 'Semnal prea slab', 'Moving vs. surroundings': 'Mișcare față de teren', 'Inside the noise': 'În zgomot',
+  'NISAR against the noise': 'NISAR față de zgomot', "What NISAR can't see yet": 'Ce nu poate vedea NISAR încă', 'Up and down': 'Sus și jos',
+  'needed to see a spot move': 'necesar ca un punct să se vadă mișcându-se',
 };
 const PHRASES = [   // longer phrases inside mixed text, applied longest first
   ['Negative means motion away from the satellite along its line of sight.', 'Valorile negative înseamnă îndepărtare de satelit, pe linia de vizare.'],
