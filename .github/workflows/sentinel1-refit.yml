@@ -80,10 +80,15 @@ jobs:
           pip install "chronos-forecasting>=2"
           cd sentinel1/scripts
           python forecast_chronos.py ../analysis_jul_nov/forecast_from_10nov.json --janoct ../analysis_jan_oct/summary.json --default --weather ../analysis/chronos_weather.json
+      - name: Data freshness after the refit (update.py --check, no login)
+        continue-on-error: true
+        run: |
+          pip install requests
+          python update.py ocnele_mari --check
       - name: Commit the results to this branch
         run: |
           git config user.name "sentinel1-refit bot"
           git config user.email "actions@users.noreply.github.com"
-          git add sentinel1/analysis_jan_nov sentinel1/assets_jan_nov sentinel1/analysis_jul_nov sentinel1/assets_jul_nov sentinel1/provenance/raw_SHA256SUMS_jan_nov
+          git add sentinel1/analysis_jan_nov sentinel1/assets_jan_nov sentinel1/analysis_jul_nov sentinel1/assets_jul_nov sentinel1/provenance/raw_SHA256SUMS_jan_nov products/ocnele_mari/updates.json
           git commit -m "Sentinel-1 refit, 1 January to 10 November 2026 (run ${{ github.run_id }})"
           git push

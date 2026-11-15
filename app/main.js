@@ -976,6 +976,11 @@ function forecastPanel() {
   const base = Object.entries(f.metrics).filter(([k2]) => k2 !== model && BASE[k2]).map(([k2, v]) => `${BASE[k2]} ${Number(v.mae_mm).toFixed(2)} mm`).join(', ');
   const nc = f.nisar_check;
   const ncText = nc ? `<p class="reason"><b>Check against NISAR</b> (129A, ${esc(nc.dates[0])} to ${esc(nc.dates[1])}, after the forecast started): NISAR ${fmt(nc.nisar_change_mm, 1)} mm, Chronos-2 ${fmt(nc.chronos2_change_mm, 1)} mm. NISAR's own date-to-date scatter here is about ${Number(nc.nisar_step_scatter_mm).toFixed(1)} mm, so this is consistent within noise, not a validation. Scaled into Sentinel-1's line of sight assuming vertical motion only.</p>` : '';
+  // the forecast before this one, scored on Sentinel-1 dates measured after it was issued (forecast_check.py)
+  const pc = f.previous_check;
+  const pcLast = pc?.rows?.at(-1);
+  const pcBase = pc ? Object.entries(pc.mae_mm || {}).filter(([k2]) => k2 !== model && BASE[k2]).map(([k2, v]) => `${BASE[k2]} ${Number(v).toFixed(1)} mm`).join(', ') : '';
+  const pcText = pcLast ? `<p class="reason"><b>How the previous forecast did.</b> Chronos-2 issued from data up to ${esc(human(pc.forecast_issued_from))} expected ${fmt(pcLast.predicted_change_mm.chronos2, 1)} mm of change by ${esc(human(pcLast.date))}; Sentinel-1 then measured ${fmt(pcLast.measured_change_mm, 1)} mm. ${pc.chronos2_inside_80pct ? `On ${esc(pc.chronos2_inside_80pct)} new dates the measurement fell inside its 80 % range. ` : ''}Average error over the ${pc.new_dates} new dates: ${Number(pc.mae_mm.chronos2).toFixed(1)} mm (simple baselines: ${pcBase}). One forecast on a few dates that share one reference, so this is a check, not proof of skill.</p>` : '';
   const btShort = [c.janoct_30d && `${Number(c.janoct_30d.mae_mm).toFixed(1)} mm at 30 days`, c.janoct_88d && `${Number(c.janoct_88d.mae_mm).toFixed(1)} mm at 88 days`].filter(Boolean).join(', ');
   const retro = f.status === 'retrospective' || f.end_date <= new Date().toISOString().slice(0, 10);
   return block('zone-forecast', `${esc(supported.label || f.zone)} · ${retro ? 'Retrospective forecast' : 'Forecast'} · Chronos-2`,
@@ -986,7 +991,7 @@ function forecastPanel() {
           <output id="fc-out" for="fc-range" aria-live="polite">${fcReadout(steps[k], val[k], lo[k], hi[k], iv.level, f.training_dates[0])}</output></div>
         ${keys(lines.slice(0, 3).map((l, i) => i === 2 ? { ...l, label: `${Math.round(iv.level * 100)} % range (backtested)` } : l))}`,
       foot: btShort ? `Typical past error: ${btShort}` : '',
-      after: more('How good is this forecast?', `${ncText}<p class="reason">Backtest error (mean absolute, January to October 2026 series): ${bt}. Over the four summer cutoffs Chronos-2 scored ${Number(f.metrics.chronos2.mae_mm).toFixed(2)} mm against simple baselines (${base}). ${esc(f.interval_reason)}</p>`),
+      after: more('How good is this forecast?', `${pcText}${ncText}<p class="reason">Backtest error (mean absolute, January to October 2026 series): ${bt}. Over the ${f.folds?.length || 'summer'} summer cutoffs Chronos-2 scored ${Number(f.metrics.chronos2.mae_mm).toFixed(2)} mm against simple baselines (${base}). ${esc(f.interval_reason)}</p>`),
     });
 }
 // the forecast exists for one zone, track, window and run: from anywhere else, offer the way there
