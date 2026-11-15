@@ -315,7 +315,7 @@ NISAR_HOLD = {}            # tracks kept off the page entirely (none since 15 No
 NISAR_FLAG = {
     "094D": "Failed the phase-sign test T3: the zones read +23.5 mm/yr against far stable ground, where they should "
             "sink. Unwrapping is ruled out, and neither the ECMWF weather model nor NASA's own troposphere screens "
-            "(in the product) remove it; the signal covers the whole valley. Shown for inspection, not interpretation "
+            "(in the product) remove it; the signal covers the whole valley. Our own pairs from NISAR's raw single-look data reduce it to +3.5 mm/yr (still failing). Shown for inspection, not interpretation "
             "(notebooks/03/t3_094d_checks.json). Summer to autumn only: with June to October dates alone, a seasonal "
             "cycle can bias its rate by about half (test T6, notebooks/03/t5_t6_synthetic.json).",
 }    # dots only within this half-size of the site centre (the Sentinel-1 window)
