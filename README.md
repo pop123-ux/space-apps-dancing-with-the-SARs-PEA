@@ -4,7 +4,7 @@
 
 <img width="1920" height="950" alt="Frontpage" src="https://github.com/user-attachments/assets/3c0e9fcc-2461-43ca-a3f5-8690c3e09ee4" />
 
-**AI-Disclosure:** https://docs.google.com/spreadsheets/d/124X3eaWHZTHrb_MgZriIy63Y4Zvm6VaW4JnVFfrDwhg/edit?usp=sharing
+**AI disclosure:** [AI-DISCLOSURE.md](AI-DISCLOSURE.md)
 
 *Our submission to NASA Space Apps 2026, challenge [Dancing with the SARs](https://www.spaceappschallenge.org/2026/challenges/dancing-with-the-sars/). The submission text is in [SUBMISSION.md](SUBMISSION.md).*
 

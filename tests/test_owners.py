@@ -17,7 +17,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 ROW = re.compile(r"^\| `([^`]+)` \| ([^|]+) \|")
 HEADER = re.compile(r"(?:^# Owner: |^\*\*Owner:\*\* |^<!-- Owner: )(.+?)(?: -->)?\s*$")
 CODES = re.compile(r"\b(0[1-6]|shared|all)\b")
-NO_HEADER = {"LICENSE", "INFO.md"}
+NO_HEADER = {"LICENSE", "INFO.md", "README.md"}   # the README is the public front page: no owner line
 
 
 def owners() -> dict[str, str]:
