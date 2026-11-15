@@ -1581,13 +1581,14 @@ function sourcesBox(d, p, fc, fo, other, agree, parts, chk) {
   const confShown = Math.round(parts.slice(0, 3).reduce((s, x) => s + x[1], 0)), confOther = Math.round(parts[3][1]);
   const st = (S.stations?.features || []).filter(f => !f.properties.combined).map(f => ({ name: f.properties.station, km: metres(f.geometry.coordinates, S.menu.at) / 1000, up: f.properties.gnss_up }));
   const row = (color, name, share, what) => `<div class="src-row"><div class="src-name"><i style="background:${color}"></i>${esc(name)}</div>
-    <div class="src-bar"><b style="width:${share}%;background:${color}"></b></div><div class="src-pct">${share}%</div><div class="src-what">${what}</div></div>`;
+    <div class="src-bar"><b style="width:${share}%;background:${color}"></b></div><div class="src-pct">${share}%</div>
+    <details class="src-more"><summary>Extend</summary><div class="src-what">${what}</div></details></div>`;
   return `<details class="srcs"><summary>What went into this answer ›</summary>
     <p class="sub small">Share of the yes-or-no answer, and what each source did here.</p>
-    ${zone ? row('#57534E', 'Salt-field outlines', 100, 'The spot is inside one: that alone decides.') : ''}
-    ${row(SATS[d.sat].color, shown, zone ? 0 : 100, `${zone ? 'Shown, not needed for the answer. ' : 'Decides the answer: '}its trend here, ${fc ? `${sgn(fc.slope)} mm/yr` : 'n/a'}, from ${p.n} radar points and ${p.pts.length} dates. Gives ${confShown} of its 75 confidence points.`)}
-    ${row(SATS[other]?.color || '#A8A29E', oth, 0, fo ? `Cross-check only: ${sgn(fo.slope)} mm/yr here, ${agree ? 'agrees' : 'disagrees'}. Gives ${confOther} of 25 confidence points.` : 'No measurement at this spot.')}
-    ${row('#0F766E', `GNSS stations (${st.map(s => s.name).join(', ')})`, 0, `Not used for this spot. They check the radar where they stand: ${st.map(s => `${s.name} ${s.km.toFixed(1)} km away, ground moving ${sgn(s.up)} mm/yr`).join('; ')}.${vlcLine()}`)}
+    ${zone ? row('#57534E', 'Salt-field outlines', 100, 'This spot is inside a known salt field. That alone gives the answer.') : ''}
+    ${row(SATS[d.sat].color, shown, zone ? 0 : 100, `${zone ? 'Not needed here: the salt field decides. ' : 'This satellite decides the answer. '}${fc ? `It saw the ground move ${sgn(fc.slope)} mm a year here` : 'It has no trend here'}, from ${p.n} radar points and ${p.pts.length} images. It earns ${confShown} of its 75 confidence points.`)}
+    ${row(SATS[other]?.color || '#A8A29E', oth, 0, fo ? `Only a double-check. It saw ${sgn(fo.slope)} mm a year here, which ${agree ? 'agrees, so confidence goes up' : 'disagrees, so confidence goes down'} (${confOther} of 25 points).` : 'It has no measurement at this spot.')}
+    ${row('#0F766E', `GNSS stations (${st.map(s => s.name).join(', ')})`, 0, `Not used for this spot. These are ground stations that check the satellites are measuring correctly. Nearest: ${st.slice().sort((a2, b2) => a2.km - b2.km).map(s => `${s.name}, ${s.km.toFixed(1)} km away`).join('; ')}.${vlcLine()}`)}
   </details>`;
 }
 function vlcLine() {   // from the validator's VLC check (checks.json): NISAR's morning pass against the station
@@ -1829,16 +1830,25 @@ async function arrowsCard(test) {
     : `The estimate reads ${Math.abs(up) >= su ? `${up < 0 ? 'sinking' : 'rising'} of about ${Math.abs(up).toFixed(0)} mm a year` : 'no up-down motion beyond the noise'}${Math.abs(east) >= se ? ` and a ${east > 0 ? 'eastward' : 'westward'} shift of about ${Math.abs(east).toFixed(0)} mm a year` : ' and no east-west motion beyond the noise'}. Treat it as unconfirmed: it combines both NISAR tracks, and the descending one failed its sign check.`;
   return `<div class="block dm-card"><h3>Which way the ground moves</h3>
     <svg class="chart arrows" viewBox="0 0 400 140" role="img" aria-label="Up-down and east-west motion">
-      <defs><marker id="dm-ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1C1917"/></marker></defs>
       <line x1="40" x2="200" y1="${cy}" y2="${cy}" stroke="#D6D3D1"/><line x1="${cx}" x2="${cx}" y1="14" y2="126" stroke="#D6D3D1"/>
       <text x="44" y="${cy - 6}">west</text><text x="196" y="${cy - 6}" text-anchor="end">east</text><text x="${cx + 5}" y="22">up</text><text x="${cx + 5}" y="124">down</text>
-      ${Math.abs(len(east)) > 2 ? `<line x1="${cx}" x2="${cx + len(east)}" y1="${cy}" y2="${cy}" stroke="#1C1917" stroke-width="2.5" marker-end="url(#dm-ah)"/>` : ''}
-      ${Math.abs(len(up)) > 2 ? `<line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy - len(up)}" stroke="#1C1917" stroke-width="2.5" marker-end="url(#dm-ah)"/>` : ''}
+      ${arrowPoly(cx, cy, east, 0, '#57534E')}
+      ${arrowPoly(cx, cy, 0, up, up > 0 ? '#2166AC' : '#B2182B')}
+      <circle cx="${cx}" cy="${cy}" r="3" fill="#1C1917"/>
       <text x="230" y="44" class="v">Up-down: ${sgn(up)} mm/yr</text><text x="230" y="62">± ${su.toFixed(0)} mm/yr</text>
       <text x="230" y="92" class="v">East-west: ${sgn(east)} mm/yr</text><text x="230" y="110">± ${se.toFixed(0)} mm/yr</text>
     </svg>
     ${S.date ? `<p class="dm-big">By ${esc(human(S.date))}: <b>${sgn(up * elapsedYears())} mm</b> up-down, <b>${sgn(east * elapsedYears())} mm</b> east-west</p>` : ''}
 </div>`;
+}
+// a pointy arrow from (x, y): east > 0 points right, up > 0 points up (screen y runs down). Length 18 px at the
+// smallest, 52 px at 30 mm/yr or more, so a small rate still shows its direction; a dark outline keeps it readable.
+function arrowPoly(x, y, east, up, color) {
+  const v = Math.hypot(east, up); if (v < 0.5) return '';
+  const ux = east / v, uy = -up / v, L = 18 + Math.min(1, v / 30) * 34, hl = 13, hw = 7.5, sw = 2.2;
+  const tx = x + ux * L, ty = y + uy * L, bx = tx - ux * hl, by = ty - uy * hl, px = -uy, py = ux;
+  const pts = [[x + px * sw, y + py * sw], [bx + px * sw, by + py * sw], [bx + px * hw, by + py * hw], [tx, ty], [bx - px * hw, by - py * hw], [bx - px * sw, by - py * sw], [x - px * sw, y - py * sw]];
+  return `<polygon points="${pts.map(([a, b]) => `${a.toFixed(1)},${b.toFixed(1)}`).join(' ')}" fill="${color}" stroke="#1C1917" stroke-width="1.6" stroke-linejoin="miter"/>`;
 }
 function elapsedYears() {   // the up/east rates are NISAR's, over its own window (June to October 2026): count only that time
   const w = sensors().nisar?.up_east?.window; if (!w || !S.date) return 0;
