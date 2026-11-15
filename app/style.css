@@ -720,3 +720,11 @@ details.src-more .src-what { margin-top: 5px; color: var(--ink); font-size: 13px
 .marker.station i svg { width: 12px; height: 12px; display: block; }
 .dm-card.plain h3 .pw-dates { margin-left: auto; font-weight: 500; color: #5B21B6; background: #EDE9FE; }
 #legend { display: none !important; }   /* the floating map legend is removed (Alexandru, 15 Nov); the menu has its own legend */
+
+/* the colour scale floats in the top-left stack, under any notice, clear of the map's side buttons (Alex, 15 Nov) */
+#flags { z-index: 19; }
+#flags > .legend-scale:not([hidden]) { display: block; pointer-events: auto; width: 264px; background: var(--card); border-radius: 14px; box-shadow: var(--shadow); padding: 10px 14px; }
+.legend-scale .legend-title { margin-bottom: 6px; font-size: 13px; }
+.legend-scale .caps { display: flex; }
+body.dmenu-open #legend-scale { display: none !important; }   /* the menu has its own scale */
+@media (max-width: 700px) { #flags > .legend-scale:not([hidden]) { width: 210px; padding: 8px 10px; } .legend-scale .legend-title { font-size: 12px; } }
