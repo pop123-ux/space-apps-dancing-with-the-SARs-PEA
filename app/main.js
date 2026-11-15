@@ -317,8 +317,9 @@ function setBasemap(key) {
 function updateBlur() {
   const z = mapA.getZoom();
   const stage = $('#stage');
-  stage.classList.toggle('far', z < SHARP_ZOOM);
-  stage.style.setProperty('--blur', `${Math.min(6, Math.max(0, (SHARP_ZOOM - z) * 1.6)).toFixed(1)}px`);
+  const from = SHARP_ZOOM - 1.5;   // the coloured dots stay sharp down to zoom 8.5; then the blur ramps in over two levels
+  stage.classList.toggle('far', z < from);
+  stage.style.setProperty('--blur', `${Math.min(5, Math.max(0, (from - z) * 1.2)).toFixed(1)}px`);
 }
 
 // markers: the salt zones, the stations, and the town label shown when zoomed out
@@ -538,7 +539,8 @@ function renderZoneChips() {
   const g = $('#zone-group');
   pressGroup(g, zones().map(z => ({ key: z.id, html: `<span class="zn">${esc(zoneShort(z))}</span><span class="zl"> ${esc(zoneName(z))}</span>`, title: `${zoneName(z)}: select, or click again to clear` })),
     k => S.selected?.kind === 'zone' && S.selected.id === k,
-    (k) => { const on = S.selected?.kind === 'zone' && S.selected.id === k; select(on ? null : { kind: 'zone', id: k }); if (!on) flyToZone(k); });
+    (k) => { const on = S.selected?.kind === 'zone' && S.selected.id === k; select(on ? null : { kind: 'zone', id: k });
+      if (on) closeMenu(); else { flyToZone(k); openMenu({ kind: 'zone', id: k }); } });
 }
 // what the map shows right now: satellite, track, date or fit window, metric, run, reference, sign
 function renderContext() {
@@ -1368,6 +1370,7 @@ function drawSelection(shape) {
 }
 function openMenu(sel) {
   S.menu = sel; closeMenus();
+  if (sel.kind === 'zone') S.fcZone = sel.id;   // the prediction follows the zone that was pressed
   $('#dmenu').hidden = false; document.body.classList.add('dmenu-open');
   setTimeout(() => mapA?.resize(), 220);
   renderMenu();
@@ -1483,7 +1486,7 @@ async function drawVectors(test) {
   if (!mapA.getSource('mvec')) {
     mapA.addSource('mvec', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
     mapA.addLayer({ id: 'mvec', type: 'line', source: 'mvec', layout: { 'line-cap': 'round' },
-      paint: { 'line-color': ['case', ['<', ['get', 'up'], 0], '#B2182B', '#2166AC'], 'line-width': 2 } });
+      paint: { 'line-color': ['case', ['<', ['get', 'up'], 0], '#B2182B', '#2166AC'], 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 2, 14, 3.5, 16, 5] } });
   }
   const ue = test && await loadUpEast();
   const feats = [];
@@ -1491,8 +1494,8 @@ async function drawVectors(test) {
     const c = [ue.lon[i], ue.lat[i]]; if (!test(c)) continue;
     const east = ue.east[i] * ue.scale, up = ue.up[i] * ue.scale;
     const shift = east * elapsedYears();                           // mm moved east-west by the date on the map
-    const m = Math.max(-1, Math.min(1, shift / 20)) * 80;           // 20 mm or more → 80 m long
-    if (Math.abs(m) < 3) continue;
+    if (Math.abs(east) < 2) continue;                               // under 2 mm/yr east-west: no arrow
+    const m = Math.sign(shift || east) * (60 + Math.min(1, Math.abs(shift) / 25) * 160);   // 60 m at the start, 220 m by 25 mm moved
     const dl = m / (111320 * Math.cos(c[1] * Math.PI / 180)), hd = dl * 0.35, hh = Math.abs(m) * 0.35 / 110540;
     const tip = [c[0] + dl, c[1]];
     feats.push({ type: 'Feature', properties: { up }, geometry: { type: 'MultiLineString', coordinates: [[c, tip], [tip, [tip[0] - hd, tip[1] + hh]], [tip, [tip[0] - hd, tip[1] - hh]]] } });
@@ -1702,7 +1705,7 @@ async function main() {
     document.querySelectorAll('.checks li.here').forEach(e => e.classList.remove('here'));
     if (li) { li.classList.add('here'); li.scrollIntoView({ block: 'center' }); } else $('#checks-h').scrollIntoView();
   });
-  $('#preset-z4').addEventListener('click', () => applyPreset());
+
   $('#reset-site').addEventListener('click', () => {
     select(null); const v = S.man.view; mapA?.flyTo({ center: [v.center[1], v.center[0]], zoom: v.zoom - ZOOM_OFFSET });
   });

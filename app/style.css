@@ -42,7 +42,8 @@ h3 { font-size: 15px; font-weight: 600; }
 #mapB { pointer-events: none; }
 #mapB .marker { pointer-events: auto; }
 .maplibregl-canvas { transition: filter .3s ease; }
-#stage.far .maplibregl-canvas { filter: blur(var(--blur, 0px)) saturate(.6); }
+#stage .maplibregl-canvas { transition: filter .4s ease; }
+#stage.far .maplibregl-canvas { filter: blur(var(--blur, 0px)) saturate(.8); }
 #stage.far .marker.zone, #stage.far .marker.station { display: none; }
 #stage:not(.far) .marker.town { display: none; }
 .maplibregl-ctrl-top-right { top: 76px; right: 6px; }
