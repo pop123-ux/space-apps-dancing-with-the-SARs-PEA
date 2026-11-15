@@ -459,6 +459,7 @@ function renderSat() {
 }
 function pickSat(k, keepDate = true) {
   if (k === S.sat) return;
+  if (k === 'compare' && !S.selected) S.view = 'agreement';   // the panel explains how the two radars differ
   const prevDate = S.date;
   S.sat = k; S.note = null;
   if (k === 'compare') {
@@ -1076,7 +1077,7 @@ function agreementSheet() {
       after: c ? more('What the check found', `<p class="reason">${esc(named(c.detail || c.title))}</p>`) : '' });
   });
   return `${head}<p class="sub small">Each line is the zone minus the terrain 6.5 to 8 km away. NISAR ${esc(nt)} is paired with Sentinel-1 ${esc(st)} because both see east-west motion the same way. A wide tolerance means agreeing proves little yet.</p>
-    ${keys(['nisar', 's1'].map(s => ({ label: `${sensors()[s].label} ${trk[s]}`, color: SATS[s].color })))}${blocks.join('')}<h3 class="sub-h">Historical context</h3>${egmsPanel()}`;
+    ${keys(['nisar', 's1'].map(s => ({ label: `${sensors()[s].label} ${trk[s]}`, color: SATS[s].color })))}${blocks.join('')}${radarsPanel()}<h3 class="sub-h">Historical context</h3>${egmsPanel()}`;
 }
 // every exported date of a track across Sentinel-1's windows (Jan to Oct and Jul to Oct), for the coverage overview
 function allDates(s, t) {
@@ -1233,6 +1234,68 @@ function zoneCoverage(id) {
     <table class="data"><thead><tr><th>Track</th><th>Zone pixels</th><th>Support or reason</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
 }
 // Compare for one zone: parallel observations over the common window, each in its own line of sight
+// median days between acquisitions
+const revisit = (ds) => { const g = ds.slice(1).map((d, i) => day(d) - day(ds[i])).sort((a, b) => a - b); return g.length ? g[Math.floor(g.length / 2)] : null; };
+function tieMad(t) { const c = S.checks.find(x => x.id === `tie-${t}`); return c && Number.isFinite(c.value) ? c.value : null; }
+// "How the two radars differ, and how they fill each other's gaps": every value read from the products
+function radarsPanel(z = null) {
+  const sn = sensors(); if (!sn.nisar || !sn.s1) return '';
+  const nt = S.track.nisar, st = pairOf ? pairOf(nt) : S.track.s1;
+  const nd = allDates('nisar', nt), sd = allDates('s1', st);
+  const fmtRange = (ds) => ds.length ? `${human(ds[0])} to ${human(ds[ds.length - 1])}` : 'none';
+  const zp = (s, t) => { if (!z) return null; const e = s === 's1' ? (entryIn(S.sens?.default_window || 'jul_oct', z, t, 'baseline')) : entry(z, s, t); return e ? e.n_pixels : 0; };
+  const rows = [
+    ['Wavelength', `${sn.nisar.band}, ${sn.nisar.wavelength_cm} cm`, `${sn.s1.band}, ${sn.s1.wavelength_cm} cm`],
+    ['Looks', sn.nisar.look ? `to the ${sn.nisar.look}` : '', sn.s1.look ? `to the ${sn.s1.look}` : ''],
+    ['Track shown here', `${nt} ${(dirOf('nisar', nt) || '').toLowerCase()}`, `${st} ${(dirOf('s1', st) || '').toLowerCase()}`],
+    ['Acquisitions', `${nd.length}, every ${revisit(nd) ?? 'n/a'} days`, `${sd.length}, every ${revisit(sd) ?? 'n/a'} days`],
+    ['Period', fmtRange(nd), fmtRange(sd)],
+    ['Grid', sn.nisar.fit?.[nt]?.grid_m ? `${sn.nisar.fit[nt].grid_m} m` : 'n/a', sn.s1.grid_m ? `${sn.s1.grid_m} m` : 'n/a'],
+    ['Reference', 'tied to a GNSS velocity model', 'relative to the surrounding terrain'],
+    ['Pixel noise on stable ground', tieMad(nt) !== null ? `about ±${Math.round(tieMad(nt))} mm/yr` : 'n/a', 'not tied to GNSS, not measured the same way'],
+  ];
+  if (z) rows.push([`Usable pixels in ${zoneName(z)}`, String(zp('nisar', nt) ?? 'n/a'), String(zp('s1', st) ?? 'n/a')]);
+  const gap = gapFill();
+  const before = nd.filter(d => sd.length && d < sd[0]).length;
+  const adds = [
+    gap ? `<li><b>Sentinel-1 fills NISAR's gap:</b> NISAR did not image the town from ${esc(human(gap[1].fills_gap.gap[0], false))} to ${esc(human(gap[1].fills_gap.gap[1]))}; Sentinel-1 did, every ${revisit(sd) ?? 'few'} days.</li>` : '',
+    before ? `<li><b>NISAR adds earlier dates:</b> ${before} NISAR acquisitions fall before Sentinel-1's first fitted date (${esc(sd[0])}).</li>` : '',
+    `<li><b>Opposite look sides:</b> NISAR looks ${esc(sn.nisar.look || '')} and Sentinel-1 ${esc(sn.s1.look || '')}, so together they can separate up-down from east-west motion, which one radar alone cannot. Here NISAR ${esc(nt)} is paired with Sentinel-1 ${esc(st)} because both see east-west motion the same way, so that motion cancels in the comparison.</li>`,
+    `<li><b>Different wavelengths:</b> the longer L-band wave keeps a usable signal through vegetation and over longer gaps; the shorter C-band wave is more sensitive to small motion and Sentinel-1 revisits more often.</li>`,
+  ].filter(Boolean).join('');
+  return `<div class="block radars"><h3>How the two radars differ, and how they fill each other's gaps</h3>
+    <div class="tscroll"><table class="data"><thead><tr><th></th><th><span class="${SATS.nisar.cls}">${SATS.nisar.mark}</span> ${esc(sn.nisar.label)}</th><th><span class="${SATS.s1.cls}">${SATS.s1.mark}</span> ${esc(sn.s1.label)}</th></tr></thead>
+    <tbody>${rows.map(r => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${esc(r[2])}</td></tr>`).join('')}</tbody></table></div>
+    <ul class="adds">${adds}</ul></div>`;
+}
+// slope of a zone-minus-ring series over the common window, mm/yr (for "what already agrees")
+function windowRate(l, w) {
+  const p = l.dates.map((d, i) => [day(d), l.mm[i]]).filter(([t, v]) => v !== null && Number.isFinite(v) && (!w || (t >= day(w[0]) && t <= day(w[1]))));
+  if (p.length < 3) return null;
+  const tm = p.reduce((a, [t]) => a + t, 0) / p.length, vm = p.reduce((a, [, v]) => a + v, 0) / p.length;
+  const num = p.reduce((a, [t, v]) => a + (t - tm) * (v - vm), 0), den = p.reduce((a, [t]) => a + (t - tm) ** 2, 0);
+  return den ? num / den * 365.25 : null;
+}
+// replaces the bare "still inconclusive" list: what the two radars already agree on, and what would settle the rest
+function settlePanel(z, lines, c) {
+  const w = S.man.common_window;
+  const nl = lines.find(l => l.label.startsWith(sensors().nisar?.label || 'NISAR'));
+  const sl = lines.find(l => l.label.includes(` ${pairOf ? pairOf(S.track.nisar) : ''} `)) || lines.find(l => l.label.startsWith(sensors().s1?.label || 'Sentinel'));
+  const rn = nl && windowRate(nl, w), rs = sl && windowRate(sl, w);
+  const same = rn !== null && rs !== null && rn !== undefined && rs !== undefined ? Math.sign(rn) === Math.sign(rs) : null;
+  const agree = same === null ? '<li>Not enough dates in the common window to compare directions.</li>'
+    : `<li>${same ? '<b>Same direction:</b> both radars' : '<b>Opposite directions:</b> the radars disagree on whether'} ${same ? `show ${esc(zoneName(z))} moving ${rn < 0 ? 'away from' : 'toward'} the satellite relative to its surroundings` : `${esc(zoneName(z))} moves away from or toward the satellite`} (NISAR ${fmt(rn, 1)}, Sentinel-1 ${fmt(rs, 1)} mm/yr over the common window).</li>`;
+  const next = S.updates?.s1 ? Object.values(S.updates.s1).reduce((a, v) => a + (v.new?.length || 0), 0) : 0;
+  const settle = [
+    `<li><b>More dates:</b> NISAR has only ${nl ? nl.dates.filter(d => !w || (d >= w[0] && d <= w[1])).length : 'a few'} dates in the common window, so its tolerance is wide. Each new acquisition narrows it${next ? `; ${next} new Sentinel-1 acquisitions are already waiting to be processed (update.py)` : ''}.</li>`,
+    '<li><b>Larger comparison areas:</b> each zone holds only tens of pixels, and the noise is correlated over kilometres, so pooling zones or comparing whole-town patterns shrinks it more than adding pixels inside one zone.</li>',
+    '<li><b>One stated assumption:</b> the comparison treats the motion as vertical (north-south motion is ignored; both radars are nearly blind to it). Agreeing on that assumption as a team removes the last geometric caveat.</li>',
+    sensors().nisar?.flags && Object.keys(sensors().nisar.flags).length ? `<li><b>NISAR ${esc(Object.keys(sensors().nisar.flags).join(', '))}:</b> failed the phase-sign test and is shown for inspection only.</li>` : '',
+  ].filter(Boolean).join('');
+  return `<div class="block settle"><h3>What already agrees</h3><ul class="adds">${agree}</ul>
+    <h3>What would settle it</h3><ul class="missing">${settle}</ul>
+    <p class="sub small">${c && c.status === 'warn' ? 'The automatic check says inconclusive because the noise is wider than the test, not because the radars contradict each other.' : ''}</p></div>`;
+}
 function zoneCompare(id) {
   const z = S.series.find(p => p.id === id); if (!z) return null;
   const w = S.man.common_window; const ctl = control();
@@ -1248,13 +1311,12 @@ function zoneCompare(id) {
   for (const t of tracksOf('s1')) { const l = minus('s1', t, (p) => entryIn(S.sens?.default_window || 'jul_oct', p, t, 'baseline') || p.series?.[`s1:${t}`]); if (l) lines.push(l); }
   const c = checkForZone(z);
   const word = c ? (c.status === 'pass' ? 'Agree' : c.status === 'fail' ? 'Disagree' : c.status === 'warn' ? 'Inconclusive' : 'Not testable') : 'Not tested yet';
-  const blockers = [S.man.compare?.ready === false ? S.man.compare.reason : null, sensors().nisar?.pending,
-    'The two satellites look from opposite sides, so their line-of-sight values are different quantities until the team decides on a shared quantity and geometry.'].filter(Boolean);
   return `<h2>${esc(zoneName(z))}: compare</h2><div class="kicker">Zone minus the outer comparison area (6.5 to 8 km), each track in its own line of sight${w ? ` · common window ${esc(w[0])} to ${esc(w[1])}` : ''}</div>
     <div class="verdict ${c ? esc(c.status) : 'na'}"><span>${c ? STATUS_ICON[c.status] : '?'}</span> ${esc(word)} <span class="sub">(validator)</span></div>
     ${c ? `<p class="reason">${esc(c.detail)} <button type="button" class="linkbtn" data-chk="${esc(c.id)}">Evidence</button></p>` : '<p class="reason">The validator has not reported on this zone.</p>'}
     ${block(`c-${z.id}`, 'Parallel observations, mm', '', lines, { window: w, range: w ? [iso(day(w[0]) - 20), iso(day(w[1]) + 20)] : undefined, foot: lines.map(l => `${l.label}: ${l.n ?? 'n/a'} px`).join(' · ') })}
-    <div class="block"><h3>Still inconclusive</h3><ul class="missing">${blockers.map(b => `<li>${esc(b)}</li>`).join('')}</ul></div>
+    ${settlePanel(z, lines, c)}
+    ${radarsPanel(z)}
     <h3 class="sub-h">Historical context</h3>${egmsPanel()}`;
 }
 function renderSheet() {

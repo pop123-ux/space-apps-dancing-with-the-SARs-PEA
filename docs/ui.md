@@ -252,3 +252,9 @@ The [group-aware rerun and four-zone review](../sentinel1/docs/TEAM_HANDOFF.md#1
 ## Forecast and environmental controls
 
 See [the forecasting handoff](forecast.md) for the January endpoint, Paul’s inputs, and the checks required before publishing environmental or vertical scenarios. Since 14 Nov 18:30 the forecast panel offers four model paths (persistence, Theil–Sen, Gaussian process, long-term trend from EGMS 2020–2025) and says that rainfall and soil moisture were tested and not adopted. The model selector must wrap or become a select when four buttons do not fit. Since 19:30 there are five paths (Chronos-2 added, with an 80 % interval in `forecast.json` that the panel should shade), and the processing panel has a sixth scenario, the weather-model troposphere. See [forecast.md](forecast.md#troposphere-the-january-to-october-fit-and-chronos-2-14-nov-2026-1930).
+
+## Compare explains the two radars (15 Nov 2026)
+
+Choosing Compare opens a panel, "How the two radars differ, and how they fill each other's gaps", built from the products: wavelength, look side, the track pair shown (NISAR 129A with Sentinel-1 007D: same east-west sensitivity), number and spacing of acquisitions, period, grid, reference, pixel noise and, for a zone, usable pixels. It then lists what each adds: Sentinel-1 fills NISAR's January to June gap, NISAR adds earlier dates, the opposite look sides together separate up-down from east-west motion, and the two wavelengths behave differently over vegetation and time.
+
+The old "Still inconclusive" list is replaced by **What already agrees** (whether both radars show the zone moving the same way over the common window, with both rates) and **What would settle it** (more dates, larger comparison areas, one stated assumption about the motion being vertical, and the flagged 094D track). The automatic check still says inconclusive where its tolerance is too wide; the page now says that this is noise, not contradiction.

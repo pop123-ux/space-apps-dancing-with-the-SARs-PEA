@@ -4,7 +4,7 @@
  "story": "TODO(01): one sentence, written by the Lead",
  "synthetic": false,
  "note": "Sentinel-1 measurements (Jul to Oct 2026) and NISAR measurements (094D, 129A).",
- "built": "2026-11-15T07:17:44+00:00",
+ "built": "2026-11-15T07:35:34+00:00",
  "bounds": [
   [
    45.016685,
@@ -190,6 +190,7 @@
      "tied": true,
      "pairs": 13,
      "groups": 2,
+     "grid_m": 80,
      "phase_sign": -1,
      "iono_used": 13
     },
@@ -197,6 +198,7 @@
      "tied": true,
      "pairs": 9,
      "groups": 1,
+     "grid_m": 80,
      "phase_sign": -1,
      "iono_used": 9
     }
@@ -342,7 +344,8 @@
    "town_cover": {
     "029A": 16,
     "007D": 46
-   }
+   },
+   "grid_m": 40
   }
  },
  "views": [
@@ -367,7 +370,7 @@
    "129A": "007D",
    "094D": "029A"
   },
-  "reason": "Side by side, each satellite in its own line of sight. Tracks are paired by geometry (NISAR 129A with Sentinel-1 007D: both see east-west motion the same way). The verdict per zone comes from the validator; a shared quantity (open team decision: how to compare the two radars) is still open."
+  "reason": "Side by side, each satellite in its own line of sight. Tracks are paired by geometry (NISAR 129A with Sentinel-1 007D: both see east-west motion the same way). The verdict per zone comes from the automatic checks."
  },
  "windows": {
   "jul_oct": "July to October 2026",

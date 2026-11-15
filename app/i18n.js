@@ -53,6 +53,15 @@ const PHRASES = [   // longer phrases inside mixed text, applied longest first
 ];
 for (const k of ['Baseline (coherence ≥ 0.35)', 'Stricter coherence (≥ 0.55)', 'West reference area only', 'East reference area only',
   'Elevation correction (fitted to the data)', 'Weather-model troposphere (ECMWF IFS, acquisition time)', 'Single run']) PHRASES.push([k, WORDS[k]]);
+PHRASES.push(['How the two radars differ, and how they fill each other\'s gaps', 'Cum diferă cele două radare și cum se completează'],
+  ['What already agrees', 'Ce concordă deja'], ['What would settle it', 'Ce ar lămuri rezultatul'], ['Same direction:', 'Aceeași direcție:'],
+  ['Opposite directions:', 'Direcții opuse:'], ['More dates:', 'Mai multe date:'], ['Larger comparison areas:', 'Zone de comparație mai mari:'],
+  ['One stated assumption:', 'O ipoteză declarată:'], ['Sentinel-1 fills NISAR\'s gap:', 'Sentinel-1 acoperă golul NISAR:'],
+  ['NISAR adds earlier dates:', 'NISAR adaugă date mai vechi:'], ['Opposite look sides:', 'Priviri din părți opuse:'],
+  ['Different wavelengths:', 'Lungimi de undă diferite:'], ['Wavelength', 'Lungime de undă'], ['Looks', 'Privește'],
+  ['Track shown here', 'Orbita afișată'], ['Acquisitions', 'Achiziții'], ['Period', 'Perioadă'], ['Grid', 'Grilă'],
+  ['Pixel noise on stable ground', 'Zgomot pe teren stabil']);
+PHRASES.sort((a, b) => b[0].length - a[0].length);
 const RX = [[/(\d{4}-\d{2}-\d{2}) to (\d{4}-\d{2}-\d{2})/g, '$1 – $2']];
 // strings from the 15 Nov text pass (folded explanations, Agreement on the geometry pair, forecast shortcut)
 Object.assign(WORDS, {

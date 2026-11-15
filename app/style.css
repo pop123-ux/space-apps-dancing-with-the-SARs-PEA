@@ -470,3 +470,9 @@ details.more.h > summary { font-family: var(--serif); font-size: 20px; color: in
 .teaser { display: block; width: 100%; text-align: left; margin: 10px 0; padding: 10px 14px; border: 1px solid #DDD6FE; background: #F5F3FF; color: #4C1D95; border-radius: 12px; font: inherit; font-weight: 600; cursor: pointer; }
 .teaser:hover { background: #EDE9FE; }
 .teaser .sub { font-weight: 400; }
+
+/* compare: how the radars differ, what agrees, what would settle it (15 Nov 2026) */
+.radars table.data td:first-child { color: var(--muted); }
+ul.adds { margin: 6px 0; padding-left: 18px; font-size: 13px; }
+ul.adds li, ul.missing li { margin: 4px 0; }
+.settle h3 + ul { margin-top: 4px; }
