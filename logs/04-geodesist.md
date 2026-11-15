@@ -6,6 +6,75 @@ This is the running log for role 04, newest entry first, so the team can follow 
 
 ---
 
+## Sun 15 Nov 2026, about 13:15 · Correction: the noise is not the chain of pairs
+
+Branch `r04/noise-floor`. Done with Claude Code. New exploration script `notebooks/04/gslc_chain_vs_network.py`, result in `notebooks/04/gslc_chain_vs_network.json`.
+
+**The test.** 094D from NISAR's raw single-look data (GSLC, the same 10 dates, 20 Jun to 18 Oct 2026), read and multilooked as in 02's `notebooks/02/gslc_pairs_094d.py` (12 × 12 km box around the zones, 80 m, 286 MB read). Then the same `stack.py` cleaning, inversion and rate, twice: a **chain** of one pair per new date (9 pairs, as in NASA's interferograms) and a **redundant network** of every pair up to 36 days (21 pairs, 16 closure triplets). Noise from 1,000 fake zones on stable ground: a 300 m disc minus a 0.5 to 1.5 km ring (the box is too small for the 1 to 3 km ring). Seed 2026.
+
+| Build, same 2,131 stable pixels | Zone rate σ (mm/yr) | Spread of cumulative displacement, date 1 → date 9 (mm) |
+| --- | --- | --- |
+| Single-look data, chain | 12.5 | 2.8 → 4.5 |
+| Single-look data, redundant network | 11.7 | 2.8 → 4.5 |
+| NASA's interferograms (GUNW, rehearsal stack), same box and ring | 19.5 | — |
+
+**What it shows.**
+- **The pair network barely matters** (chain over network 1.07). My explanation of the morning entry, "pair errors add up along the chain, so longer pairs would bring the dates earlier", is **wrong** and is withdrawn.
+- On the single-look data the spread grows little after the first pair (2.8 → 4.5 mm, not ×3), so the noise is not a random walk there. It acts more like a slow, steady pattern of rates on "stable" ground. That could be real slope movement in the hills or a seasonal effect (soil moisture, troposphere) over a summer-only window. This test cannot tell which.
+- **The processing route matters more:** the same dates built from the single-look data are about a third quieter than NASA's interferograms (12.5 against 19.5 mm/yr). The comparison mixes the GSLC box with the rehearsal GUNW stack and their different corrections (no ionosphere screen on the GSLC route), so read it as a lead, not a result.
+
+**What changes.**
+- `noise_floor.py`: the detection-horizon text now calls the projection a rough estimate. It is still modelled as noise adding up pair by pair, which fits NASA's interferograms, and the chain was not tested there. The `best_case` is labelled an optimistic bound that more pairs did not reach. The chart is retitled. The numbers are unchanged.
+- The pitch sentence for 01 and the caption for 06 lose "longer pairs would bring it earlier". Correction posted on PR #54.
+- **For 02/03:** the single-look route is the lead worth following (open item 6 becomes "process from GSLC", not "add longer pairs"). A wider box would allow the 1 to 3 km ring and a direct comparison with `noise_floor.json`.
+
+---
+
+## Sun 15 Nov 2026, about 10:30 · How big a motion can the page show, and when will NISAR see the zones?
+
+Branch `r04/noise-floor`. Done with Claude Code (see the `AI-DISCLOSURE.md` log). New script `noise_floor.py` (04); it reads the tied tracks in `data/work/ocnele_mari/` and writes `products/ocnele_mari/noise_floor.json` and `noise_floor.png`. It changes no rate, no tie and no other role's file. Run: `python noise_floor.py ocnele_mari` (about 7 s).
+
+**Inputs.** 129A: the team's own stream (14 Nov, 17:40). 094D: still the advisor's rehearsal stack, which fails the sign check. Rerun when 02/03 land their 094D.
+
+### 1. Zone noise: 1,000 fake zones on stable ground per size and track
+
+| Track | One pixel | One zone, alone | Zone minus 1 to 3 km ring | Zone minus 6.5 to 8 km band | Pin (120 m minus about 300 m) |
+| --- | --- | --- | --- | --- | --- |
+| 129A | 38.9 | 26.8 to 26.9 | **21.3 to 23.2** | 23.0 to 24.3 | 17.9 |
+| 094D | 47.6 | 40.1 to 41.4 | 25.2 to 25.5 | 30.9 to 31.4 | 17.8 |
+
+All in mm/yr, 1σ, robust (1.4826 · MAD). Averaging a zone barely helps, because neighbouring pixels share their noise.
+
+### 2. The real zones are all inside the noise
+
+129A, zone minus 1 to 3 km ring: z1 −12.4 (z = −0.6), z2 −11.3 (−0.5), z3 −3.9 (−0.2), z4 −7.1 (−0.3) mm/yr. No zone reaches 2σ on either track or either reference. The "Salt zones sink on 129A" check passes only because its threshold is "< −2 mm/yr". **Proposal for 05:** require < −2σ, with σ from `noise_floor.json`.
+
+### 3. For 06: the pin
+
+A pin needs to differ from the spots around it by more than **36 mm/yr (2σ)** before the page may say anything. Below that, the honest text is "too little signal to say". Never a green tick.
+
+### 4. Up/east from 129A + 094D is noise
+
+Zone-level 2 × 2 solve, north dropped: σ up 22 to 23, σ east 27 to 28 mm/yr. Every component is within about 1σ of zero (for example z2: up +5.9 ± 23.0, east −25.4 ± 27.8). The page's zone 1 value (east −41.6 ± 19 mm/yr) comes from 03's files, which are not on this machine, but by this test its error bar is too small. **Proposal for 06 and 03:** hide the up/east panel, or show "129A only, assuming no horizontal motion" (z1 −16.5 ± 28.2 mm/yr up).
+
+### 5. When can NISAR see the zones?
+
+*Corrected at 13:15, see the entry above: the cause is not the chain of pairs.* Each date is linked to the previous one by a single 12-day pair. The zone-to-zone spread of cumulative displacement grows like √(pairs), about 3.0 mm per pair on 129A. A random walk with 2.6 mm per pair reproduces today's zone σ of 21.3 mm/yr, so the two estimates agree. Independent noise per date would explain only about a third of it.
+
+Projected with passes every 12 days and no new gap (129A, zone minus 1 to 3 km ring):
+
+| Steady vertical sink | Needs σ ≤ (LOS) | First date at 2σ, as processed now |
+| --- | --- | --- |
+| 25 mm/yr (EGMS maximum, 2019 to 2024) | 9.4 mm/yr | about 2 May 2029 |
+| 19 mm/yr | 7.2 mm/yr | not before 2031 |
+| 10 mm/yr | 3.8 mm/yr | not before 2031 |
+
+**What this cannot tell you.** It assumes no new gap, the same pair network and coherence, a steady rate and no seasonal term. The JSON also holds a `best_case` (independent noise per date, as if redundant longer pairs stopped the errors adding up). It is an upper bound, not a result, and it is not plotted. ~~What it does say is that the chain of pairs, not the radar itself, limits the result.~~ Tested at 13:15 (entry above): a redundant network is no quieter than the chain, so this was wrong.
+
+**For the pitch (01).** "Today one zone carries ±21 mm/yr of noise, and the strongest salt zone moves −12: inside the noise. Processed as now, NISAR would see a 25 mm/yr sink by about mid-2029, a rough estimate." (The earlier ending, "longer pairs are the way to get there sooner", was withdrawn at 13:15.)
+
+---
+
 ## Sat 14 Nov 2026, about 17:40 · 129A on the team's own stream: HDF5 verified, 13 pairs, real tie
 
 Branch `r04/129a-series`. Done with Claude Code (see the `AI-DISCLOSURE.md` log). Earthdata: Matei signed in himself; the token sits in `.env` (git-ignored) and was never printed or copied.
