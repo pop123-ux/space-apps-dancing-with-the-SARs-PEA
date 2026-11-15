@@ -1833,26 +1833,36 @@ async function arrowsCard(test) {
   const len = (v) => Math.max(-1, Math.min(1, v / S2)) * L;
   const cx = 120, cy = 70;
   const noise = Math.abs(up) < su && Math.abs(east) < se;
+  // the arrows draw the motion accumulated by the selected date (the same numbers as the line under them), scaled so
+  // the whole window fills the longest arrow; at the window's start they are zero, and Play grows them
+  const win0 = info.window || [S.date, S.date];
+  const full = Math.max(1e-6, (Date.parse(win0[1]) - Date.parse(win0[0])) / 3.15576e10);
+  const yrs = S.date ? elapsedYears() : full;
+  const dUp = up * yrs, dEast = east * yrs;
+  const k = 30 / Math.max(1e-6, Math.max(Math.abs(up), Math.abs(east)) * full);
   const words = noise ? 'At this precision the motion cannot be told apart from zero, in either direction.'
     : `The estimate reads ${Math.abs(up) >= su ? `${up < 0 ? 'sinking' : 'rising'} of about ${Math.abs(up).toFixed(0)} mm a year` : 'no up-down motion beyond the noise'}${Math.abs(east) >= se ? ` and a ${east > 0 ? 'eastward' : 'westward'} shift of about ${Math.abs(east).toFixed(0)} mm a year` : ' and no east-west motion beyond the noise'}. Treat it as unconfirmed: it combines both NISAR tracks, and the descending one failed its sign check.`;
   return `<div class="block dm-card"><h3>Which way the ground moves</h3>
     <svg class="chart arrows" viewBox="0 0 400 140" role="img" aria-label="Up-down and east-west motion">
       <line x1="40" x2="200" y1="${cy}" y2="${cy}" stroke="#D6D3D1"/><line x1="${cx}" x2="${cx}" y1="14" y2="126" stroke="#D6D3D1"/>
       <text x="44" y="${cy - 6}">west</text><text x="196" y="${cy - 6}" text-anchor="end">east</text><text x="${cx + 5}" y="22">up</text><text x="${cx + 5}" y="124">down</text>
-      ${arrowPoly(cx, cy, east, 0, '#57534E')}
-      ${arrowPoly(cx, cy, 0, up, up > 0 ? '#2166AC' : '#B2182B')}
+      ${arrowPoly(cx, cy, dEast * k, 0, '#57534E', true)}
+      ${arrowPoly(cx, cy, 0, dUp * k, dUp > 0 ? '#2166AC' : '#B2182B', true)}
       <circle cx="${cx}" cy="${cy}" r="3" fill="#1C1917"/>
-      <text x="230" y="44" class="v">Up-down: ${sgn(up)} mm/yr</text><text x="230" y="62">± ${su.toFixed(0)} mm/yr</text>
-      <text x="230" y="92" class="v">East-west: ${sgn(east)} mm/yr</text><text x="230" y="110">± ${se.toFixed(0)} mm/yr</text>
+      <text x="230" y="44" class="v">Up-down: ${sgn(dUp)} mm</text><text x="230" y="62">${sgn(up)} ± ${su.toFixed(0)} mm/yr</text>
+      <text x="230" y="92" class="v">East-west: ${sgn(dEast)} mm</text><text x="230" y="110">${sgn(east)} ± ${se.toFixed(0)} mm/yr</text>
     </svg>
-    ${S.date ? `<p class="dm-big">By ${esc(human(S.date))}: <b>${sgn(up * elapsedYears())} mm</b> up-down, <b>${sgn(east * elapsedYears())} mm</b> east-west</p>` : ''}
+    <p class="dm-big">${S.date ? `By ${esc(human(S.date))}` : `Over ${esc(human(win0[0]))} to ${esc(human(win0[1]))}`}: <b>${sgn(dUp)} mm</b> up-down, <b>${sgn(dEast)} mm</b> east-west</p>
+    <p class="sub small">The arrows grow with the motion built up by that date: press Play to watch them.</p>
 </div>`;
 }
 // a pointy arrow from (x, y): east > 0 points right, up > 0 points up (screen y runs down). Length 18 px at the
 // smallest, 52 px at 30 mm/yr or more, so a small rate still shows its direction; a dark outline keeps it readable.
-function arrowPoly(x, y, east, up, color) {
+function arrowPoly(x, y, east, up, color, proportional = false) {
   const v = Math.hypot(east, up); if (v < 0.5) return '';
-  const ux = east / v, uy = -up / v, L = 18 + Math.min(1, v / 30) * 34, hl = 13, hw = 7.5, sw = 2.2;
+  // proportional: length strictly follows the value (52 px at 30), drawn once it is long enough for a head
+  const L = proportional ? Math.min(1, v / 30) * 52 : 18 + Math.min(1, v / 30) * 34; if (L < 15) return '';
+  const ux = east / v, uy = -up / v, hl = 13, hw = 7.5, sw = 2.2;
   const tx = x + ux * L, ty = y + uy * L, bx = tx - ux * hl, by = ty - uy * hl, px = -uy, py = ux;
   const pts = [[x + px * sw, y + py * sw], [bx + px * sw, by + py * sw], [bx + px * hw, by + py * hw], [tx, ty], [bx - px * hw, by - py * hw], [bx - px * sw, by - py * sw], [x - px * sw, y - py * sw]];
   return `<polygon points="${pts.map(([a, b]) => `${a.toFixed(1)},${b.toFixed(1)}`).join(' ')}" fill="${color}" stroke="#1C1917" stroke-width="1.6" stroke-linejoin="miter"/>`;
@@ -2361,8 +2371,9 @@ async function main() {
     if (li) { li.classList.add('here'); li.scrollIntoView({ block: 'center' }); } else $('#checks-h').scrollIntoView();
   });
 
-  $('#reset-site').addEventListener('click', () => {
-    select(null); const v = S.man.view; mapA?.flyTo({ center: [v.center[1], v.center[0]], zoom: v.zoom - ZOOM_OFFSET });
+  $('#reset-site').addEventListener('click', () => {   // like a fresh visit: the default site, view, satellite and date
+    stopPlay?.();
+    location.replace(location.pathname + location.search.replace(/([?&])site=[^&]*&?/, '$1').replace(/[?&]$/, ''));
   });
   $('#copy-link').addEventListener('click', async () => {
     writeHash();
