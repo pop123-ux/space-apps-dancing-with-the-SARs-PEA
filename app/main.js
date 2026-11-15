@@ -1829,16 +1829,25 @@ async function arrowsCard(test) {
     : `The estimate reads ${Math.abs(up) >= su ? `${up < 0 ? 'sinking' : 'rising'} of about ${Math.abs(up).toFixed(0)} mm a year` : 'no up-down motion beyond the noise'}${Math.abs(east) >= se ? ` and a ${east > 0 ? 'eastward' : 'westward'} shift of about ${Math.abs(east).toFixed(0)} mm a year` : ' and no east-west motion beyond the noise'}. Treat it as unconfirmed: it combines both NISAR tracks, and the descending one failed its sign check.`;
   return `<div class="block dm-card"><h3>Which way the ground moves</h3>
     <svg class="chart arrows" viewBox="0 0 400 140" role="img" aria-label="Up-down and east-west motion">
-      <defs><marker id="dm-ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1C1917"/></marker></defs>
       <line x1="40" x2="200" y1="${cy}" y2="${cy}" stroke="#D6D3D1"/><line x1="${cx}" x2="${cx}" y1="14" y2="126" stroke="#D6D3D1"/>
       <text x="44" y="${cy - 6}">west</text><text x="196" y="${cy - 6}" text-anchor="end">east</text><text x="${cx + 5}" y="22">up</text><text x="${cx + 5}" y="124">down</text>
-      ${Math.abs(len(east)) > 2 ? `<line x1="${cx}" x2="${cx + len(east)}" y1="${cy}" y2="${cy}" stroke="#1C1917" stroke-width="2.5" marker-end="url(#dm-ah)"/>` : ''}
-      ${Math.abs(len(up)) > 2 ? `<line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy - len(up)}" stroke="#1C1917" stroke-width="2.5" marker-end="url(#dm-ah)"/>` : ''}
+      ${arrowPoly(cx, cy, east, 0, '#57534E')}
+      ${arrowPoly(cx, cy, 0, up, up > 0 ? '#2166AC' : '#B2182B')}
+      <circle cx="${cx}" cy="${cy}" r="3" fill="#1C1917"/>
       <text x="230" y="44" class="v">Up-down: ${sgn(up)} mm/yr</text><text x="230" y="62">± ${su.toFixed(0)} mm/yr</text>
       <text x="230" y="92" class="v">East-west: ${sgn(east)} mm/yr</text><text x="230" y="110">± ${se.toFixed(0)} mm/yr</text>
     </svg>
     ${S.date ? `<p class="dm-big">By ${esc(human(S.date))}: <b>${sgn(up * elapsedYears())} mm</b> up-down, <b>${sgn(east * elapsedYears())} mm</b> east-west</p>` : ''}
 </div>`;
+}
+// a pointy arrow from (x, y): east > 0 points right, up > 0 points up (screen y runs down). Length 18 px at the
+// smallest, 52 px at 30 mm/yr or more, so a small rate still shows its direction; a dark outline keeps it readable.
+function arrowPoly(x, y, east, up, color) {
+  const v = Math.hypot(east, up); if (v < 0.5) return '';
+  const ux = east / v, uy = -up / v, L = 18 + Math.min(1, v / 30) * 34, hl = 13, hw = 7.5, sw = 2.2;
+  const tx = x + ux * L, ty = y + uy * L, bx = tx - ux * hl, by = ty - uy * hl, px = -uy, py = ux;
+  const pts = [[x + px * sw, y + py * sw], [bx + px * sw, by + py * sw], [bx + px * hw, by + py * hw], [tx, ty], [bx - px * hw, by - py * hw], [bx - px * sw, by - py * sw], [x - px * sw, y - py * sw]];
+  return `<polygon points="${pts.map(([a, b]) => `${a.toFixed(1)},${b.toFixed(1)}`).join(' ')}" fill="${color}" stroke="#1C1917" stroke-width="1.6" stroke-linejoin="miter"/>`;
 }
 function elapsedYears() {   // the up/east rates are NISAR's, over its own window (June to October 2026): count only that time
   const w = sensors().nisar?.up_east?.window; if (!w || !S.date) return 0;
