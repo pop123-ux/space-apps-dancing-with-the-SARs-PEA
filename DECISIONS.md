@@ -258,5 +258,38 @@ A decision recorded here is not a question. Nobody blocks on one. If a line look
   - **Stricter "the satellites agree":** both show no clear movement, or both move clearly the same way. One still and one clearly moving now counts as disagreement.
 - 2026-11-15 (06, via Alexandru): The 'Which way the ground moves' arrows are now pointy, outlined shapes: at least 18 px long, so a small rate still shows its direction (a +2.3 mm/yr arrow used to vanish under its own head); 52 px at 30 mm/yr or more. Up is blue, down red, east-west dark grey (red means sinking on this page). Checked in the browser: −48.6 mm/yr east-west points west, +26.5 mm/yr up-down points up.
 - 2026-11-15 (06, via Alexandru): In 'What went into this answer' each source shows only its name, bar and share; its explanation sits behind an 'Extend' button, rewritten in plain words.
+- 2026-11-15 (03, 05 and 06, via Alexandru): The checks and the prediction.
+  - **The three "NISAR 094D against Sentinel-1 029A" failures** are now "Not compared": 094D failed its own sign check, so its rates can't judge agreement, and the three failures repeated that one fault. The sign failure itself (sign-094D) stays visible as the single "fail". `validate.py` keeps the list of failed tracks from the sign check (SIGN_FAILED). No threshold changed.
+  - **Running the current `validate.py` also turned the four held-out station checks from warn into info.** This comes from a rule already in the code, not from this change: a station check whose tolerance is wider than 20 mm/yr has no decisive answer ("?" on the pin). The committed products were older than that rule.
+  - **Result:** 5 pass, 6 warn, 1 fail, 12 info. The page now counts the badge from `checks.json` itself.
+  - **The remaining warnings cannot honestly be turned into passes with today's data:**
+    - NISAR's per-pixel scatter on stable ground is 38.9 mm/yr (target under 6);
+    - there are only 6 NISAR dates in the shared window;
+    - the fair partner of NISAR's morning pass (Sentinel-1 007D) has no usable town points over the long window.
+    More NISAR passes (one every 12 days) are the fix.
+- 2026-11-15 (03, via Alexandru): Chronos-2 rerun on the longest series (Sentinel-1 029A: 94 dates from May 2025), and every series now backtested on its last 60 days against a "no further change" guess.
+  - **029A:** mean errors 1.0 to 1.9 mm against 1.2 to 2.0 mm for no change.
+  - **007D (July to November):** 1.0 to 2.9 mm against 1.2 to 2.5 mm.
+  - **Verdict:** Chronos-2 is better on 3 of 7 series and about equal on 1; NISAR series (10 dates) are too short to test.
+  - **On the page:** the prediction card shows this test under its table. New 1 Jan 2029 medians on 029A: Zone 1 −28.3 mm, Zone 2 −8.6 mm, Zone 4 −22.2 mm.
+- 2026-11-15 (06, via Alexandru): Removed the "Up and east (experimental)" map option and its "No supported up/east export yet" note, the time from "Built" in Terms & Conditions (date only), and the "70 or more: high…" line in the confidence score. Satellite imagery is requested to zoom 17 only (Esri has imagery there everywhere; zoom 18 is patchy and 19 placeholder tiles), and deeper zooms enlarge zoom-17 tiles, so the map never shows "Map data not yet available".
+- 2026-11-15 (06, via Alexandru):
+  - **Sentinel-1 always opens on its full record** (May 2025 to November 2026) for both passes. Old links that carried "window=jul_oct" used to reopen the short window, which looked like data was missing. The morning pass still shows its notice that few town points stay usable through the winters.
+  - **Station markers no longer show "?".** The "?" meant the radar-versus-station test is not decisive (the radar's uncertainty at a station is wider than 20 mm/yr), which a viewer reads as "unknown". The marker now shows a ground-station icon and the station's own measured motion (HORE −1.4, VLC +0.0 mm/yr). Its tooltip says it is used to check the satellites. The checks list still holds the full result.
+  - **"In plain words"** shows the measured period and the forecast date in its title.
+  - **Map clicks:** a plain click on the map now opens a small note for the nearest single dot (its value on the date shown). The 1 km square needs the new dashed-square button under the house picker. The Arrows button still opens a square at the map centre.
+  - **No restart dates on the timeline.** The first date after a gap restarts the count at zero, so its map is blank by construction (NISAR 23 Jun 2026). It is kept in the data but removed from the timeline and from Play, and a link to it moves on to the next date.
+- 2026-11-15 (03 and 06, via Alexandru): **The prediction now covers the whole town, not only the four salt zones.** `sentinel1/scripts/forecast_area.py` groups every measured point inside Ocnele Mari's administrative boundary (OpenStreetMap) into 240 m cells and forecasts each cell's median series with Chronos-2, zero-shot, to 1 Jan 2029 (`products/ocnele_mari/forecast_area.json`).
+  - **Cells per pass:**
+    - Sentinel-1 evening pass (029A), May 2025 to November 2026: 65 cells, 375 points;
+    - Sentinel-1 morning pass (007D), July to November 2026: 161 cells, 1,004 points (its long window keeps only 8 town points through the winters);
+    - NISAR morning pass: 443 cells; NISAR evening pass: 375 cells (both from June 2026).
+  - **Backtest on each cell's last 60 days** (median error over cells):
+    - 029A: 2.2 mm, against 2.5 mm for "no change"; Chronos-2 better in 49 % of cells;
+    - 007D: 2.1 mm, against 3.1 mm; better in 78 %;
+    - NISAR: too few dates to test.
+  - **On the page:** the prediction card combines, date by date, the cells inside whatever is selected (square, zone or house), or the 3 nearest within 500 m when none is inside. It shows how many cells and points it used. The zone buttons are removed, and "In plain words" uses the same forecast. When an area has no long-window points (the morning pass), the trend chart uses the cells' measured series.
+  - **Points outside the boundary** have no forecast, and the card says so.
+  - `forecast_zones.json` stays for reference but is no longer shown.
 15:00 | 04 (Claude Code), for 06 to review | The pin gives no yes or no. It reports a spot only when it differs from the ground 300 m around by more than a measured noise floor (noise_floor.json, else 2 × calib.json tie scatter); flagged tracks give no reading; one slope with one starting level per acquisition group; no extrapolation to 2029 | keep ✔/✘ with stricter thresholds; remove the pin | The assessment (15 Nov) found the verdicts follow the noise and the fit read the January to June reset as motion; on 129A the floor is 83 mm/yr, so an honest yes or no is never possible from these data
 15:00 | 04 (Claude Code), for 06 to review | Show the map legend whenever the side menu is closed (was hidden always) | leave it hidden | The colour key was invisible on the main map (assessment, style.css:508)

@@ -86,7 +86,7 @@ const BASEMAPS = {
   satellite: {   // aerial imagery, sharp down to single houses (the earlier Sentinel-2 mosaic is 10 m per pixel and blurs past zoom 15)
     label: 'Satellite',
     tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
-    maxzoom: 19,
+    maxzoom: 17,   // Esri has imagery here to zoom 17 everywhere; 18 is patchy and 19 is placeholder tiles, so deeper zooms enlarge 17
     attribution: 'Imagery <a href="https://www.esri.com/en-us/legal/terms/full-master-agreement" target="_blank" rel="noopener">Esri</a>, Maxar, Earthstar Geographics, and the GIS User Community',
   },
 };
@@ -123,7 +123,7 @@ const sensorKeys = () => Object.keys(SATS).filter(k => sensors()[k]);
 const win = () => S.sens?.windows?.[S.window] || null;
 // the window with the most dates for this track among those that keep at least 5 % of the town (January to November for 029A)
 function longestWindow(trk) {
-  const ws = Object.entries(S.sens?.windows || {}).filter(([, w]) => (w.town_cover?.[trk] ?? 0) >= 5);
+  const ws = Object.entries(S.sens?.windows || {}).filter(([, w]) => w.frames?.[trk]);
   ws.sort((a, b) => (b[1].frames?.[trk]?.dates?.length || 0) - (a[1].frames?.[trk]?.dates?.length || 0));
   return ws[0]?.[0] || S.sens?.default_window || null;
 }
@@ -140,6 +140,9 @@ const pointFile = (sat) => (sat === 's1' && win()?.points) ? win().points[S.trac
 const covOf = (sat) => S.cov?.[sat] || {};
 const tracksOf = (sat) => { const f = Object.keys(frames(sat)); return f.length ? f : Object.keys(covOf(sat)); };
 const datesOf = (sat, t) => frames(sat)[t]?.dates || covOf(sat)[t]?.dates || [];
+// the first date after a gap restarts the count at zero (its map is blank by construction): kept in the data, not on the timeline
+const restartsOf = (sat, t) => { const f = frames(sat)[t]; return new Set(f?.groups ? f.dates.filter((d, i) => i > 0 && f.groups[i] !== f.groups[i - 1]) : []); };
+const stepDates = (sat, t) => { const r = restartsOf(sat, t); return datesOf(sat, t).filter(d => !r.has(d)); };
 const gapsOf = (sat, t) => frames(sat)[t]?.gaps || covOf(sat)[t]?.gaps || [];
 const dirOf = (sat, t) => frames(sat)[t]?.direction || covOf(sat)[t]?.direction || '';
 const pendingText = (sat) => sensors()[sat]?.pending || `${SATS[sat].name} measurements are not exported yet`;
@@ -171,9 +174,9 @@ function entry(point, sat, trk, scenario = S.scenario) {
 }
 
 function sliderDates() {
-  if (S.sat !== 'compare') return measured(S.sat) ? datesOf(S.sat, S.track[S.sat]) : [];
+  if (S.sat !== 'compare') return measured(S.sat) ? stepDates(S.sat, S.track[S.sat]) : [];
   const w = S.man.common_window; const all = new Set();
-  for (const s of ['nisar', 's1']) datesOf(s, S.track[s]).filter(d => !w || inWindow(d, w)).forEach(d => all.add(d));
+  for (const s of ['nisar', 's1']) stepDates(s, S.track[s]).filter(d => !w || inWindow(d, w)).forEach(d => all.add(d));
   return [...all].sort();
 }
 
@@ -195,13 +198,13 @@ function writeHash() {
 }
 function applyHash(h) {
   const keys = sensorKeys();
-  if (h.window && S.sens?.windows?.[h.window]) { S.window = h.window; S.windowPicked = true; }
+  // a window in an old link is ignored: the page always opens on the full Sentinel-1 record (May 2025 on)
   if (h.scenario && scenarios()?.[h.scenario]) S.scenario = h.scenario;
   if (h.sat && (keys.includes(h.sat) || (h.sat === 'compare' && compareReady()))) S.sat = h.sat;
   if (h.track) for (const t of h.track.split(',')) for (const s of keys) if (tracksOf(s).includes(t)) S.track[s] = t;
   if (h.view && (S.man.views || []).includes(h.view)) S.view = h.view;
   if (h.date && /^\d{4}-\d{2}-\d{2}$/.test(h.date)) { S.date = h.date; S.dateUser = true; }
-  if (h.exp) S.exp = h.exp === '1';
+
   if (h.zone && zones().some(z => z.id === h.zone)) S.selected = { kind: 'zone', id: h.zone };
   if (h.preset === 'zone4') applyPreset(false);
   if (!viewAllowed(S.view)) S.view = 'coverage';
@@ -238,7 +241,8 @@ async function load() {
   S.updates = await opt('updates.json');
   S.calib = await opt('calib.json');         // calibrate.py (04): the tie per track, with its residual scatter
   S.noise = await opt('noise_floor.json');   // noise_floor.py (04): measured noise of a pin and a zone, per track
-  S.fz = await opt('forecast_zones.json');   // forecast_zones.py: Chronos-2 for every zone and track   // update.py --check: acquisitions newer than the fits
+  S.fz = await opt('forecast_zones.json');
+  S.fa = await opt('forecast_area.json');   // forecast_area.py: Chronos-2 for every 240 m cell of the town   // forecast_zones.py: Chronos-2 for every zone and track   // update.py --check: acquisitions newer than the fits
   S.window = sens ? (sens.default_window || Object.keys(sens.windows || {})[0]) : null;
   if (sens) S.window = longestWindow(tracksOf('s1')[0]);
   const d = man.default || {};
@@ -412,8 +416,10 @@ function addMarkers(m) {
     const cls = p.agree === true ? 'yes' : p.agree === false ? 'no' : 'na';
     const el = document.createElement('button');
     el.type = 'button'; el.className = `marker station ${cls}`; el.dataset.id = p.station;
-    el.setAttribute('aria-label', `Station ${p.station}: ${cls === 'yes' ? 'agrees' : cls === 'no' ? 'disagrees' : 'not tested'}`);
-    el.innerHTML = `<i aria-hidden="true">${p.status === 'warn' ? '!' : cls === 'yes' ? '✔' : cls === 'no' ? '✘' : '?'}</i>${esc(names || p.station)}`;
+    el.setAttribute('aria-label', `Ground station ${p.station}: ground moving ${sgn(p.gnss_up)} mm a year`);
+    const mark = cls === 'yes' ? '✔' : cls === 'no' ? '✘' : '<svg viewBox="0 0 16 16"><path d="M8 2v9M4 6a5 5 0 0 1 8 0M2 4a8 8 0 0 1 12 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M5 14h6L8 10z" fill="currentColor"/></svg>';
+    el.innerHTML = `<i aria-hidden="true">${mark}</i>${esc(names || p.station)}<small>${sgn(p.gnss_up)} mm/yr</small>`;
+    el.title = `GNSS ground station: the ground here moves ${sgn(p.gnss_up)} mm a year (up-down). Used to check the satellites.`;
     el.addEventListener('click', (e) => { e.stopPropagation(); select({ kind: 'station', id: p.station }); });
     new maplibregl.Marker({ element: el }).setLngLat(f.geometry.coordinates).addTo(m);
   }
@@ -515,6 +521,8 @@ function passLine(s) {   // "about 05:20 (morning, from the east) and 19:30 (eve
   return tracksOf(s).map(t => { const p = passInfo(s, t); const n = nextPass(s, t); return p && n ? `${roTime(n, { hour: '2-digit', minute: '2-digit' })} ${p.when}, from the ${p.from}` : ''; }).filter(Boolean).join(' · ')
     + ` · every ${Math.min(...tracksOf(s).map(t => repeatDays(s, t)))} days`;
 }
+// counted from checks.json itself, so the badge always matches the checks list (manifest counts can be older)
+const checkCounts = () => (S.checks || []).reduce((n, c) => (n[c.status] = (n[c.status] || 0) + 1, n), {});
 function renderSat() {
   const sn = sensors();
   const cur = S.sat === 'compare'
@@ -573,7 +581,7 @@ function renderChecksButton() {
   }
   delete $('#checks-btn').dataset.target;
   $('#checks-btn').setAttribute('aria-label', 'All checks');
-  const n = S.man.checks || {};
+  const n = checkCounts();
   $('#checks-btn').innerHTML = `<span class="c-pass">✔ ${n.pass ?? 0}</span><span class="c-warn">! ${n.warn ?? 0}</span><span class="c-fail">✘ ${n.fail ?? 0}</span>${n.info ? `<span class="c-info">· ${n.info}</span>` : ''}`;
   $('#checks-btn').setAttribute('aria-label', `Checks: ${n.pass ?? 0} pass, ${n.warn ?? 0} warn, ${n.fail ?? 0} fail, ${n.info ?? 0} info. Open the list.`);
 }
@@ -581,11 +589,7 @@ function renderLayersMenu() {
   pressGroup($('#base-group'), Object.entries(BASEMAPS).map(([k, b]) => ({ key: k, html: b.label })), k => k === S.basemap, setBasemap);
   $('#opacity').value = Math.round(S.opacity * 100);
   $('#opacity-val').textContent = `${Math.round(S.opacity * 100)}%`;
-  const up = hasUpLayer();
-  $('#exp').disabled = !up;
-  $('#exp').checked = S.exp && up;
-  $('#exp').closest('label').title = up ? '' : 'No supported up/east export yet (open team decision: how to compare the two radars)';
-  $('#exp-why').hidden = up;
+  S.exp = false;   // the up/east map option is removed from the layers menu
 }
 
 // ------------------------------------------------------------------------------------------------ dock: views, tracks, timeline
@@ -695,7 +699,7 @@ function monthLabels(R) {
   return out.join('');
 }
 function dotsFor(s, t, R, lane, shown, hollow = false, dates = null) {
-  return (dates || datesOf(s, t)).map(d => `<span class="dot ${SATS[s].shape === 'tri' ? 'tri' : ''} ${lane}${hollow ? ' hollow' : ''}${d === shown ? ' on' : ''}" style="left:${R.x(d)}%;--c:${SATS[s].color}" title="${esc(sensors()[s].label)} ${d}"></span>`).join('');
+  return (dates || stepDates(s, t)).map(d => `<span class="dot ${SATS[s].shape === 'tri' ? 'tri' : ''} ${lane}${hollow ? ' hollow' : ''}${d === shown ? ' on' : ''}" style="left:${R.x(d)}%;--c:${SATS[s].color}" title="${esc(sensors()[s].label)} ${d}"></span>`).join('');
 }
 // Sentinel-1's window that covers NISAR's acquisition gap (sensitivity.json windows.<k>.fills_gap), if exported.
 const gapFill = () => Object.entries(S.sens?.windows || {}).find(([, w]) => w.fills_gap?.sensor === 'nisar') || null;
@@ -1467,8 +1471,26 @@ function pinCursor() {
   if (!el) { el = document.createElement('div'); el.id = 'pin-cursor'; el.innerHTML = `<div class="pc-in"><svg viewBox="0 0 40 48" aria-hidden="true"><path d="M20 46 C20 46 4 28 4 18 A16 16 0 0 1 36 18 C36 28 20 46 20 46 Z" fill="#DC2626" stroke="#1C1917" stroke-width="2.4"/><circle cx="20" cy="18" r="10.5" fill="#FFF" stroke="#1C1917" stroke-width="1.6"/><path d="M13.5 19 L20 13 L26.5 19" fill="#7C2D12" stroke="#1C1917" stroke-width="1.2" stroke-linejoin="round"/><rect x="15" y="18.5" width="10" height="7" fill="#C2410C" stroke="#1C1917" stroke-width="1.1"/><rect x="18.6" y="21" width="2.8" height="4.5" fill="#7C2D12"/></svg></div>`; el.hidden = true; document.body.append(el); }
   return el;
 }
+function setAreaMode(on) {
+  S.areaMode = on; if (on) { if (S.pinMode) setPinMode(false); if (S.houseMode) setHouseMode(false); }
+  $('#area-btn')?.setAttribute('aria-pressed', String(on));
+  if (mapA) mapA.getCanvas().style.cursor = on ? 'crosshair' : '';
+}
+let dotPop = null;
+function dotPopup(e) {   // one measured dot: its value on the shown date, nothing more
+  dotPop?.remove(); dotPop = null;
+  const f = mapA.queryRenderedFeatures([[e.point.x - 8, e.point.y - 8], [e.point.x + 8, e.point.y + 8]], { layers: ['pts'] })
+    .sort((a, b) => { const pa = mapA.project(a.geometry.coordinates), pb = mapA.project(b.geometry.coordinates); return Math.hypot(pa.x - e.point.x, pa.y - e.point.y) - Math.hypot(pb.x - e.point.x, pb.y - e.point.y); })[0];
+  if (!f) return;
+  const sat = S.sat === 'compare' ? 'nisar' : S.sat; const L = layerFor(sat); const k = mapA._ptsWant?.key;
+  const v = k ? f.properties[k] : null, r = f.properties.r;
+  const txt = S.view === 'rate' || k === 'r' ? `${sgn(r)} mm a year` : v != null ? `${sgn(v)} mm since ${human(L.first)}` : 'no value on this date';
+  const word = (x) => x == null ? '' : Math.abs(x) < 2 ? 'about still' : x < 0 ? 'moved away from the satellite (often: sank)' : 'moved toward the satellite';
+  dotPop = new maplibregl.Popup({ closeButton: false, offset: 10, className: 'dot-pop' }).setLngLat(f.geometry.coordinates)
+    .setHTML(`<b>${esc(txt)}</b><span>${esc(word(S.view === 'rate' ? r : v))}${L?.date && S.view !== 'rate' ? ` · ${esc(human(L.date))}` : ''}</span>`).addTo(mapA);
+}
 function setHouseMode(on) {
-  S.houseMode = on; if (on && S.pinMode) setPinMode(false);
+  S.houseMode = on; if (on && S.pinMode) setPinMode(false); if (on && S.areaMode) setAreaMode(false);
   $('#house-btn')?.setAttribute('aria-pressed', String(on));
   if (mapA) mapA.getCanvas().style.cursor = on ? 'pointer' : '';
   if (on) {
@@ -1722,11 +1744,10 @@ function plainWords(d, d2) {
     const a = clip(P), b = clip(d2.pts);
     if (a != null && b != null) out.push(`Over the months both satellites watched, NISAR saw ${sgn(a, 0)} mm and Sentinel-1 ${sgn(b, 0)} mm: ${Math.sign(a) === Math.sign(b) ? 'they agree on the direction' : 'they disagree, so treat this place with caution'}.`);
   }
-  const zf = S.fz?.zones?.[S.fcZone]; const sat = d.sat; const k = zf && (zf[`${sat}:${S.track[sat]}`] ? `${sat}:${S.track[sat]}` : Object.keys(zf)[0]);
-  if (zf && k) {
-    const f = zf[k], further = f.median.at(-1) - f.observed_mm.at(-1);
-    const z = zones().find(p => p.id === S.fcZone);
-    out.push(`For ${zoneName(z)}${S.menu?.kind === 'area' ? ', the nearest salt field' : ''}, ${sensors()[k.split(':')[0]]?.label || ''}'s forecast expects ${Math.abs(further) < 2 ? 'little further change' : `about ${Math.abs(further).toFixed(0)} mm more ${further < 0 ? 'sinking' : 'rising'}`} by ${human(S.fz.end)}. It is a guide, not a promise.`);
+  const af = areaFc(d.sat, d.test);
+  if (af) {
+    const further = af.med.at(-1)[1] - af.obs.at(-1)[1];
+    out.push(`From every measured point in this area, ${sensors()[d.sat]?.label || ''}'s forecast expects ${Math.abs(further) < 2 ? 'little further change' : `about ${Math.abs(further).toFixed(0)} mm more ${further < 0 ? 'sinking' : 'rising'}`} by ${human(S.fa.end)}. It is a guide, not a promise.`);
   }
   out.push(clear && Math.abs(rate) >= 15 && net < 0 ? 'Worth a closer look before building: drop the pin on a spot for a yes-or-no check.'
     : 'Nothing here stands out from normal ground movement. For one exact spot, drop the pin.');
@@ -1737,7 +1758,8 @@ function plainCard(d, d2) {
   const text = s.join(' '); const fresh = S.plainLast !== text; S.plainLast = text;
   let i = 0;   // each word fades in after the one before ("typed out"), only when the text is new
   const words = s.map(p => `<p>${p.split(' ').map(w => `<span class="tk" style="--i:${i++}">${esc(w)} </span>`).join('')}</p>`).join('');
-  return `<div class="block dm-card plain${fresh ? ' typing' : ''}"><h3><span class="spark" aria-hidden="true">✦</span> In plain words</h3><div class="pw">${words}</div></div>`;
+  const P = d.pts; const span = P?.length ? `${human(P[0][0])} – ${human(P.at(-1)[0])}${S.fa ? ` · forecast to ${human(S.fa.end)}` : ''}` : '';
+  return `<div class="block dm-card plain${fresh ? ' typing' : ''}"><h3><span class="spark" aria-hidden="true">✦</span> In plain words <span class="badge pw-dates">${esc(span)}</span></h3><div class="pw">${words}</div></div>`;
 }
 function compareTrend(a, b) {   // the honest-comparison rules: same months, each re-zeroed at the first shared date
   const lo = a.pts[0][0] > b.pts[0][0] ? a.pts[0][0] : b.pts[0][0], hi = a.pts.at(-1)[0] < b.pts.at(-1)[0] ? a.pts.at(-1)[0] : b.pts.at(-1)[0];
@@ -1756,31 +1778,49 @@ function fcAt(f, d) {   // the Chronos-2 median on the forecast date nearest d
   let best = 0; f.dates.forEach((x, i) => { if (Math.abs(day(x) - day(d)) < Math.abs(day(f.dates[best]) - day(d))) best = i; });
   return f.median[best];
 }
-function forecastCard(sel) {
-  const fz = S.fz?.zones; if (!fz) return '';
-  if (!S.fcZone || !fz[S.fcZone]) S.fcZone = sel.kind === 'zone' && fz[sel.id] ? sel.id : (fz.z4 ? 'z4' : Object.keys(fz)[0]);
-  const zf = fz[S.fcZone]; const z = zones().find(p => p.id === S.fcZone);
-  const pickKey = (sat) => zf[`${sat}:${S.track[sat]}`] ? `${sat}:${S.track[sat]}` : Object.keys(zf).find(k => k.startsWith(sat + ':'));
-  const keys = S.sat === 'compare' ? ['nisar', 's1'].map(pickKey).filter(Boolean) : [pickKey(S.sat) || Object.keys(zf)[0]];
-  const buttons = zones().map(p => `<button type="button" data-fcz="${esc(p.id)}" aria-pressed="${p.id === S.fcZone}"${fz[p.id] ? '' : ' disabled title="No series on any track"'}>${esc(zoneShort(p))}</button>`).join('');
-  const lines = [], marks = [], rows = [];
-  let from = null, divider = null;
-  for (const k of keys) {
-    const f = zf[k]; const [s_, trk] = k.split(':'); const col = SATS[s_]?.color || '#1C1917';
-    const obs = f.observed_dates.map((d, i) => [d, f.observed_mm[i]]); const last = obs.at(-1);
-    const med = [[last[0], last[1]], ...f.dates.map((d, i) => [d, f.median[i]])];
-    lines.push({ pts: obs, color: col, dots: true, grow: true }, { pts: med, color: col, dash: true });
-    if (!from || obs[0][0] < from) from = obs[0][0];
-    if (!divider || last[0] > divider) divider = last[0];
-    const vals = YEARS.map(y => fcAt(f, y));
-    YEARS.forEach((y, i) => marks.push({ d: y, v: vals[i], color: col, label: `${sgn(vals[i])}` }));
-    const rate = (f.median.at(-1) - last[1]) / ((day(f.dates.at(-1)) - day(last[0])) / 365.25);
-    rows.push(`<tr><th><span style="color:${col}">●</span> ${esc(sensors()[s_]?.label || s_)} ${esc(trk)}</th>${vals.map(v => `<td>${sgn(v)} mm</td>`).join('')}<td>${sgn(rate)} mm/yr</td></tr>`);
+// The cells of forecast_area.json inside the selection (or, for a small selection, the three nearest within 500 m),
+// combined date by date with the median: the measured line and the Chronos-2 line come from the same cells.
+function areaFc(sat, test) {
+  const tk = S.fa?.tracks?.[`${sat}:${S.track[sat]}`]; if (!tk || !test) return null;
+  let cells = tk.cells.filter(c => test([c.lon, c.lat]));
+  if (!cells.length) {
+    const at = S.menu?.at || (() => { const z = zones().find(q => q.id === S.menu?.id); return z ? [z.lon, z.lat] : null; })();
+    if (!at) return null;
+    cells = tk.cells.map(c => [metres([c.lon, c.lat], at), c]).filter(([d]) => d <= 500).sort((x, y) => x[0] - y[0]).slice(0, 3).map(x => x[1]);
+    if (!cells.length) return null;
   }
-  return `<div class="block dm-card"><h3>The prediction <span class="seg dm-zones" role="group" aria-label="Zone">${buttons}</span></h3>
-    <div class="sub small">${esc(zoneName(z))} · forecast, mm</div>
-    ${miniChart([], { from, to: S.fz.end, extra: lines, marks, divider, height: 150, upto: S.playing ? S.date : null })}
-    <table class="fc-table"><tr><th></th>${YEARS.map(y => `<th>${esc(human(y))}</th>`).join('')}<th>trend after today</th></tr>${rows.join('')}</table></div>`;
+  const byDate = (key, val) => { const m = new Map(); for (const c of cells) c[key].forEach((d, i) => { (m.get(d) || m.set(d, []).get(d)).push(c[val][i]); }); return [...m.entries()].sort().map(([d, v]) => [d, median(v)]); };
+  const obs = byDate('obs_dates', 'obs').filter(([, v]) => v != null);
+  const med = byDate('dates', 'median');
+  if (obs.length < 2 || !med.length) return null;
+  return { obs, med: [obs.at(-1), ...med.filter(([d]) => d > obs.at(-1)[0])], cells: cells.length, points: cells.reduce((s, c) => s + c.n, 0), backtest: tk.backtest, window: tk.window, sat };
+}
+const fcValue = (f, d) => { let best = f.med[0]; for (const x of f.med) if (Math.abs(day(x[0]) - day(d)) < Math.abs(day(best[0]) - day(d))) best = x; return best[1]; };
+function forecastCard(d) {
+  if (!S.fa) return '';
+  const sats = S.sat === 'compare' ? ['nisar', 's1'] : [d.sat];
+  const fcs = sats.map(s => areaFc(s, d.test)).filter(Boolean);
+  if (!fcs.length) return `<div class="block dm-card"><h3>The prediction</h3><p class="reason">No measured ground in this area to forecast from (forest or steep slopes).</p></div>`;
+  const lines = [], marks = [], rows = [], tests = [];
+  let from = null, divider = null;
+  for (const f of fcs) {
+    const col = SATS[f.sat].color, lab = sensors()[f.sat]?.label || f.sat;
+    lines.push({ pts: f.obs, color: col, dots: true, grow: true }, { pts: f.med, color: col, dash: true });
+    if (!from || f.obs[0][0] < from) from = f.obs[0][0];
+    if (!divider || f.obs.at(-1)[0] > divider) divider = f.obs.at(-1)[0];
+    const vals = YEARS.map(y => fcValue(f, y));
+    YEARS.forEach((y, i) => marks.push({ d: y, v: vals[i], color: col, label: `${sgn(vals[i])}` }));
+    const last = f.obs.at(-1), end = f.med.at(-1);
+    const rate = (end[1] - last[1]) / Math.max((day(end[0]) - day(last[0])) / 365.25, 0.1);
+    const b = f.backtest;
+    tests.push(b ? `${esc(lab)}: tested on the last ${b.days} days of ${b.cells} cells, off by ${b.mae_chronos.toFixed(1)} mm (a "no change" guess: ${b.mae_no_change.toFixed(1)} mm).` : `${esc(lab)}: too few dates to test yet.`);
+    rows.push(`<tr><th><span style="color:${col}">●</span> ${esc(lab)} ${esc(S.track[f.sat])}</th>${vals.map(v => `<td>${sgn(v)} mm</td>`).join('')}<td>${sgn(rate)} mm/yr</td></tr>`);
+  }
+  const f0 = fcs[0];
+  return `<div class="block dm-card"><h3>The prediction <span class="badge">${f0.cells} cell${f0.cells > 1 ? 's' : ''} · ${f0.points} points</span></h3>
+    <div class="sub small">This area, from every measured point in it · forecast, mm</div>
+    ${miniChart([], { from, to: S.fa.end, extra: lines, marks, divider, height: 150, upto: S.playing ? S.date : null })}
+    <table class="fc-table"><tr><th></th>${YEARS.map(y => `<th>${esc(human(y))}</th>`).join('')}<th>trend after today</th></tr>${rows.join('')}</table><p class="sub small fc-test">${tests.join(' ')}</p></div>`;
 }
 async function arrowsCard(test) {
   const ue = await loadUpEast(); const info = sensors().nisar?.up_east;
@@ -1857,7 +1897,7 @@ const rampCss = (lo, hi) => `linear-gradient(90deg, ${rangeStops(lo, hi).map(([v
 // legend's colour for the value at the node; its length grows with the steepness, relative to the steepest in view.
 // A light pulse runs along each arrow, like a wind map. Nodes with fewer than 4 points nearby (forest) get no arrow.
 const field = (() => {
-  let canvas = null, arrows = [], raf = 0, busy = 0;
+  let canvas = null, arrows = [], raf = 0, busy = 0, lastSig = null, lastArea = null;
   const shownKey = (sat) => {
     const L = layerFor(sat); const f = frames(sat)?.[S.track[sat]];
     if (!L) return null;
@@ -1876,6 +1916,7 @@ const field = (() => {
     canvas = document.createElement('canvas'); canvas.className = 'field-canvas';
     const cc = mapA.getCanvasContainer(); cc.insertBefore(canvas, mapA.getCanvas().nextSibling);
     mapA.on('moveend', () => refresh()); mapA.on('resize', () => refresh());
+    mapA.on('move', () => { if (S.arrows && !raf) raf = requestAnimationFrame(draw); });
   }
   let area = null;
   const pointsIn = (b, lon, lat, rad, key, keep) => {   // points within rad metres of (lon, lat), as local metres and value
@@ -1902,6 +1943,8 @@ const field = (() => {
     ensureCanvas();
     const sat = S.sat === 'compare' ? 'nisar' : S.sat; const file = pointFile(sat); const key = shownKey(sat);
     if (!file || !key) { arrows = []; return; }
+    // the arrows don't depend on the view, so panning or zooming keeps them (and their motion)
+    const sig = `${file}|${key}`; if (arrows.length && lastSig === sig && lastArea === area) { if (!raf) raf = requestAnimationFrame(draw); return; }
     const job = ++busy; const b = await index(file); if (job !== busy) return;
     const st = stops(sat);
     // the selection's bounding box, in degrees and on screen
@@ -1924,50 +1967,94 @@ const field = (() => {
     }
     const ref = around.length ? median(around.map(p => p.val)) : 0;
     const noise = around.length >= 5 ? around.map(p => p.g).sort((a2, b2) => a2 - b2)[Math.floor(around.length * 0.8)] : null;
-    const out = [];
-    for (let i = 0; i < cells; i++) for (let j = 0; j < cells; j++) {
-      const lon = w + (i + 0.5) * cw, lat = s + (j + 0.5) * ch;
-      if (cells > 1 && !area.test([lon, lat])) continue;
-      const pl = plane(pointsIn(b, lon, lat, Math.max(120, cellM * 0.75), key, area.test)); if (!pl || !(pl.g > 0)) continue;
-      const head = [lon - pl.gx / pl.g * 10 / (111320 * Math.cos(lat * Math.PI / 180)), lat - pl.gy / pl.g * 10 / 110540];
-      const v = pl.val - ref;
-      out.push({ at: [lon, lat], head, g: pl.g, cell: [cw, ch], weak: noise != null && pl.g <= noise, col: colourAt(st, Math.max(st[0][0], Math.min(st.at(-1)[0], v))), ph: Math.random() });
+    // one arrow per measured dot, starting at the dot's centre. Like a vector-field
+    // animation, the field morphs through every radar date in a loop: at each date a plane is fitted to that date's
+    // change around the dot, and the arrow eases from one date's slope to the next.
+    const gj = await loadPoints(file); const spacing = gj.meta.spacing || 80; const nd = gj.meta.dates.length; const out = [];
+    let dots = gj.features.filter(f => f.properties[key] != null && area.test(f.geometry.coordinates));
+    const step = Math.max(1, Math.ceil(dots.length / 700)); dots = dots.filter((_, i) => i % step === 0);
+    const rad = Math.max(spacing * 2.2, 150), all = [];
+    for (const f of dots) {
+      const [lon, lat] = f.geometry.coordinates, kx = Math.floor(lon / 0.002), ky = Math.floor(lat / 0.0015), nb = [];
+      for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) for (const g2 of b.get(`${kx + i},${ky + j}`) || []) {
+        if (!area.test(g2.geometry.coordinates)) continue;
+        const dx = (g2.geometry.coordinates[0] - lon) * 111320 * Math.cos(lat * Math.PI / 180), dy = (g2.geometry.coordinates[1] - lat) * 110540;
+        if (dx * dx + dy * dy <= rad * rad) nb.push([dx, dy, g2.properties]);
+      }
+      const gx = new Float32Array(nd), gy = new Float32Array(nd); let any = false;
+      for (let k = 0; k < nd; k++) {
+        const pl = plane(nb.filter(x => x[2][`c${k}`] != null).map(x => [x[0], x[1], x[2][`c${k}`]]));
+        if (pl) { gx[k] = pl.gx; gy[k] = pl.gy; all.push(pl.g); any = true; } else if (k) { gx[k] = gx[k - 1]; gy[k] = gy[k - 1]; }
+      }
+      const sm = (arr) => { const o = new Float32Array(nd); for (let k = 0; k < nd; k++) { let t = 0, c = 0; for (let j = Math.max(0, k - 3); j <= Math.min(nd - 1, k + 3); j++) { const wj = 4 - Math.abs(j - k); t += arr[j] * wj; c += wj; } o[k] = t / c; } return o; };
+      if (any) out.push({ at: [lon, lat], v: f.properties[key], gx: sm(gx), gy: sm(gy), spacing, mPerDegX: 111320 * Math.cos(lat * Math.PI / 180) });
     }
-    const gmax = Math.max(...out.map(a2 => a2.g), 1e-9);
-    for (const a2 of out) a2.rel = 0.45 + 0.45 * Math.min(1, a2.g / gmax);
-    arrows = out; const strong = out.filter(a2 => !a2.weak).length;
+    all.sort((x, y) => x - y); const gref = all.length ? all[Math.floor(all.length * 0.95)] || 1e-9 : 1e-9;
+    for (const a2 of out) a2.gref = gref;
+    const kShown = key.startsWith('c') ? Math.min(nd - 1, Math.max(0, +key.slice(1))) : nd - 1;
+    S.vf = { dates: gj.meta.dates, k: kShown }; sp.last = null;
+    { const prev = new Map(arrows.map(a2 => [a2.at.join(), a2])); for (const a2 of out) { const o = prev.get(a2.at.join()); if (o) { a2.s = o.s; a2.ph = o.ph; a2.vis = o.vis; } } }
+    lastSig = sig; lastArea = area;
+    arrows = out; const strong = out.length;
     S.fieldInfo = { cells, shown: out.length, strong, noise, ref };
     const note = document.querySelector('.arrow-note');
-    if (note) note.innerHTML = `<div class="an-head"><b>Arrows</b><span class="an-count">${noise == null ? "can't tell" : `${strong} of ${out.length} clear`}</span></div>
-      <div class="an-row"><svg viewBox="0 0 30 10" aria-hidden="true"><path d="M2 5H24M18 1L25 5L18 9" fill="none" stroke="#B2182B" stroke-width="2.4" stroke-linecap="round"/></svg>points to where the ground sank more</div>
-      <div class="an-row"><svg viewBox="0 0 30 10" aria-hidden="true"><circle cx="15" cy="5" r="3.6" fill="none" stroke="#57534E" stroke-width="1.8"/></svg>${noise == null ? 'too few points around to judge, so all are drawn as arrows' : 'measured, but no clear direction (within normal wobble)'}</div>
-      <div class="an-row muted">Colour follows the legend, relative to the ground around the area.</div>`;
+    if (note) note.innerHTML = `<div class="an-head"><b>Arrows</b><span class="an-count vf-date"></span></div>
+      <div class="an-row"><svg viewBox="0 0 30 10" aria-hidden="true"><path d="M2 5H24M18 1L25 5L18 9" fill="none" stroke="#B2182B" stroke-width="2" stroke-linecap="round"/></svg>points to where the ground sank more</div>
+      <div class="an-row"><svg viewBox="0 0 30 10" aria-hidden="true"><path d="M2 5H12M8 2L13 5L8 8" fill="none" stroke="#B2182B" stroke-width="2" stroke-linecap="round"/></svg>short: a weak difference, likely within the terrain's normal wobble</div>
+      <div class="an-row muted">Arrows start at each dot and point to where the ground had sunk more by the date shown (move the timeline to change it). Colour follows the legend (the dot's own value); longer = steeper difference.</div>`;
     if (!raf) raf = requestAnimationFrame(draw);
   }
+  // the arrows hold still on the shown date. They float: when the map moves, their tips carry a
+  // little momentum in the same direction, swing a few pixels and bob back with a soft bounce; the base stays on the dot.
+  // One underdamped spring for the whole field; each arrow scaled 0.85 to 1.15 so the bounce looks natural, not busy.
+  const sp = { last: null, t: 0 }, sel = { z: null, arr: null };
   function draw(now) {
     raf = 0; if (!S.arrows || !canvas) return;
     const r = mapA.getContainer().getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
     if (canvas.width !== Math.round(r.width * dpr)) { canvas.width = Math.round(r.width * dpr); canvas.height = Math.round(r.height * dpr); }
     const ctx = canvas.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, r.width, r.height);
-    ctx.lineCap = 'round';
-    for (const a of arrows) {
-      const p = mapA.project(a.at), q = mapA.project(a.head); let ux = q.x - p.x, uy = q.y - p.y; const u = Math.hypot(ux, uy) || 1; ux /= u; uy /= u;
-      const cp = mapA.project([a.at[0] + a.cell[0], a.at[1] + a.cell[1]]); a.len = Math.max(18, Math.min(Math.abs(cp.x - p.x), Math.abs(cp.y - p.y)) * a.rel);
-      const sx = p.x - ux * a.len / 2, sy = p.y - uy * a.len / 2, ex = p.x + ux * a.len / 2, ey = p.y + uy * a.len / 2;
-      const hx = -uy, hy = ux, hl = Math.min(14, Math.max(7, a.len * 0.22));
-      const path = () => { ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.moveTo(ex - ux * hl + hx * hl * 0.55, ey - uy * hl + hy * hl * 0.55); ctx.lineTo(ex, ey); ctx.lineTo(ex - ux * hl - hx * hl * 0.55, ey - uy * hl - hy * hl * 0.55); };
-      if (a.weak) {   // measured, but no slope beyond the terrain's own wobble: a hollow circle, no direction
-        ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, 7); ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(12,10,9,.45)'; ctx.stroke();
-        ctx.lineWidth = 1.8; ctx.strokeStyle = '#FAFAF9'; ctx.stroke(); continue;
-      }
-      ctx.strokeStyle = 'rgba(12,10,9,.55)'; ctx.lineWidth = 4.5; path(); ctx.stroke();
-      const lw = Math.max(2.4, Math.min(6, a.len / 18));
-      ctx.lineWidth = lw + 2.5; ctx.strokeStyle = 'rgba(12,10,9,.55)'; path(); ctx.stroke();
-      ctx.strokeStyle = a.col; ctx.lineWidth = lw; path(); ctx.stroke();
-      const k = ((now / 1400) + a.ph) % 1, px = sx + (ex - sx) * k, py = sy + (ey - sy) * k;   // the travelling pulse
-      ctx.fillStyle = `rgba(255,255,255,${(0.85 * Math.sin(Math.PI * k)).toFixed(2)})`; ctx.beginPath(); ctx.arc(px, py, 2.2, 0, 7); ctx.fill();
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    const dotPx = arrows.length ? (() => { const a = arrows[0], p = mapA.project(a.at), q = mapA.project([a.at[0] + a.spacing / a.mPerDegX, a.at[1]]); return Math.abs(q.x - p.x); })() : 20;
+    const k0 = S.vf?.k ?? 0;
+    const lab = document.querySelector('.vf-date'); if (lab && S.vf) lab.textContent = human(S.vf.dates[k0]);
+    const dt = Math.min(3, sp.t ? (now - sp.t) / 16.7 : 1); sp.t = now;
+    const anc = arrows.length ? mapA.project(arrows[0].at) : null;
+    const ix = anc && sp.last ? (anc.x - sp.last.x) * 0.05 : 0, iy = anc && sp.last ? (anc.y - sp.last.y) * 0.05 : 0; sp.last = anc;
+    let active = false;
+    const stD = stops(S.sat === 'compare' ? 'nisar' : S.sat);   // the legend's gradient: each arrow takes its dot's colour
+    // which arrows show is fixed on the ground per zoom level (one per ~26 px cell at that zoom),
+    // so panning never swaps arrows; when the zoom level changes, arrows fade in or out instead of popping
+    const cellPx = 26, zl = Math.floor(mapA.getZoom());
+    if (arrows.length && (sel.z !== zl || sel.arr !== arrows)) {
+      const lat0 = arrows[0].at[1], mpp = 40075016 * Math.cos(lat0 * Math.PI / 180) / (512 * 2 ** zl), cellM = cellPx * mpp, taken = new Set();
+      for (const a of arrows) { const ck = `${Math.floor(a.at[0] * a.mPerDegX / cellM)},${Math.floor(a.at[1] * 110540 / cellM)}`; a.on = !taken.has(ck); taken.add(ck); }
+      sel.z = zl; sel.arr = arrows;
     }
-    raf = requestAnimationFrame(draw);
+    for (const a of arrows) {   // shaft from the dot's centre, filled head; length, colour and opacity by strength
+      const gx = a.gx[k0], gy = a.gy[k0], g = Math.hypot(gx, gy); if (!(g > 0)) continue;
+      const rel = Math.min(1, g / a.gref);
+      const p0 = mapA.project(a.at), ph = a.ph ?? (a.ph = Math.random()), p = p0;
+      // each tip has its own spring: slightly different stiffness, and a sideways (curl) pull that varies smoothly across
+      // the map, so after a drag the tips trace small loops that swirl in neighbouring directions, as in a vector field
+      const st = a.s || (a.s = { ox: 0, oy: 0, vx: 0, vy: 0 }), kk = 0.04 * (0.7 + 0.6 * ph), cu = 0.09 * Math.sin(p0.x / 110 + 1.3 * Math.cos(p0.y / 130));
+      st.vx += ix * (0.8 + 0.4 * ph); st.vy += iy * (0.8 + 0.4 * ph);
+      for (let i = 0; i < 2; i++) { const ax = -kk * st.ox - 0.1 * st.vx - cu * st.vy, ay = -kk * st.oy - 0.1 * st.vy + cu * st.vx; st.vx += ax * dt / 2; st.vy += ay * dt / 2; st.ox += st.vx * dt / 2; st.oy += st.vy * dt / 2; }
+      { const om = Math.hypot(st.ox, st.oy); if (om > 6) { st.ox *= 6 / om; st.oy *= 6 / om; } }
+      if (Math.hypot(st.ox, st.oy, st.vx, st.vy) > 0.02) active = true; else { st.ox = st.oy = st.vx = st.vy = 0; } a.vis = (a.vis ?? 0) + ((a.on ? 1 : 0) - (a.vis ?? 0)) * Math.min(1, 0.12 * dt); if (Math.abs((a.on ? 1 : 0) - a.vis) > 0.01) active = true; else a.vis = a.on ? 1 : 0; if (a.vis < 0.01) continue;
+      const q = mapA.project([a.at[0] - gx / g * 10 / a.mPerDegX, a.at[1] - gy / g * 10 / 110540]);
+      let ux = q.x - p0.x, uy = q.y - p0.y; const u = Math.hypot(ux, uy) || 1; ux /= u; uy /= u;
+      const len = Math.max(10, Math.max(dotPx, cellPx) * 1.2 * (0.2 + 0.8 * rel)); const ex = p.x + ux * len + st.ox, ey = p.y + uy * len + st.oy;   // the base stays on the dot; only the tip floats
+      { const d = Math.hypot(ex - p.x, ey - p.y) || 1; ux = (ex - p.x) / d; uy = (ey - p.y) / d; }
+      const hl = Math.max(5, Math.min(10, len * 0.32)), hw = hl * 0.55, bx = ex - ux * hl, by = ey - uy * hl;
+      const col = colourAt(stD, Math.max(stD[0][0], Math.min(stD.at(-1)[0], a.v))); ctx.globalAlpha = (0.6 + 0.4 * rel) * a.vis;
+      const shaft = () => { ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(bx, by); };
+      const tip = () => { ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(bx - uy * hw, by + ux * hw); ctx.lineTo(bx + uy * hw, by - ux * hw); ctx.closePath(); };
+      ctx.strokeStyle = 'rgba(12,10,9,.7)'; ctx.lineWidth = 4.6; shaft(); ctx.stroke(); ctx.lineWidth = 2.4; tip(); ctx.stroke();
+      ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = 2.4; shaft(); ctx.stroke(); tip(); ctx.fill();
+      ctx.beginPath(); ctx.arc(p.x, p.y, 2.2, 0, 7); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    if (active) raf = requestAnimationFrame(draw); else sp.t = 0;
   }
   return { refresh: () => refresh(), setArea: (x) => { area = x; refresh(); }, redraw: () => { if (S.arrows && !raf) raf = requestAnimationFrame(draw); } };
 })();
@@ -1998,6 +2085,7 @@ async function renderMenu() {
   field.setArea(d.test && d.shape ? { test: d.test, shape: d.shape } : null);
   let html = `<div class="dm-head"><h2>${S.menu.house ? 'What the radar shows at this house' : S.menu.kind === 'pin' ? 'What the radar shows here' : 'How the ground moved here'}</h2><div class="kicker">${esc(d.label)}${d.n ? ` · ${d.n} points` : ''}</div></div>`;
   const d2 = S.sat === 'compare' && S.menu.kind !== 'pin' ? await menuData('s1') : null;
+  if (S.menu.kind !== 'pin' && d.pts.length < 3) { const af = areaFc(d.sat, d.test); if (af) d.pts = af.obs; }   // e.g. the morning pass: its long window keeps almost no town points, its July to November cells do
   if (S.menu.kind === 'pin') html += await pinCards(d);
   else if (d2 && d.pts.length && d2.pts.length) html += compareTrend(d, d2);
   else if (!d.pts.length) html += `<div class="block dm-card"><p class="reason">No measurement here on this satellite.</p></div>`;
@@ -2009,13 +2097,13 @@ async function renderMenu() {
       ${miniChart(d.pts, { from: d.pts[0][0], to: d.pts.at(-1)[0], gaps, on: S.date, color: SATS[d.sat].color, height: 140, upto: S.playing ? S.date : null })}</div>`;
   }
   if (S.menu.kind !== 'pin') {
-    html += forecastCard(S.menu);
+    html += forecastCard(d);
     html += await arrowsCard(d.test || (() => false));
     html += plainCard(d, d2);
   }
   if (S.menu !== want) return;
   $('#dm-body').innerHTML = html;
-  document.querySelectorAll('#dm-body [data-fcz]').forEach(btn => btn.addEventListener('click', () => { S.fcZone = btn.dataset.fcz; renderMenu(); }));
+
   // legend: the colour scale with its mm values, and how much ground one centimetre of screen covers
   // the scale runs over the selected area's own lowest and highest value at this date, and the map is recoloured to match
   const L = layerFor(d.sat); const rng = await areaRange(d, L);
@@ -2127,7 +2215,7 @@ function openTracker() {
 }
 function renderAbout() {
   const sn = sensorKeys().map(s => sensors()[s]);
-  const n = S.man.checks || {};
+  const n = checkCounts();
   const m = S.man.methods || {};
   const others = (S.index || []).filter(s => s.site !== S.site);
   const passRows = sensorKeys().flatMap(s => tracksOf(s).map(tk => { const p = passInfo(s, tk); return p ? `<tr><td>${trackHtml(s, tk)}</td><td>${esc(roTime(Date.parse(`2026-01-15T${p.utc}:00Z`), { hour: '2-digit', minute: '2-digit' }))} in winter, an hour later in summer</td><td>flies ${p.north ? 'north' : 'south'}, every ${repeatDays(s, tk)} days</td></tr>` : ''; })).join('');
@@ -2157,7 +2245,7 @@ function renderAbout() {
     ${sn.map(x => `<p class="sub">${esc(x.credit)}</p>`).join('')}
     <p class="sub">Maps: ${BASEMAPS.light.attribution}; ${BASEMAPS.satellite.attribution}. Building outlines: © OpenStreetMap contributors (ODbL), via OpenFreeMap. Map library: MapLibre GL JS.</p>
     <h3>7. Use</h3>
-    <p class="sub">Free to view and share with attribution. Provided as is, without warranty, for NASA Space Apps 2026. Built ${esc(S.man.built)}.</p>
+    <p class="sub">Free to view and share with attribution. Provided as is, without warranty, for NASA Space Apps 2026. Built ${esc(String(S.man.built || '').slice(0, 10))}.</p>
     ${Object.keys(m).length ? more('Methods (for specialists)', `${['s1', 'sign', 'rate', 'zones'].filter(k => m[k]).map(k => `<p class="sub">${esc(m[k])}</p>`).join('')}
       ${m.links ? `<p>${m.links.map(l => `<a href="${esc(l.href)}" target="_blank" rel="noopener">${esc(l.label)}</a>`).join(' · ')}</p>` : ''}`, 'h') : ''}
     <details class="more" id="checks-more"><summary id="checks-h">Validation checks (for reviewers) · ${n.pass ?? 0} pass, ${n.warn ?? 0} warn, ${n.fail ?? 0} fail</summary>
@@ -2169,6 +2257,7 @@ function renderAbout() {
 // ------------------------------------------------------------------------------------------------ main render
 function changed(full = true) {
   const ds = sliderDates();
+  if (S.date && S.sat !== 'compare' && measured(S.sat) && restartsOf(S.sat, S.track[S.sat]).has(S.date)) S.date = ds.find(d => d > S.date) || ds.at(-1);   // never land on a blank restart map
   if (ds.length && (!S.date || (!S.dateUser && !ds.includes(S.date)))) S.date = ds[ds.length - 1];   // first load: the satellite's own last date   // a kept date with no acquisition gets an explicit "nearest" offer
   if (full) { renderSat(); renderViews(); renderTracks(); }
   renderLayersMenu();
@@ -2205,6 +2294,11 @@ async function main() {
     hb.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 L11 4 L19 11 V19 H3 Z" fill="#DC2626" stroke="#1C1917" stroke-width="1.6" stroke-linejoin="round"/><path d="M14 14 L22 17 L18.5 18.5 L17 22 Z" fill="#fff" stroke="#1C1917" stroke-width="1.4" stroke-linejoin="round"/></svg>`;
     hb.addEventListener('click', (e) => { e.stopPropagation(); setHouseMode(!S.houseMode); });
     comp?.parentNode.insertBefore(hb, comp.nextSibling);
+    const ab = document.createElement('button'); ab.type = 'button'; ab.id = 'area-btn'; ab.className = 'pin-btn';
+    ab.title = 'Select an area: press the map to study a 1 km square'; ab.setAttribute('aria-label', ab.title); ab.setAttribute('aria-pressed', 'false');
+    ab.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" fill="rgba(29,78,216,.12)" stroke="#1D4ED8" stroke-width="2" stroke-dasharray="3.5 2.5"/></svg>`;
+    ab.addEventListener('click', (e) => { e.stopPropagation(); setAreaMode(!S.areaMode); });
+    hb.parentNode.insertBefore(ab, hb.nextSibling);
     let used = false; try { used = localStorage.getItem('dos-pin-used') === '1'; } catch (e) { /* storage blocked */ }
     if (!used) {   // a hint for first-time visitors, gone once the pin has been used
       const h = document.createElement('div'); h.id = 'pin-hint'; h.textContent = 'Can I build here? Pick up the pin';
@@ -2242,7 +2336,8 @@ async function main() {
       setHouseMode(false); return openMenu({ kind: 'pin', at: c, house: { type: 'Polygon', coordinates: poly } });
     }
     if (S.pinMode) { dropPinCursor(e); S.pinMode = false; setTimeout(() => { setPinMode(false); openMenu({ kind: 'pin', at }); }, 330); return; }
-    openMenu({ kind: 'area', at });
+    if (S.areaMode) { setAreaMode(false); return openMenu({ kind: 'area', at }); }
+    dotPopup(e);
   });
   mapA.on('mouseenter', 'pts', () => { mapA.getCanvas().style.cursor = 'pointer'; });
   mapA.on('mouseleave', 'pts', () => { mapA.getCanvas().style.cursor = ''; });
@@ -2278,7 +2373,7 @@ async function main() {
   });
   $('#about').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.close(); });
   $('#table-dlg').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.close(); });
-  $('#exp').addEventListener('change', (e) => { S.exp = e.target.checked; changed(); });
+
   $('#opacity').addEventListener('input', (e) => {
     S.opacity = Number(e.target.value) / 100;
     $('#opacity-val').textContent = `${e.target.value}%`;

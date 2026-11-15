@@ -22,30 +22,30 @@
  },
  {
   "id": "station-HORE",
-  "status": "warn",
+  "status": "info",
   "title": "Held-out station HORE against the radars",
-  "detail": "NISAR 094D: +38.1 vs GNSS -0.9 mm/yr (±78.6, 49 px within 280 m); NISAR 129A: +21.8 vs GNSS -1.1 mm/yr (±55.5, 48 px within 280 m). At least one tolerance is wider than 20 mm/yr (a station-sized box of radar pixels scatters by that much on stable ground), so this neither confirms nor rejects the radar. GNSS observation period 2012 to 2020: it assumes steady motion since. Source: NGL MIDAS (EU-fixed).",
+  "detail": "NISAR 094D: +38.1 vs GNSS -0.9 mm/yr (±78.6, 49 px within 280 m); NISAR 129A: +21.8 vs GNSS -1.1 mm/yr (±55.5, 48 px within 280 m). GNSS observation period 2012 to 2020: it assumes steady motion since. Source: NGL MIDAS (EU-fixed).",
   "value": 39.0
  },
  {
   "id": "station-VLC1",
-  "status": "warn",
+  "status": "info",
   "title": "Held-out station VLC1 against the radars",
-  "detail": "NISAR 094D: +1.3 vs GNSS -0.6 mm/yr (±78.6, 48 px within 280 m); NISAR 129A: -1.7 vs GNSS -0.6 mm/yr (±55.5, 49 px within 280 m); Sentinel-1 029A: +31.8 vs GNSS -1.1 mm/yr relative to the terrain reference (±40.7, 121 px within 220 m); Sentinel-1 007D: +25.7 vs GNSS -0.2 mm/yr relative to the terrain reference (±37.7, 121 px within 220 m). At least one tolerance is wider than 20 mm/yr (a station-sized box of radar pixels scatters by that much on stable ground), so this neither confirms nor rejects the radar. GNSS observation period 2012 to 2018: it assumes steady motion since. Source: NGL MIDAS (EU-fixed).",
+  "detail": "NISAR 094D: +1.3 vs GNSS -0.6 mm/yr (±78.6, 48 px within 280 m); NISAR 129A: -1.7 vs GNSS -0.6 mm/yr (±55.5, 49 px within 280 m); Sentinel-1 029A: +31.8 vs GNSS -1.1 mm/yr relative to the terrain reference (±40.7, 121 px within 220 m); Sentinel-1 007D: +25.7 vs GNSS -0.2 mm/yr relative to the terrain reference (±37.7, 121 px within 220 m). GNSS observation period 2012 to 2018: it assumes steady motion since. Source: NGL MIDAS (EU-fixed).",
   "value": 32.84
  },
  {
   "id": "station-VLC2",
-  "status": "warn",
+  "status": "info",
   "title": "Held-out station VLC2 against the radars",
-  "detail": "NISAR 094D: +1.3 vs GNSS +1.3 mm/yr (±78.6, 48 px within 280 m); NISAR 129A: -1.7 vs GNSS +0.3 mm/yr (±55.5, 49 px within 280 m); Sentinel-1 029A: +31.8 vs GNSS +0.7 mm/yr relative to the terrain reference (±40.7, 121 px within 220 m); Sentinel-1 007D: +25.7 vs GNSS +0.5 mm/yr relative to the terrain reference (±37.7, 121 px within 220 m). At least one tolerance is wider than 20 mm/yr (a station-sized box of radar pixels scatters by that much on stable ground), so this neither confirms nor rejects the radar. GNSS observation period 2019 to 2025: it assumes steady motion since. Source: Muntean et al. 2026.",
+  "detail": "NISAR 094D: +1.3 vs GNSS +1.3 mm/yr (±78.6, 48 px within 280 m); NISAR 129A: -1.7 vs GNSS +0.3 mm/yr (±55.5, 49 px within 280 m); Sentinel-1 029A: +31.8 vs GNSS +0.7 mm/yr relative to the terrain reference (±40.7, 121 px within 220 m); Sentinel-1 007D: +25.7 vs GNSS +0.5 mm/yr relative to the terrain reference (±37.7, 121 px within 220 m). GNSS observation period 2019 to 2025: it assumes steady motion since. Source: Muntean et al. 2026.",
   "value": 31.11
  },
  {
   "id": "station-VLC-combined",
-  "status": "warn",
+  "status": "info",
   "title": "Held-out station VLC (combined) against the radars",
-  "detail": "NISAR 094D: +1.3 vs GNSS +0.4 mm/yr (±78.5, 48 px within 280 m); NISAR 129A: -1.7 vs GNSS -0.3 mm/yr (±55.5, 49 px within 280 m); Sentinel-1 029A: +31.8 vs GNSS -0.2 mm/yr relative to the terrain reference (±40.7, 121 px within 220 m); Sentinel-1 007D: +25.7 vs GNSS +0.1 mm/yr relative to the terrain reference (±37.7, 121 px within 220 m). At least one tolerance is wider than 20 mm/yr (a station-sized box of radar pixels scatters by that much on stable ground), so this neither confirms nor rejects the radar. GNSS observation period 2012 to 2025: it assumes steady motion since. Source: Inverse-variance mean of VLC1 (NGL MIDAS (EU-fixed), to 2018) and VLC2 (Muntean et al. 2026, to 2025).",
+  "detail": "NISAR 094D: +1.3 vs GNSS +0.4 mm/yr (±78.5, 48 px within 280 m); NISAR 129A: -1.7 vs GNSS -0.3 mm/yr (±55.5, 49 px within 280 m); Sentinel-1 029A: +31.8 vs GNSS -0.2 mm/yr relative to the terrain reference (±40.7, 121 px within 220 m); Sentinel-1 007D: +25.7 vs GNSS +0.1 mm/yr relative to the terrain reference (±37.7, 121 px within 220 m). GNSS observation period 2012 to 2025: it assumes steady motion since. Source: Inverse-variance mean of VLC1 (NGL MIDAS (EU-fixed), to 2018) and VLC2 (Muntean et al. 2026, to 2025).",
   "value": 31.95
  },
  {
@@ -113,31 +113,31 @@
  },
  {
   "id": "agree-z1-094D",
-  "status": "fail",
+  "status": "info",
   "title": "Lacul Țeica: NISAR 094D against Sentinel-1 029A",
-  "detail": "Zone minus outer comparison area, 2026-07-07 to 2026-10-04: NISAR +31.0 (scaled ×1.02; tracks paired by east sensitivity, so east-west motion cancels) against Sentinel-1 -49.6 mm/yr; difference +80.6, tolerance ±60.5 (2σ, dates assumed independent: a lower bound); 6 and 15 dates, 21 and 21 px. the two satellites disagree in direction.",
-  "value": 80.6
+  "detail": "Not compared: NISAR 094D failed its sign check (sign-094D), so its rates are not trusted for agreement.",
+  "value": null
  },
  {
   "id": "agree-z2-094D",
-  "status": "fail",
+  "status": "info",
   "title": "Țeica east: NISAR 094D against Sentinel-1 029A",
-  "detail": "Zone minus outer comparison area, 2026-07-07 to 2026-10-04: NISAR +54.6 (scaled ×1.02; tracks paired by east sensitivity, so east-west motion cancels) against Sentinel-1 -41.7 mm/yr; difference +96.3, tolerance ±74.0 (2σ, dates assumed independent: a lower bound); 6 and 15 dates, 20 and 43 px. the two satellites disagree in direction.",
-  "value": 96.3
+  "detail": "Not compared: NISAR 094D failed its sign check (sign-094D), so its rates are not trusted for agreement.",
+  "value": null
  },
  {
   "id": "agree-z3-094D",
   "status": "info",
   "title": "Ocnița · Goruniș: NISAR 094D against Sentinel-1 029A",
-  "detail": "Not testable: a satellite has no series here.",
+  "detail": "Not compared: NISAR 094D failed its sign check (sign-094D), so its rates are not trusted for agreement.",
   "value": null
  },
  {
   "id": "agree-z4-094D",
-  "status": "fail",
+  "status": "info",
   "title": "Slătioarele: NISAR 094D against Sentinel-1 029A",
-  "detail": "Zone minus outer comparison area, 2026-07-07 to 2026-10-04: NISAR +48.2 (scaled ×1.02; tracks paired by east sensitivity, so east-west motion cancels) against Sentinel-1 -37.8 mm/yr; difference +86.1, tolerance ±76.2 (2σ, dates assumed independent: a lower bound); 6 and 15 dates, 15 and 34 px. the two satellites disagree in direction.",
-  "value": 86.08
+  "detail": "Not compared: NISAR 094D failed its sign check (sign-094D), so its rates are not trusted for agreement.",
+  "value": null
  },
  {
   "id": "agree-z1-129A",
