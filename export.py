@@ -66,7 +66,8 @@ WINDOW = "jul_oct"
 # 55 dates per track, refit from all 214 HyP3 jobs); jan_oct stays in sentinel1/ as the earlier fit, off the page.
 # jul_nov (7 Jul to 10 Nov, 22 dates) is the summer pair design plus the six new dates: the forecast's window.
 LONG_WINDOW = "jan_nov"
-EXTRA_WINDOWS = ("jul_nov", LONG_WINDOW)     # exported after the default window, in this order
+# all: every acquisition ASF holds on both bursts, May 2025 to 15 Nov 2026 (374 HyP3 jobs; sentinel1/scripts/order_all.py).
+EXTRA_WINDOWS = ("jul_nov", LONG_WINDOW, "all")     # exported after the default window, in this order
 S1_WINDOWS = {
     "jul_oct": dict(label="July to October 2026", analysis="analysis", assets="assets", prefix="s1"),
     "jan_oct": dict(label="January to October 2026", analysis="analysis_jan_oct", assets="assets_jan_oct", prefix="s1/jan_oct",
@@ -74,6 +75,9 @@ S1_WINDOWS = {
     "jul_nov": dict(label="July to November 2026", analysis="analysis_jul_nov", assets="assets_jul_nov", prefix="s1/jul_nov",
                     provenance="sentinel1/analysis_jan_nov/README.md (the summer pairs plus the 24 jobs of 15 Nov 2026; "
                                "links and checksums in sentinel1/provenance/)"),
+    "all": dict(label="May 2025 to November 2026", analysis="analysis_all", assets="assets_all", prefix="s1/all",
+                provenance="sentinel1/analysis_all/README.md (all 374 HyP3 jobs with links in "
+                           "sentinel1/provenance/hyp3_jobs_all.csv and checksums in raw_SHA256SUMS_all)"),
     "jan_nov": dict(label="January to November 2026", analysis="analysis_jan_nov", assets="assets_jan_nov", prefix="s1/jan_nov",
                     provenance="sentinel1/analysis_jan_nov/README.md (all 214 HyP3 jobs with links and checksums in "
                                "sentinel1/provenance/hyp3_jobs_jan_nov.csv and raw_SHA256SUMS_jan_nov)"),
@@ -85,6 +89,7 @@ EMPTY_ZONE_LABEL = {
     "jul_oct": "No connected series for this zone on this track",
     "jan_oct": "Insufficient continuous coverage",
     "jan_nov": "Insufficient continuous coverage",
+    "all": "Insufficient continuous coverage",
     "jul_nov": "No connected series for this zone on this track",
 }
 
@@ -525,7 +530,7 @@ def extra_window(out: pathlib.Path, site: dict, window: str = LONG_WINDOW) -> di
                 **(dict(fills_gap=dict(sensor="nisar", gap=["2026-01-18", "2026-06-23"],
                                        note="Sentinel-1 kept imaging the town while NISAR had no acquisitions. Its "
                                             "values are its own line of sight and reference, not NISAR's."))
-                   if window == LONG_WINDOW else {}),
+                   if window in (LONG_WINDOW, "all") else {}),
                 provenance=S1_WINDOWS[window]["provenance"])
 
 
