@@ -214,3 +214,27 @@ A decision recorded here is not a question. Nobody blocks on one. If a line look
   - The menu is a column, so its legend never covers the cards.
   - Phone: short header buttons, the pin and compass are visible (zoom buttons hidden), track buttons show "Morning" or "Evening".
   - The app files are served with no-cache, so browsers recheck them on every visit. Old cached copies were showing removed features, such as the "Investigate Zone 4" button and the earlier white points.
+- 2026-11-15 (06, via Alexandru): Less text on screen, and a plain-language summary.
+  - **New "In plain words" card** in the area and zone menu, its words fading in one after another the first time it appears. Every sentence is built from the numbers on screen:
+    - the selection's net change and its rate;
+    - "barely changed" when the change is no bigger than 1.5 × the usual image-to-image wobble (or 3 mm);
+    - a pencil comparison (a pencil is about 7 mm thick);
+    - in Compare, whether the two satellites agree;
+    - the forecast for the zone, or for the nearest salt field when an area is pressed (the prediction card now switches to that same field);
+    - one closing line. "Worth a closer look" appears only for a clear sinking of 15 mm/yr or more; otherwise "nothing stands out".
+  - **The pin verdict** is now: the verdict, one plain sentence, four facts (trend, change by 2029, confidence, compared with the ground around it), and a closed "Why?" with the technical reasons.
+  - **Satellites now:** the explanation is cut to one line, with a pulsing "Drag to rotate the globe" badge on the globe.
+  - **Text removed:**
+    - the trend caption "Below 0: moving away from the satellite (often sinking). Above 0: moving toward it. The blue point is the date on the map." (now "mm · blue dot: the date on the map"; the legend explains the colours);
+    - "Line-of-sight change, mm" subtitles;
+    - "Chronos-2 median, line-of-sight change in mm from each radar's first date · each radar in its own line of sight" (now "forecast, mm");
+    - "each in its own line of sight" in the Compare chart;
+    - "Area around the press, about 1 × 1 km" (now "1 km square") and "measured points" (now "points");
+    - the "CAN YOU BUILD HERE?" label repeated inside the verdict;
+    - the long confidence, surroundings and disclaimer paragraphs of the verdict (moved under "Why?");
+    - "median of N measured points within 120 m" (now "N radar points nearby");
+    - "This spot's own straight-line trend, carried on to …" (now "Its trend, continued to …");
+    - the 80 % range after the pin's 2029 value;
+    - the pin's no-data explanation, cut to one sentence;
+    - in the satellite panel, the sentences on the catalogue, orbit period, 12-day repeat and the 500 to 600 km side offset;
+    - the unused older build rule in the code.

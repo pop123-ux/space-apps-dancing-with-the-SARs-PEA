@@ -1444,6 +1444,7 @@ function drawSelection(shape) {
 function openMenu(sel) {
   S.menu = sel; closeMenus();
   if (sel.kind === 'zone') S.fcZone = sel.id;   // the prediction follows the zone that was pressed
+  else if (sel.kind === 'area') { let best = null, bd = Infinity; for (const z of zones()) { const dd = metres(sel.at, [z.lon, z.lat]); if (dd < bd) { bd = dd; best = z.id; } } if (best) S.fcZone = best; }
   $('#dmenu').hidden = false; document.body.classList.add('dmenu-open');
   setTimeout(() => mapA?.resize(), 220);
   renderMenu();
@@ -1541,33 +1542,25 @@ async function surroundings(at, sat) {
 }
 function buildCheck(at, fc, around) {
   const z0 = zones().find(p => metres(at, [p.lon, p.lat]) <= (p.r_m || 250));
-  if (z0) return { ok: false, why: `It lies inside ${zoneName(z0)}, one of the salt-brine fields where the ground has sunk or collapsed before.` };
+  if (z0) return { ok: false, kind: 'zone', zone: zoneName(z0), why: `It lies inside ${zoneName(z0)}, one of the salt-brine fields where the ground has sunk or collapsed before.` };
   if (!fc) return null;
   if (around) {
     const diff = fc.slope - around.med;
     if (Math.abs(diff) >= DIFF_MIN && Math.abs(diff) > 2 * around.spread)
-      return { ok: false, why: `It moves differently from the ground around it: ${sgn(fc.slope)} mm/yr here against ${sgn(around.med)} mm/yr around (the surroundings vary by ± ${around.spread.toFixed(1)} mm/yr). Uneven settling like this is what cracks a house.` };
+      return { ok: false, kind: 'diff', why: `It moves differently from the ground around it: ${sgn(fc.slope)} mm/yr here against ${sgn(around.med)} mm/yr around (the surroundings vary by ± ${around.spread.toFixed(1)} mm/yr). Uneven settling like this is what cracks a house.` };
   }
   const further = fc.line.at(-1)[1] - fc.line[0][1], sure = Math.abs(fc.slope) > 2 * fc.sigSlope;
   if (further <= SINK_LIMIT && sure)
-    return { ok: false, why: `Its own trend (${sgn(fc.slope)} ± ${fc.sigSlope.toFixed(1)} mm/yr), carried on to ${human(fc.end)}, moves it a further ${sgn(further)} mm away from the satellite: more than the ${Math.abs(SINK_LIMIT)} mm limit.` };
-  return { ok: true, why: `It is outside the salt-brine zones, and its own trend (${sgn(fc.slope)} ± ${fc.sigSlope.toFixed(1)} mm/yr), carried on to ${human(fc.end)}, ${further >= 0 ? `moves it ${sgn(further)} mm toward the satellite: no sinking ahead` : `moves it a further ${sgn(further)} mm away: less than the ${Math.abs(SINK_LIMIT)} mm limit for sinking`}.` };
-}
-function oldBuildCheck(at, fc) {
-  const z = zones().find(p => metres(at, [p.lon, p.lat]) <= (p.r_m || 250));
-  if (z) return { ok: false, why: `It lies inside ${zoneName(z)}, one of the salt-brine fields where the ground has sunk or collapsed before.` };
-  if (!fc) return null;
-  if (fc.slope <= BUILD_LIMIT && -fc.slope > 2 * fc.sigSlope)
-    return { ok: false, why: `Its own trend moves away from the satellite at ${sgn(fc.slope)} mm/yr (± ${fc.sigSlope.toFixed(1)}), faster than the ${Math.abs(BUILD_LIMIT)} mm/yr limit.` };
-  return { ok: true, why: `It is outside the salt-brine zones and its trend (${sgn(fc.slope)} ± ${fc.sigSlope.toFixed(1)} mm/yr) stays within the ${Math.abs(BUILD_LIMIT)} mm/yr limit.` };
+    return { ok: false, kind: 'sink', why: `Its own trend (${sgn(fc.slope)} ± ${fc.sigSlope.toFixed(1)} mm/yr), carried on to ${human(fc.end)}, moves it a further ${sgn(further)} mm away from the satellite: more than the ${Math.abs(SINK_LIMIT)} mm limit.` };
+  return { ok: true, kind: 'ok', why: `It is outside the salt-brine zones, and its own trend (${sgn(fc.slope)} ± ${fc.sigSlope.toFixed(1)} mm/yr), carried on to ${human(fc.end)}, ${further >= 0 ? `moves it ${sgn(further)} mm toward the satellite: no sinking ahead` : `moves it a further ${sgn(further)} mm away: less than the ${Math.abs(SINK_LIMIT)} mm limit for sinking`}.` };
 }
 async function pinCards(d) {
   const at = S.menu.at; const p = await pinPoint(at, d.sat);
   if (!p || p.pts.length < 2) {
     const z = zones().find(q => metres(at, [q.lon, q.lat]) <= (q.r_m || 250));
     pinBadge(z ? { ok: false } : null);
-    if (z) return `<div class="block dm-card verdict hero no"><div class="verdict-q">Can you build here?</div><p class="verdict-word">✘ Not recommended</p><p>It lies inside ${esc(zoneName(z))}, one of the salt-brine fields where the ground has sunk or collapsed before. No radar point within ${PIN_RADIUS_M} m to show more.</p></div>`;
-    return `<div class="block dm-card"><p class="reason">No measured point within ${PIN_RADIUS_M} m of this spot on ${esc(sensors()[d.sat].label)} ${esc(d.trk)} (forest and steep slopes lose the radar signal). ${z ? `It lies inside ${esc(zoneName(z))}, a salt-brine field: <b>not advised</b> for building.` : 'Try another track or a spot on open ground.'}</p></div>`;
+    if (z) return `<div class="block dm-card verdict hero no"><p class="verdict-word">✘ Not recommended</p><p class="verdict-say">This spot is inside a salt-brine field (${esc(zoneName(z))}), where the ground has sunk before.</p></div>`;
+    return `<div class="block dm-card"><p class="reason">The radar can't see the ground here (forest or steep slope). Try a spot on open ground.</p></div>`;
   }
   const fc = lineForecast(p.pts); const around = fc ? await surroundings(at, d.sat) : null; const chk = buildCheck(at, fc, around);
   // confidence: how many radar points and dates, how noisy, and whether the other radar points the same way
@@ -1576,23 +1569,39 @@ async function pinCards(d) {
   const agree = fo ? Math.sign(fo.slope) === Math.sign(fc?.slope ?? 0) : null;
   if (agree === false && Math.abs(fo.slope) > 2 * fo.sigSlope) level = Math.max(0, level - 1);
   if (fc && Math.abs(fc.slope) < 2 * fc.sigSlope) level = Math.max(0, level - 1);
-  const conf = `<p class="conf conf-${level}"><b>Confidence: ${['low', 'medium', 'high'][level]}</b> · ${p.n} radar point${p.n > 1 ? 's' : ''} within ${PIN_RADIUS_M} m, ${p.pts.length} dates${fo ? ` · ${esc(sensors()[other].label)} ${esc(S.track[other])} here: ${sgn(fo.slope)} mm/yr, ${agree ? 'same direction' : 'opposite direction'}` : ` · no ${esc(sensors()[other]?.label || 'other radar')} point here to cross-check`}</p>`;
   const first = p.pts[0], last = p.pts.at(-1);
   const gaps = gapsOf(d.sat, d.trk);
   pinBadge(chk);
-  let html = chk ? `<div class="block dm-card verdict hero ${chk.ok ? 'ok' : 'no'}"><div class="verdict-q">Can you build here?</div>
-    <p class="verdict-word">${chk.ok ? '✔ No warning sign' : '✘ Not recommended'}</p><p>${esc(chk.why)}</p>${conf}
-    ${around && fc ? `<p class="conf"><b>Against the ground around it</b> (${around.n} spots ${RING_M} m away): ${sgn(fc.slope - around.med)} mm/yr different; the surroundings vary by ± ${around.spread.toFixed(1)} mm/yr, so this ${Math.abs(fc.slope - around.med) > 2 * around.spread ? '<b>stands out</b>' : 'is within that variation'}.</p>` : ''}
-    <p class="sub small">A screen from satellite data, not a ground survey: ask for a geotechnical study before building.</p></div>` : '';
+  const cm = (mm) => Math.abs(mm) >= 10 ? `${(Math.abs(mm) / 10).toFixed(Math.abs(mm) >= 100 ? 0 : 1)} cm` : `${Math.abs(mm).toFixed(1)} mm`;
+  const further = fc ? fc.line.at(-1)[1] - fc.line[0][1] : 0;
+  const say = !chk ? '' : chk.kind === 'zone' ? `This spot is inside a salt-brine field (${chk.zone}), where the ground has sunk before.`
+    : chk.kind === 'sink' ? `The ground here is sinking about ${Math.abs(fc.slope).toFixed(0)} mm a year. By ${human(fc.end, true).replace(/^1 Jan /, '')} that adds up to about ${cm(further)}.`
+    : chk.kind === 'diff' ? `This spot moves differently from the ground around it. Uneven ground like this can crack a house.`
+    : further >= 0 ? `The ground here is not sinking.` : `The ground here sinks only slowly, about ${cm(further)} by ${human(fc.end).replace(/^1 Jan /, '')}.`;
+  const diffOk = around && fc ? Math.abs(fc.slope - around.med) <= 2 * around.spread : null;
+  const facts = [
+    fc && [`${sgn(fc.slope, Math.abs(fc.slope) < 10 ? 1 : 0)} mm/yr`, 'trend'],
+    fc && [`${further < 0 ? '−' : '+'}${cm(further)}`, `by ${human(fc.end).replace(/^1 Jan /, '')}`],
+    [['low', 'medium', 'high'][level], 'confidence'],
+    diffOk != null && [diffOk ? 'like around it' : 'unlike around it', 'vs. the ground 300 m away'],
+  ].filter(Boolean);
+  const conf = `Confidence ${['low', 'medium', 'high'][level]}: ${p.n} radar point${p.n > 1 ? 's' : ''} within ${PIN_RADIUS_M} m, ${p.pts.length} dates${fo ? `; ${sensors()[other].label} here: ${sgn(fo.slope)} mm/yr, ${agree ? 'same direction' : 'opposite direction'}` : ''}.`;
+  let html = chk ? `<div class="block dm-card verdict hero ${chk.ok ? 'ok' : 'no'}">
+    <p class="verdict-word">${chk.ok ? '✔ No warning sign' : '✘ Not recommended'}</p>
+    <p class="verdict-say">${esc(say)}</p>
+    <div class="facts">${facts.map(([v, k]) => `<div class="fact"><b>${esc(v)}</b><span>${esc(k)}</span></div>`).join('')}</div>
+    <details class="why"><summary>Why?</summary><p>${esc(chk.why)}</p><p>${esc(conf)}</p>
+      ${around && fc ? `<p>Against the ground ${RING_M} m around (${around.n} spots): ${sgn(fc.slope - around.med)} mm/yr different; they vary by ± ${around.spread.toFixed(1)} mm/yr.</p>` : ''}
+      <p>A satellite screen, not a ground survey: ask for a geotechnical study before building.</p></details></div>` : '';
   html += `<div class="block dm-card"><h3>The history of this spot <span class="badge">${p.pts.length} dates</span></h3>
-    <div class="sub small">Line-of-sight change, mm · median of ${p.n} measured point${p.n > 1 ? 's' : ''} within ${PIN_RADIUS_M} m</div>
+    <div class="sub small">mm · ${p.n} radar point${p.n > 1 ? 's' : ''} nearby</div>
     ${miniChart(p.pts, { from: first[0], to: last[0], gaps, on: S.date, color: SATS[d.sat].color, height: 140, upto: S.playing ? S.date : null })}
     <p class="dm-big">From ${esc(human(first[0]))} to ${esc(human(last[0]))}: <b>${sgn(last[1] - first[1])} mm</b></p></div>`;
   if (fc) {
     const endV = fc.line.at(-1)[1], bb = fc.band.at(-1);
-    html += `<div class="block dm-card"><h3>Where it heads</h3><div class="sub small">This spot's own straight-line trend, carried on to ${esc(human(fc.end))}</div>
+    html += `<div class="block dm-card"><h3>Where it heads</h3><div class="sub small">Its trend, continued to ${esc(human(fc.end))}</div>
       ${miniChart(p.pts, { from: first[0], to: fc.end, band: fc.band, extra: [{ pts: fc.line, color: '#7C3AED', dash: true }], color: SATS[d.sat].color, height: 130, upto: S.playing ? S.date : null })}
-      <p class="dm-big">${esc(human(fc.end))}: <b>${sgn(endV)} mm</b> <span class="sub">(80 % range ${sgn(bb[1])} to ${sgn(bb[2])} mm)</span></p></div>`;
+      <p class="dm-big">${esc(human(fc.end))}: <b>${sgn(endV)} mm</b></p></div>`;
   }
   return html;
 }
@@ -1623,7 +1632,7 @@ async function menuData(satArg) {
     out.n = inside.length;
     out.shape = cellBox(inside.map(f => f.geometry.coordinates), gj.meta.spacing || 80) || { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [[[box[0], box[1]], [box[2], box[1]], [box[2], box[3]], [box[0], box[3]], [box[0], box[1]]]] } };
   }
-  out.label = `Area around the press, about ${AREA_M / 1000} × ${AREA_M / 1000} km · ${trackText(sat, trk)}`;
+  out.label = `${AREA_M / 1000} km square · ${trackText(sat, trk)}`;
   return out;
 }
 // a small chart in the app's own style (the zone panels use the same proportions, fonts and greys)
@@ -1659,6 +1668,44 @@ function miniChart(series, { from, to, gaps = [], on = null, band = null, extra 
   o.push('</svg>');
   return o.join('');
 }
+// Every sentence comes from the numbers on screen: the selection's own series, its image-to-image jitter, the forecast
+// card and, in Compare, the second radar. Nothing is invented; when a number is too small to tell apart from the
+// jitter, the text says so.
+function plainWords(d, d2) {
+  const P = d.pts; if (!P || P.length < 3) return [];
+  const out = [], t0 = P[0][0], t1 = P.at(-1)[0];
+  const net = P.at(-1)[1] - P[0][1], yrs = Math.max((day(t1) - day(t0)) / 365.25, 0.05);
+  const jit = median(P.slice(1).map((p, i) => Math.abs(p[1] - P[i][1]))) || 0;
+  const pencils = Math.round(Math.abs(net) / 7);   // a pencil is about 7 mm thick
+  const clear = Math.abs(net) > Math.max(1.5 * jit, 3);
+  if (!clear)
+    out.push(`From ${human(t0)} to ${human(t1)}, the ground here barely changed overall: ${Math.abs(net).toFixed(0)} mm, no bigger than the usual wobble between two images (about ${jit.toFixed(0)} mm).`);
+  else out.push(`From ${human(t0)} to ${human(t1)}, the ground here moved ${Math.abs(net).toFixed(0)} mm ${net < 0 ? 'away from' : 'toward'} the satellite${pencils >= 1 ? `, about the thickness of ${pencils === 1 ? 'a pencil' : `${pencils} pencils`}` : ''}. ${net < 0 ? 'That usually means it sank.' : 'That usually means it rose a little or shifted sideways.'}`);
+  const rate = net / yrs, speed = Math.abs(rate) < 5 ? 'slow, like ordinary ground' : Math.abs(rate) < 15 ? 'noticeable' : 'fast';
+  if (clear) out.push(`That is about ${Math.abs(rate).toFixed(0)} mm a year: ${speed}.`);
+  if (d2?.pts?.length > 2) {
+    const lo = P[0][0] > d2.pts[0][0] ? P[0][0] : d2.pts[0][0], hi = t1 < d2.pts.at(-1)[0] ? t1 : d2.pts.at(-1)[0];
+    const clip = (Q) => { const c = Q.filter(([x]) => x >= lo && x <= hi); return c.length > 1 ? c.at(-1)[1] - c[0][1] : null; };
+    const a = clip(P), b = clip(d2.pts);
+    if (a != null && b != null) out.push(`Over the months both satellites watched, NISAR saw ${sgn(a, 0)} mm and Sentinel-1 ${sgn(b, 0)} mm: ${Math.sign(a) === Math.sign(b) ? 'they agree on the direction' : 'they disagree, so treat this place with caution'}.`);
+  }
+  const zf = S.fz?.zones?.[S.fcZone]; const sat = d.sat; const k = zf && (zf[`${sat}:${S.track[sat]}`] ? `${sat}:${S.track[sat]}` : Object.keys(zf)[0]);
+  if (zf && k) {
+    const f = zf[k], further = f.median.at(-1) - f.observed_mm.at(-1);
+    const z = zones().find(p => p.id === S.fcZone);
+    out.push(`For ${zoneName(z)}${S.menu?.kind === 'area' ? ', the nearest salt field' : ''}, ${sensors()[k.split(':')[0]]?.label || ''}'s forecast expects ${Math.abs(further) < 2 ? 'little further change' : `about ${Math.abs(further).toFixed(0)} mm more ${further < 0 ? 'sinking' : 'rising'}`} by ${human(S.fz.end)}. It is a guide, not a promise.`);
+  }
+  out.push(clear && Math.abs(rate) >= 15 && net < 0 ? 'Worth a closer look before building: drop the pin on a spot for a yes-or-no check.'
+    : 'Nothing here stands out from normal ground movement. For one exact spot, drop the pin.');
+  return out;
+}
+function plainCard(d, d2) {
+  const s = plainWords(d, d2); if (!s.length) return '';
+  const text = s.join(' '); const fresh = S.plainLast !== text; S.plainLast = text;
+  let i = 0;   // each word fades in after the one before ("typed out"), only when the text is new
+  const words = s.map(p => `<p>${p.split(' ').map(w => `<span class="tk" style="--i:${i++}">${esc(w)} </span>`).join('')}</p>`).join('');
+  return `<div class="block dm-card plain${fresh ? ' typing' : ''}"><h3><span class="spark" aria-hidden="true">✦</span> In plain words</h3><div class="pw">${words}</div></div>`;
+}
 function compareTrend(a, b) {   // the honest-comparison rules: same months, each re-zeroed at the first shared date
   const lo = a.pts[0][0] > b.pts[0][0] ? a.pts[0][0] : b.pts[0][0], hi = a.pts.at(-1)[0] < b.pts.at(-1)[0] ? a.pts.at(-1)[0] : b.pts.at(-1)[0];
   const clip = (pts) => { const c = pts.filter(([d]) => d >= lo && d <= hi); return c.length ? c.map(([d, v]) => [d, v - c[0][1]]) : []; };
@@ -1667,7 +1714,7 @@ function compareTrend(a, b) {   // the honest-comparison rules: same months, eac
   const lab = (x) => trackHtml(x.sat, x.trk);
   const end = (P) => P.at(-1)[1];
   return `<div class="block dm-card"><h3>The trend: both radars <span class="badge">${esc(human(lo))} to ${esc(human(hi))}</span></h3>
-    <div class="sub small"><span style="color:${SATS.nisar.color}">●</span> ${lab(a)} &nbsp; <span style="color:${SATS.s1.color}">●</span> ${lab(b)} · each in its own line of sight, both from 0 on ${esc(human(lo))}</div>
+    <div class="sub small"><span style="color:${SATS.nisar.color}">●</span> ${lab(a)} &nbsp; <span style="color:${SATS.s1.color}">●</span> ${lab(b)} · both from 0 on ${esc(human(lo))}</div>
     ${miniChart(A, { from: lo, to: hi, gaps: gapsOf(a.sat, a.trk), on: S.date, color: SATS.nisar.color, height: 150, upto: S.playing ? S.date : null, extra: [{ pts: B, color: SATS.s1.color, dots: true, grow: true }] })}
     <p class="dm-big">By ${esc(human(hi))}: NISAR <b>${sgn(end(A))} mm</b>, Sentinel-1 <b>${sgn(end(B))} mm</b> · ${Math.sign(end(A)) === Math.sign(end(B)) ? 'same direction' : 'opposite directions'}, ${Math.abs(end(A) - end(B)).toFixed(1)} mm apart</p></div>`;
 }
@@ -1698,7 +1745,7 @@ function forecastCard(sel) {
     rows.push(`<tr><th><span style="color:${col}">●</span> ${esc(sensors()[s_]?.label || s_)} ${esc(trk)}</th>${vals.map(v => `<td>${sgn(v)} mm</td>`).join('')}<td>${sgn(rate)} mm/yr</td></tr>`);
   }
   return `<div class="block dm-card"><h3>The prediction <span class="seg dm-zones" role="group" aria-label="Zone">${buttons}</span></h3>
-    <div class="sub small">${esc(zoneName(z))} · Chronos-2 median, line-of-sight change in mm from each radar's first date${keys.length > 1 ? ' · each radar in its own line of sight' : ''}</div>
+    <div class="sub small">${esc(zoneName(z))} · forecast, mm</div>
     ${miniChart([], { from, to: S.fz.end, extra: lines, marks, divider, height: 150, upto: S.playing ? S.date : null })}
     <table class="fc-table"><tr><th></th>${YEARS.map(y => `<th>${esc(human(y))}</th>`).join('')}<th>trend after today</th></tr>${rows.join('')}</table></div>`;
 }
@@ -1904,7 +1951,7 @@ async function renderMenu() {
   if (S.menu !== want) return;
   drawSelection(d.shape); showPin(S.menu.kind === 'pin' ? S.menu.at : null);
   field.setArea(d.test && d.shape ? { test: d.test, shape: d.shape } : null);
-  let html = `<div class="dm-head"><h2>${S.menu.kind === 'pin' ? 'Can you build here?' : 'How the ground moved here'}</h2><div class="kicker">${esc(d.label)}${d.n ? ` · ${d.n} measured points` : ''}</div></div>`;
+  let html = `<div class="dm-head"><h2>${S.menu.kind === 'pin' ? 'Can you build here?' : 'How the ground moved here'}</h2><div class="kicker">${esc(d.label)}${d.n ? ` · ${d.n} points` : ''}</div></div>`;
   const d2 = S.sat === 'compare' && S.menu.kind !== 'pin' ? await menuData('s1') : null;
   if (S.menu.kind === 'pin') html += await pinCards(d);
   else if (d2 && d.pts.length && d2.pts.length) html += compareTrend(d, d2);
@@ -1913,13 +1960,13 @@ async function renderMenu() {
     const gaps = gapsOf(d.sat, d.trk);
     const vmin = Math.min(...d.pts.map(p => p[1])), vmax = Math.max(...d.pts.map(p => p[1]));
     html += `<div class="block dm-card"><h3>The trend <span class="badge">${sgn(vmin)} to ${sgn(vmax)} mm</span></h3>
-      <div class="sub small">Line-of-sight change, mm</div>
-      ${miniChart(d.pts, { from: d.pts[0][0], to: d.pts.at(-1)[0], gaps, on: S.date, color: SATS[d.sat].color, height: 140, upto: S.playing ? S.date : null })}
-      <p class="sub small">Below 0: moving away from the satellite (often sinking). Above 0: moving toward it. The blue point is the date on the map.</p></div>`;
+      <div class="sub small">mm · blue dot: the date on the map</div>
+      ${miniChart(d.pts, { from: d.pts[0][0], to: d.pts.at(-1)[0], gaps, on: S.date, color: SATS[d.sat].color, height: 140, upto: S.playing ? S.date : null })}</div>`;
   }
   if (S.menu.kind !== 'pin') {
     html += forecastCard(S.menu);
     html += await arrowsCard(d.test || (() => false));
+    html += plainCard(d, d2);
   }
   if (S.menu !== want) return;
   $('#dm-body').innerHTML = html;
