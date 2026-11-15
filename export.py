@@ -438,6 +438,36 @@ def export_nisar(out: pathlib.Path, site_key: str, series: list[dict]):
     return layers, frames, points, notes
 
 
+def export_up_east(out: pathlib.Path, site_key: str):
+    """Experimental up and east rates (split.py, NISAR 129A + 094D, June to October 2026) as points for the menu's arrows.
+    → manifest block or None. Values in 0.1 mm/yr; points only inside the Sentinel-1 box."""
+    import numpy as np
+    f = C.WORK / site_key / "up_east.npz"
+    if not f.exists():
+        return None
+    z = np.load(f)
+    ref = str(z["ref_track"])
+    meta = C.load_json(C.WORK / site_key / ref / "meta.json")
+    site = C.SITES[site_key]
+    cx, cy = C.to_xy(meta["epsg"], site["lon"], site["lat"])
+    X = meta["x0"] + np.arange(meta["nx"]) * meta["dx"]
+    Y = meta["y0"] + np.arange(meta["ny"]) * meta["dy"]
+    XX, YY = np.meshgrid(X, Y)
+    keep = (np.abs(XX - cx) <= NISAR_POINT_BOX_M) & (np.abs(YY - cy) <= NISAR_POINT_BOX_M) & np.isfinite(z["up"]) & np.isfinite(z["east"])
+    lon, lat = C.to_lonlat(meta["epsg"], XX[keep], YY[keep])
+    t = lambda a: [int(round(float(v) * 10)) for v in a[keep]]
+    obj = dict(scale=0.1, units="mm/yr", window=[str(w) for w in z["window"]], spacing_m=round(meta["dx"]),
+               lon=[round(float(v), 5) for v in lon], lat=[round(float(v), 5) for v in lat],
+               up=t(z["up"]), east=t(z["east"]), sig_up=t(z["sig_up"]), sig_east=t(z["sig_east"]))
+    (out / "nisar").mkdir(parents=True, exist_ok=True)
+    (out / "nisar" / "up_east_points.json").write_text(json.dumps(obj, separators=(",", ":")), encoding="utf-8")
+    print(f"  nisar up/east: {int(keep.sum())} points (experimental)")
+    return dict(file="nisar/up_east_points.json", experimental=True, tracks=["129A", "094D"], window=obj["window"],
+                note="Experimental: NISAR 129A and 094D rates over June to October 2026 combined into up-down and east-west, "
+                     "north-south ignored (both radars are nearly blind to it). 094D failed the phase-sign test, so these "
+                     "values are for inspection only; the uncertainty is a lower bound.")
+
+
 # ------------------------------------------------------------------------------------------------ the products set
 def write_pending(out: pathlib.Path) -> list[str]:
     """stations.geojson, calib.json, checks.json belong to 04 and 05; write explicit pending files only if missing."""
@@ -479,6 +509,7 @@ def run(site_key: str) -> None:
     s1, bounds = export_s1(out, summary)
     series, variants = export_series(summary, site)
     n_layers, n_frames_, n_points, n_notes = export_nisar(out, site_key, series)
+    up_east = export_up_east(out, site_key)
     C.save_json(out / "series.json", series)
     cov = nisar_coverage()
     C.save_json(out / "coverage.json", dict(
@@ -514,7 +545,7 @@ def run(site_key: str) -> None:
     nmeta = C.SENSORS["nisar"]
     nisar = {k: nmeta[k] for k in ("label", "agency", "band", "wavelength_cm", "status", "reference", "credit")}
     nisar.update(layers=n_layers, frames=n_frames_, points=n_points, look=nmeta["look"], product=nmeta["product"],
-                 fit=n_notes, flags={t: r for t, r in NISAR_FLAG.items() if t in n_frames_})
+                 fit=n_notes, up_east=up_east, flags={t: r for t, r in NISAR_FLAG.items() if t in n_frames_})
     missing = [t for t in nmeta["tracks"] if t not in n_frames_]
     if missing:
         nisar["pending"] = (" ".join(NISAR_HOLD.get(t, f"{t}: displacement fit pending.") for t in missing) if n_frames_ else
