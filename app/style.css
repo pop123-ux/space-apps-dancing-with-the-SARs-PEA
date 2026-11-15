@@ -504,8 +504,8 @@ body.dmenu-open #stage { right: 50vw; }
 body.dmenu-open #sheet { display: none !important; }
 body.dmenu-open .layers-wrap { right: calc(50vw + var(--gap)); }
 @media (max-width: 1100px) { #dm-body { grid-template-columns: 1fr; } }
-/* the floating legend is replaced by the menu's legend */
-#legend { display: none !important; }
+/* the floating legend gives way to the menu's own legend only while a menu is open */
+body.dmenu-open #legend { display: none !important; }
 @media (max-width: 760px) {
   #dmenu { width: 100vw; top: auto; height: 55%; }
   body.dmenu-open #stage { right: 0; }
@@ -560,6 +560,8 @@ body.pin-mode #map .maplibregl-canvas-container { cursor: crosshair; }
 #pin-hint::after { content: ''; position: absolute; right: -7px; top: 50%; margin-top: -7px; border: 7px solid transparent; border-right: 0; border-left-color: #1C1917; }
 @keyframes hint-bob { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-5px); } }
 /* the verdict comes first, across the whole menu */
+.dm-card.verdict.neutral { grid-column: 1 / -1; border-left: 5px solid #78716C; font-weight: 400; }
+.dm-card.verdict.look { grid-column: 1 / -1; border-left: 5px solid #B45309; background: #FFFBEB; font-weight: 400; }
 .dm-card.verdict.hero { grid-column: 1 / -1; display: block; padding: 18px 20px; }
 .dm-card.verdict.hero.no { background: #FDECEA; border: 2px solid #B2182B; border-left-width: 8px; }
 .dm-card.verdict.hero.ok { background: #EAF2FA; border: 2px solid #2166AC; border-left-width: 8px; }
