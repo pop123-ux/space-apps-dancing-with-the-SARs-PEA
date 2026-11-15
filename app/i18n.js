@@ -54,6 +54,40 @@ const PHRASES = [   // longer phrases inside mixed text, applied longest first
 for (const k of ['Baseline (coherence ≥ 0.35)', 'Stricter coherence (≥ 0.55)', 'West reference area only', 'East reference area only',
   'Elevation correction (fitted to the data)', 'Weather-model troposphere (ECMWF IFS, acquisition time)', 'Single run']) PHRASES.push([k, WORDS[k]]);
 const RX = [[/(\d{4}-\d{2}-\d{2}) to (\d{4}-\d{2}-\d{2})/g, '$1 – $2']];
+// strings from the 15 Nov text pass (folded explanations, Agreement on the geometry pair, forecast shortcut)
+Object.assign(WORDS, {
+  'What the check found': 'Ce a găsit verificarea', 'How good is this forecast?': 'Cât de bună este prognoza?',
+  'Which run changes it?': 'Ce procesare o schimbă?', 'About this table': 'Despre acest tabel', 'Source and method': 'Sursă și metodă',
+  'Loading measurements…': 'Se încarcă măsurătorile…', 'Methods': 'Metode', 'Stable ground nearby': 'Teren stabil din apropiere',
+  'One satellite has no series here': 'Un satelit nu are serie aici', 'Sentinel-1 history': 'Istoric Sentinel-1',
+  'No automatic check for this zone yet': 'Încă nicio verificare automată pentru această zonă',
+});
+PHRASES.push(
+  ['See the forecast to', 'Vezi prognoza până la'], ['Typical past error: ', 'Eroare tipică în trecut: '],
+  [' at 30 days', ' la 30 de zile'], [' at 88 days', ' la 88 de zile'], ['Before 2026: ', 'Înainte de 2026: '],
+  ['NISAR next to Sentinel-1 over the months both cover', 'NISAR alături de Sentinel-1 în lunile acoperite de amândoi'],
+  ['. The verdicts come from the automatic checks.', '. Verdictele vin din verificările automate.'],
+  ['Each line is the zone minus the terrain 6.5 to 8 km away.', 'Fiecare linie este zona minus terenul aflat la 6,5–8 km.'],
+  [' is paired with ', ' este asociat cu '], ['because both see east-west motion the same way.', 'deoarece amândoi văd la fel mișcarea est-vest.'],
+  ['A wide tolerance means agreeing proves little yet.', 'O toleranță largă înseamnă că acordul încă dovedește puțin.'],
+  ["Change in each salt zone along the radar's line of sight", 'Schimbarea în fiecare zonă de sare pe linia de vizare a radarului'],
+  ['Negative = away from the satellite, which is what sinking looks like. Relative to nearby terrain.',
+   'Negativ = departe de satelit, adică așa arată tasarea. Relativ la terenul din jur.'],
+  ['A pretrained time-series model (Chronos-2) extends this radar series to',
+   'Un model preantrenat de serii temporale (Chronos-2) prelungește această serie radar până la'],
+  ['It sees only the series: nothing about salt, weather or the mine.', 'Vede doar seria: nimic despre sare, vreme sau mină.'],
+  ['Median rates in mm/yr, December 2020 to November 2025. Positive = up or east.',
+   'Rate mediane în mm/an, decembrie 2020 – noiembrie 2025. Pozitiv = în sus sau spre est.'],
+  ["Ground motion measured by two radar satellites, along each one's line of sight and relative to nearby terrain.",
+   'Mișcarea terenului măsurată de doi sateliți radar, pe linia de vizare a fiecăruia și relativ la terenul din jur.'],
+  ['It is not a hazard forecast, an evacuation guide or a building safety assessment.',
+   'Nu este o prognoză de hazard, un ghid de evacuare sau o evaluare a siguranței clădirilor.'],
+  ['For official notices, follow ISU Vâlcea and the Ocnele Mari town hall.', 'Pentru anunțuri oficiale, urmăriți ISU Vâlcea și Primăria Ocnele Mari.'],
+  ['has almost no data over the town in', 'nu are aproape deloc date deasupra orașului în'],
+  ['a dot needs a connected series through every date, and C-band loses coherence in winter.',
+   'un punct are nevoie de o serie continuă la toate datele, iar banda C pierde coerența iarna.'],
+  ['1 dot = ', '1 punct = '], ['Map shows the baseline run', 'Harta arată procesarea de bază'],
+);
 PHRASES.sort((a, b) => b[0].length - a[0].length);
 
 let lang = 'en', busy = false;
