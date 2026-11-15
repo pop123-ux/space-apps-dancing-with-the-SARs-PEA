@@ -123,7 +123,7 @@ const sensorKeys = () => Object.keys(SATS).filter(k => sensors()[k]);
 const win = () => S.sens?.windows?.[S.window] || null;
 // the window with the most dates for this track among those that keep at least 5 % of the town (January to November for 029A)
 function longestWindow(trk) {
-  const ws = Object.entries(S.sens?.windows || {}).filter(([, w]) => (w.town_cover?.[trk] ?? 0) >= 5);
+  const ws = Object.entries(S.sens?.windows || {}).filter(([, w]) => w.frames?.[trk]);
   ws.sort((a, b) => (b[1].frames?.[trk]?.dates?.length || 0) - (a[1].frames?.[trk]?.dates?.length || 0));
   return ws[0]?.[0] || S.sens?.default_window || null;
 }
@@ -140,6 +140,9 @@ const pointFile = (sat) => (sat === 's1' && win()?.points) ? win().points[S.trac
 const covOf = (sat) => S.cov?.[sat] || {};
 const tracksOf = (sat) => { const f = Object.keys(frames(sat)); return f.length ? f : Object.keys(covOf(sat)); };
 const datesOf = (sat, t) => frames(sat)[t]?.dates || covOf(sat)[t]?.dates || [];
+// the first date after a gap restarts the count at zero (its map is blank by construction): kept in the data, not on the timeline
+const restartsOf = (sat, t) => { const f = frames(sat)[t]; return new Set(f?.groups ? f.dates.filter((d, i) => i > 0 && f.groups[i] !== f.groups[i - 1]) : []); };
+const stepDates = (sat, t) => { const r = restartsOf(sat, t); return datesOf(sat, t).filter(d => !r.has(d)); };
 const gapsOf = (sat, t) => frames(sat)[t]?.gaps || covOf(sat)[t]?.gaps || [];
 const dirOf = (sat, t) => frames(sat)[t]?.direction || covOf(sat)[t]?.direction || '';
 const pendingText = (sat) => sensors()[sat]?.pending || `${SATS[sat].name} measurements are not exported yet`;
@@ -171,9 +174,9 @@ function entry(point, sat, trk, scenario = S.scenario) {
 }
 
 function sliderDates() {
-  if (S.sat !== 'compare') return measured(S.sat) ? datesOf(S.sat, S.track[S.sat]) : [];
+  if (S.sat !== 'compare') return measured(S.sat) ? stepDates(S.sat, S.track[S.sat]) : [];
   const w = S.man.common_window; const all = new Set();
-  for (const s of ['nisar', 's1']) datesOf(s, S.track[s]).filter(d => !w || inWindow(d, w)).forEach(d => all.add(d));
+  for (const s of ['nisar', 's1']) stepDates(s, S.track[s]).filter(d => !w || inWindow(d, w)).forEach(d => all.add(d));
   return [...all].sort();
 }
 
@@ -195,7 +198,7 @@ function writeHash() {
 }
 function applyHash(h) {
   const keys = sensorKeys();
-  if (h.window && S.sens?.windows?.[h.window]) { S.window = h.window; S.windowPicked = true; }
+  // a window in an old link is ignored: the page always opens on the full Sentinel-1 record (May 2025 on)
   if (h.scenario && scenarios()?.[h.scenario]) S.scenario = h.scenario;
   if (h.sat && (keys.includes(h.sat) || (h.sat === 'compare' && compareReady()))) S.sat = h.sat;
   if (h.track) for (const t of h.track.split(',')) for (const s of keys) if (tracksOf(s).includes(t)) S.track[s] = t;
@@ -410,8 +413,10 @@ function addMarkers(m) {
     const cls = p.agree === true ? 'yes' : p.agree === false ? 'no' : 'na';
     const el = document.createElement('button');
     el.type = 'button'; el.className = `marker station ${cls}`; el.dataset.id = p.station;
-    el.setAttribute('aria-label', `Station ${p.station}: ${cls === 'yes' ? 'agrees' : cls === 'no' ? 'disagrees' : 'not tested'}`);
-    el.innerHTML = `<i aria-hidden="true">${p.status === 'warn' ? '!' : cls === 'yes' ? '✔' : cls === 'no' ? '✘' : '?'}</i>${esc(names || p.station)}`;
+    el.setAttribute('aria-label', `Ground station ${p.station}: ground moving ${sgn(p.gnss_up)} mm a year`);
+    const mark = cls === 'yes' ? '✔' : cls === 'no' ? '✘' : '<svg viewBox="0 0 16 16"><path d="M8 2v9M4 6a5 5 0 0 1 8 0M2 4a8 8 0 0 1 12 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M5 14h6L8 10z" fill="currentColor"/></svg>';
+    el.innerHTML = `<i aria-hidden="true">${mark}</i>${esc(names || p.station)}<small>${sgn(p.gnss_up)} mm/yr</small>`;
+    el.title = `GNSS ground station: the ground here moves ${sgn(p.gnss_up)} mm a year (up-down). Used to check the satellites.`;
     el.addEventListener('click', (e) => { e.stopPropagation(); select({ kind: 'station', id: p.station }); });
     new maplibregl.Marker({ element: el }).setLngLat(f.geometry.coordinates).addTo(m);
   }
@@ -691,7 +696,7 @@ function monthLabels(R) {
   return out.join('');
 }
 function dotsFor(s, t, R, lane, shown, hollow = false, dates = null) {
-  return (dates || datesOf(s, t)).map(d => `<span class="dot ${SATS[s].shape === 'tri' ? 'tri' : ''} ${lane}${hollow ? ' hollow' : ''}${d === shown ? ' on' : ''}" style="left:${R.x(d)}%;--c:${SATS[s].color}" title="${esc(sensors()[s].label)} ${d}"></span>`).join('');
+  return (dates || stepDates(s, t)).map(d => `<span class="dot ${SATS[s].shape === 'tri' ? 'tri' : ''} ${lane}${hollow ? ' hollow' : ''}${d === shown ? ' on' : ''}" style="left:${R.x(d)}%;--c:${SATS[s].color}" title="${esc(sensors()[s].label)} ${d}"></span>`).join('');
 }
 // Sentinel-1's window that covers NISAR's acquisition gap (sensitivity.json windows.<k>.fills_gap), if exported.
 const gapFill = () => Object.entries(S.sens?.windows || {}).find(([, w]) => w.fills_gap?.sensor === 'nisar') || null;
@@ -1463,8 +1468,26 @@ function pinCursor() {
   if (!el) { el = document.createElement('div'); el.id = 'pin-cursor'; el.innerHTML = `<div class="pc-in"><svg viewBox="0 0 40 48" aria-hidden="true"><path d="M20 46 C20 46 4 28 4 18 A16 16 0 0 1 36 18 C36 28 20 46 20 46 Z" fill="#DC2626" stroke="#1C1917" stroke-width="2.4"/><circle cx="20" cy="18" r="10.5" fill="#FFF" stroke="#1C1917" stroke-width="1.6"/><path d="M13.5 19 L20 13 L26.5 19" fill="#7C2D12" stroke="#1C1917" stroke-width="1.2" stroke-linejoin="round"/><rect x="15" y="18.5" width="10" height="7" fill="#C2410C" stroke="#1C1917" stroke-width="1.1"/><rect x="18.6" y="21" width="2.8" height="4.5" fill="#7C2D12"/></svg></div>`; el.hidden = true; document.body.append(el); }
   return el;
 }
+function setAreaMode(on) {
+  S.areaMode = on; if (on) { if (S.pinMode) setPinMode(false); if (S.houseMode) setHouseMode(false); }
+  $('#area-btn')?.setAttribute('aria-pressed', String(on));
+  if (mapA) mapA.getCanvas().style.cursor = on ? 'crosshair' : '';
+}
+let dotPop = null;
+function dotPopup(e) {   // one measured dot: its value on the shown date, nothing more
+  dotPop?.remove(); dotPop = null;
+  const f = mapA.queryRenderedFeatures([[e.point.x - 8, e.point.y - 8], [e.point.x + 8, e.point.y + 8]], { layers: ['pts'] })
+    .sort((a, b) => { const pa = mapA.project(a.geometry.coordinates), pb = mapA.project(b.geometry.coordinates); return Math.hypot(pa.x - e.point.x, pa.y - e.point.y) - Math.hypot(pb.x - e.point.x, pb.y - e.point.y); })[0];
+  if (!f) return;
+  const sat = S.sat === 'compare' ? 'nisar' : S.sat; const L = layerFor(sat); const k = mapA._ptsWant?.key;
+  const v = k ? f.properties[k] : null, r = f.properties.r;
+  const txt = S.view === 'rate' || k === 'r' ? `${sgn(r)} mm a year` : v != null ? `${sgn(v)} mm since ${human(L.first)}` : 'no value on this date';
+  const word = (x) => x == null ? '' : Math.abs(x) < 2 ? 'about still' : x < 0 ? 'moved away from the satellite (often: sank)' : 'moved toward the satellite';
+  dotPop = new maplibregl.Popup({ closeButton: false, offset: 10, className: 'dot-pop' }).setLngLat(f.geometry.coordinates)
+    .setHTML(`<b>${esc(txt)}</b><span>${esc(word(S.view === 'rate' ? r : v))}${L?.date && S.view !== 'rate' ? ` · ${esc(human(L.date))}` : ''}</span>`).addTo(mapA);
+}
 function setHouseMode(on) {
-  S.houseMode = on; if (on && S.pinMode) setPinMode(false);
+  S.houseMode = on; if (on && S.pinMode) setPinMode(false); if (on && S.areaMode) setAreaMode(false);
   $('#house-btn')?.setAttribute('aria-pressed', String(on));
   if (mapA) mapA.getCanvas().style.cursor = on ? 'pointer' : '';
   if (on) {
@@ -1768,7 +1791,8 @@ function plainCard(d, d2) {
   const text = s.join(' '); const fresh = S.plainLast !== text; S.plainLast = text;
   let i = 0;   // each word fades in after the one before ("typed out"), only when the text is new
   const words = s.map(p => `<p>${p.split(' ').map(w => `<span class="tk" style="--i:${i++}">${esc(w)} </span>`).join('')}</p>`).join('');
-  return `<div class="block dm-card plain${fresh ? ' typing' : ''}"><h3><span class="spark" aria-hidden="true">✦</span> In plain words</h3><div class="pw">${words}</div></div>`;
+  const P = d.pts; const span = P?.length ? `${human(P[0][0])} – ${human(P.at(-1)[0])}${S.fz ? ` · forecast to ${human(S.fz.end)}` : ''}` : '';
+  return `<div class="block dm-card plain${fresh ? ' typing' : ''}"><h3><span class="spark" aria-hidden="true">✦</span> In plain words <span class="badge pw-dates">${esc(span)}</span></h3><div class="pw">${words}</div></div>`;
 }
 function compareTrend(a, b) {   // the honest-comparison rules: same months, each re-zeroed at the first shared date
   const lo = a.pts[0][0] > b.pts[0][0] ? a.pts[0][0] : b.pts[0][0], hi = a.pts.at(-1)[0] < b.pts.at(-1)[0] ? a.pts.at(-1)[0] : b.pts.at(-1)[0];
@@ -2202,6 +2226,7 @@ function renderAbout() {
 // ------------------------------------------------------------------------------------------------ main render
 function changed(full = true) {
   const ds = sliderDates();
+  if (S.date && S.sat !== 'compare' && measured(S.sat) && restartsOf(S.sat, S.track[S.sat]).has(S.date)) S.date = ds.find(d => d > S.date) || ds.at(-1);   // never land on a blank restart map
   if (ds.length && (!S.date || (!S.dateUser && !ds.includes(S.date)))) S.date = ds[ds.length - 1];   // first load: the satellite's own last date   // a kept date with no acquisition gets an explicit "nearest" offer
   if (full) { renderSat(); renderViews(); renderTracks(); }
   renderLayersMenu();
@@ -2238,6 +2263,11 @@ async function main() {
     hb.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 L11 4 L19 11 V19 H3 Z" fill="#DC2626" stroke="#1C1917" stroke-width="1.6" stroke-linejoin="round"/><path d="M14 14 L22 17 L18.5 18.5 L17 22 Z" fill="#fff" stroke="#1C1917" stroke-width="1.4" stroke-linejoin="round"/></svg>`;
     hb.addEventListener('click', (e) => { e.stopPropagation(); setHouseMode(!S.houseMode); });
     comp?.parentNode.insertBefore(hb, comp.nextSibling);
+    const ab = document.createElement('button'); ab.type = 'button'; ab.id = 'area-btn'; ab.className = 'pin-btn';
+    ab.title = 'Select an area: press the map to study a 1 km square'; ab.setAttribute('aria-label', ab.title); ab.setAttribute('aria-pressed', 'false');
+    ab.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" fill="rgba(29,78,216,.12)" stroke="#1D4ED8" stroke-width="2" stroke-dasharray="3.5 2.5"/></svg>`;
+    ab.addEventListener('click', (e) => { e.stopPropagation(); setAreaMode(!S.areaMode); });
+    hb.parentNode.insertBefore(ab, hb.nextSibling);
     let used = false; try { used = localStorage.getItem('dos-pin-used') === '1'; } catch (e) { /* storage blocked */ }
     if (!used) {   // a hint for first-time visitors, gone once the pin has been used
       const h = document.createElement('div'); h.id = 'pin-hint'; h.textContent = 'Can I build here? Pick up the pin';
@@ -2275,7 +2305,8 @@ async function main() {
       setHouseMode(false); return openMenu({ kind: 'pin', at: c, house: { type: 'Polygon', coordinates: poly } });
     }
     if (S.pinMode) { dropPinCursor(e); S.pinMode = false; setTimeout(() => { setPinMode(false); openMenu({ kind: 'pin', at }); }, 330); return; }
-    openMenu({ kind: 'area', at });
+    if (S.areaMode) { setAreaMode(false); return openMenu({ kind: 'area', at }); }
+    dotPopup(e);
   });
   mapA.on('mouseenter', 'pts', () => { mapA.getCanvas().style.cursor = 'pointer'; });
   mapA.on('mouseleave', 'pts', () => { mapA.getCanvas().style.cursor = ''; });
