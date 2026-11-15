@@ -1,118 +1,50 @@
 <!doctype html>
 <!-- Owner: 06 · App developer (Darius) -->
-<!-- The page. It reads products/<site>/ only (contracts: docs/build-spec.md; design: docs/ui.md). -->
+<!-- The page (layout v5, 15 Nov 2026): toolbar, map, timeline, and a menu that opens when the map is used.
+     It reads products/<site>/ only. -->
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Dancing on Salt · Ocnele Mari</title>
   <meta name="description" content="How the ground moves above the salt-brine fields of Ocnele Mari, Romania, seen by two radar satellites, NISAR and Sentinel-1.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Inter:wght@400;500;600&display=swap">
+  <link rel="icon" href="app/favicon.png">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.15.0/dist/maplibre-gl.css">
   <link rel="stylesheet" href="app/style.css">
-  <link rel="icon" type="image/png" href="app/favicon.png">
 </head>
 <body>
-  <div id="stage">
-    <div id="map" aria-label="Map of Ocnele Mari"></div>
-    <div id="mapB" hidden aria-hidden="true"></div>
-    <div id="divider" hidden><button id="divider-handle" type="button" aria-label="Move the comparison divider (left and right arrow keys)">⇆</button></div>
-    <div id="cmp-tags" hidden><span id="cmp-left" class="tag"></span><span id="cmp-right" class="tag"></span></div>
-  </div>
-
-  <header id="bar">
-    <div class="brand">
-      <img class="logo" src="app/logo.png" alt="Dancing on Salt logo" width="42" height="42">
-      <h1>Dancing on Salt</h1>
-      <div class="lang" role="group" aria-label="Language / Limba"><button type="button" data-lang="en" aria-pressed="true">EN</button><button type="button" data-lang="ro" aria-pressed="false">RO</button></div>
-      <span id="site-name" class="sub"></span>
-    </div>
-    <div class="bar-right">
-      <div class="menu-wrap">
-        <button id="sat-btn" type="button" class="pill" aria-haspopup="true" aria-expanded="false" aria-controls="sat-menu"></button>
-        <div id="sat-menu" class="menu" role="group" aria-label="Satellite" hidden></div>
+  <header id="toolbar">
+    <div class="name">Dancing on Salt</div>
+    <div class="settings">
+      <div class="setting down" id="set-sat">
+        <button type="button" class="set-btn" aria-haspopup="true">Satellite</button>
+        <div class="opts" role="menu" aria-label="Satellite">
+          <button type="button" role="menuitemradio" data-sat="nisar">NISAR</button>
+          <button type="button" role="menuitemradio" data-sat="s1">Sentinel-1</button>
+        </div>
       </div>
-      <button id="checks-btn" type="button" class="pill quiet" aria-label="Checks"></button>
-      <button id="about-btn" type="button" class="round" aria-label="About this page">i</button>
     </div>
   </header>
 
-  <section id="context" aria-label="What the map shows">
-    <div id="ctx-what" class="ctx-what"></div>
-    <div class="ctx-row">
-      <div id="zone-group" class="zones" role="group" aria-label="Zone"></div>
-      <div class="ctx-actions">
-        <button id="preset-z4" type="button" class="chip strong"><span class="long">Investigate Zone 4</span><span class="short">Zone 4</span></button>
-        <button id="copy-link" type="button" class="chip"><span class="long">Copy view link</span><span class="short">Link</span></button>
-        <button id="reset-site" type="button" class="chip"><span class="long">Reset to site</span><span class="short">Reset</span></button>
-      </div>
-    </div>
-  </section>
+  <main id="map" aria-label="Map of Ocnele Mari"></main>
 
-  <div id="flags">
-    <div id="sim" class="flag sim" hidden role="status"><b>Simulated, not data</b> · every value here is invented</div>
-    <div id="notice" class="flag" hidden role="status"></div>
-    <div id="busy" class="flag quiet" hidden role="status">Loading measurements…</div>
-    <div id="exp-note" class="flag warn" hidden role="status">Experimental: up and east assume no north motion; reference and atmosphere not resolved.</div>
-  </div>
-
-  <div id="legend" class="legend">
-    <div class="legend-title"><span id="legend-title"></span> <span id="legend-units" class="sub"></span></div>
-    <div class="ramp" aria-hidden="true"></div>
-    <div class="ticks"><span id="legend-min"></span><span>0</span><span id="legend-max"></span></div>
-    <div class="caps"><span id="legend-neg"></span><span id="legend-pos"></span></div>
-    <div class="legend-town"><i aria-hidden="true"></i>Ocnele Mari town boundary</div>
-    <div class="legend-keys"><span><i class="k-pale" aria-hidden="true"></i>near 0 (pale dot)</span><span><i class="k-none" aria-hidden="true"></i>no dot = no data</span></div>
-    <div id="legend-note" class="legend-note"></div>
-  </div>
-
-  <div class="menu-wrap layers-wrap">
-    <button id="layers-btn" type="button" class="round big" aria-haspopup="true" aria-expanded="false" aria-controls="layers" title="Map settings">
-      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 3 2 8l10 5 10-5-10-5Zm-8.2 9L2 13l10 5 10-5-1.8-1L12 16l-8.2-4Zm0 4L2 17l10 5 10-5-1.8-1L12 20l-8.2-4Z" fill="currentColor"/></svg>
-    </button>
-    <div id="layers" class="menu up" hidden>
-      <div class="menu-label">Map</div>
-      <div id="base-group" class="seg" role="group" aria-label="Basemap"></div>
-      <div class="menu-label">Colour overlay <span id="opacity-val" class="sub"></span></div>
-      <input id="opacity" type="range" min="0" max="100" step="5" value="70" aria-label="Overlay opacity">
-      <label class="check"><input id="exp" type="checkbox"> Up and east <span class="sub">experimental</span></label>
-      <p id="exp-why" class="sub small" hidden>No supported up/east export yet (O-19).</p>
-    </div>
-  </div>
-
-  <aside id="sheet" hidden aria-live="polite">
-    <button id="sheet-close" type="button" class="round small close" aria-label="Close">✕</button>
-    <div id="sheet-body"></div>
+  <aside id="menu" hidden aria-label="Selected place">
+    <section id="graph"></section>
+    <section id="legend"></section>
   </aside>
 
-  <section id="dock" aria-label="Time and view">
-    <div class="dock-top">
-      <div class="navs"><div id="view-group" class="seg views" role="group" aria-label="View"></div>
-      <div id="sub-group" class="seg sub" role="group" aria-label="Motion measure"></div></div>
-      <div id="track-group" class="tracks" role="group" aria-label="Track"></div>
+  <footer id="timeline">
+    <div id="tl-bar">
+      <div class="setting up" id="set-unit">
+        <button type="button" class="set-btn" aria-haspopup="true">Time unit</button>
+        <div class="opts" role="menu" aria-label="Time unit">
+          <button type="button" role="menuitemradio" data-unit="years">Years</button>
+          <button type="button" role="menuitemradio" data-unit="months">Months</button>
+        </div>
+      </div>
     </div>
-    <div class="dock-mid">
-      <button id="play" type="button" class="round play" aria-label="Play through the acquisitions">
-        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path id="play-icon" d="M8 5v14l11-7z" fill="currentColor"/></svg>
-      </button>
-      <div id="tl" class="tl" role="slider" tabindex="0" aria-label="Acquisition date"></div>
-    </div>
-    <div id="status" class="status"></div>
-  </section>
-
-  <dialog id="table-dlg" class="table-dlg" aria-label="Table">
-    <button type="button" class="round small close" aria-label="Close" onclick="this.closest('dialog').close()">✕</button>
-    <div id="table-body"></div>
-  </dialog>
-
-  <dialog id="about">
-    <button type="button" class="round small close" aria-label="Close" onclick="this.closest('dialog').close()">✕</button>
-    <div id="about-body"></div>
-  </dialog>
-
-  <div id="fatal" hidden role="alert"></div>
+    <div id="tl-line"><svg id="tl-svg" role="slider" tabindex="0" aria-label="Time period"></svg></div>
+  </footer>
 
   <script type="module" src="app/main.js"></script>
 </body>
