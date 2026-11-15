@@ -116,8 +116,8 @@
   <dialog id="tracker" class="tracker">
     <button type="button" class="round small close" aria-label="Close" onclick="this.closest('dialog').close()">✕</button>
     <h2>Where the satellites are now</h2>
-    <p class="lead">Computed in your browser from each satellite's fixed orbit: its last pass over Ocnele Mari in ASF's catalogue, the time it takes to circle the Earth and its 12-day repeat. Accurate to about 300 km. A radar looks sideways, so when it measures Ocnele Mari the satellite is 500 to 600 km to the east or west of the town. The dashed line is the next 100 minutes, about one orbit. Drag the globe to turn it.</p>
-    <div id="trk-map"></div>
+    <p class="lead">Live positions from each satellite's fixed orbit, accurate to about 300 km. Dashed line: the next orbit.</p>
+    <div class="trk-wrap"><div id="trk-map"></div><div class="trk-hint" aria-hidden="true"><span class="trk-hand">↻</span> Drag to rotate the globe</div></div>
     <div id="trk-body"></div>
   </dialog>
 
