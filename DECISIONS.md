@@ -202,3 +202,15 @@ A decision recorded here is not a question. Nobody blocks on one. If a line look
   - How positions are computed: from fixed orbits (12-day repeat; 173 orbits per cycle for NISAR and 175 for Sentinel-1; inclinations 98.4° and 98.18°), one reference pass each from ASF's catalogue, and the side offset of a side-looking radar.
   - Check: against the known descending passes, the satellite comes out on the right side of the town, 470 to 530 km out and 180 to 310 km off along the track, so the page says "accurate to about 300 km". This is not a full orbit propagation from tracking data.
 - 2026-11-15 (06, via Alexandru): The "i" panel is now a "Terms & Conditions" button and panel with six short sections: what the page is, what it is not, how to read it, the satellites and their pass times, data licences and credits, and use. The validation checks are no longer listed openly: they sit in a closed "Validation checks (for reviewers)" section at the end, which the checks badge still opens.
+- 2026-11-15 (06, via Alexandru): UI pass on desktop and phone:
+  - Satellite basemap is now Esri World Imagery (aerial, sharp to house level, map zoom to 17.5), instead of the 10 m Sentinel-2 mosaic that blurred past zoom 15. Used under Esri's terms with its attribution; for a long-lived public site, check the licence or switch to a keyed service.
+  - "C-band" and "L-band" removed from the satellite button.
+  - Coverage dots take the satellite's colour (NISAR orange, Sentinel-1 purple) instead of grey or white.
+  - The arrows note is a card in the app's style.
+  - Terms & Conditions links the emergency inspectorate (igsu.ro; ISU Vâlcea's own site not confirmed) and the town hall (ocne.ro, the domain its council publishes under), and lists the official sources: NISAR (nisar.jpl.nasa.gov, asf.alaska.edu/nisar), Sentinel-1 (sentiwiki.copernicus.eu), ASF HyP3 and ASF Search, and the repository.
+  - The timeline axis spans every date shown (Sentinel-1 from May 2025), so rows no longer spill over their labels.
+  - The window choice wraps instead of cutting off a button.
+  - Map credits moved beside the layers button.
+  - The menu is a column, so its legend never covers the cards.
+  - Phone: short header buttons, the pin and compass are visible (zoom buttons hidden), track buttons show "Morning" or "Evening".
+  - The app files are served with no-cache, so browsers recheck them on every visit. Old cached copies were showing removed features, such as the "Investigate Zone 4" button and the earlier white points.
