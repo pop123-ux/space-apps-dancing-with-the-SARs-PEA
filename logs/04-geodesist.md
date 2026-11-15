@@ -41,7 +41,7 @@ This matches the code: the tide layer is built towards-positive, the troposphere
 
 ### 3. 094D: NASA's ionosphere layer is not what makes the zones look like uplift
 
-Same 94D pairs (`data/work/ocnele_mari/094D/`, 02's stream), same pixels, 04's stand-in stack, with and without the ionosphere layer:
+Same 094D pairs (`data/work/ocnele_mari/094D/`, 02's stream), same pixels, 04's stand-in stack, with and without the ionosphere layer:
 
 | 094D | Ionosphere subtracted (default) | Layer added back |
 | --- | --- | --- |
