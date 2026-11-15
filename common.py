@@ -58,7 +58,7 @@ SITES = {
                  place="Village of Slătioarele, Coșota"),
         ],
         stations=["VLC1", "VLC2", "HORE"],   # DRAFT (04/05): open stations inside the window
-        story="TODO(01): one sentence, written by the Lead",
+        story="Two radar satellites, NISAR and Sentinel-1, watch the ground above Ocnele Mari's salt-brine fields, and this page shows plainly where it moves, how sure we are, and what the radar cannot yet see.",
         # D-002 (locked): the map opens on the town; zooming out shows Romania, blurred, as context only.
         view=dict(center=[45.086281, 24.2704806], zoom=13),
     ),

@@ -306,3 +306,11 @@ A decision recorded here is not a question. Nobody blocks on one. If a line look
 2026-11-15 | Alex (Claude Code) | 'Reset to site' moves to the top bar and reloads the default view of the real site (drops a simulated or old link state) | keep it in the context strip, where it only deselected and flew back | Visitors who land on the simulated set or an old link need one obvious way back to the real default
 2026-11-15 | Alex (Claude Code) | The colour scale (title, ramp, -20/0/+20, away/toward) floats in the top-left stack under the notices; the rest of the old legend stays removed | bottom-left legend (overlapped the Arrows and Buildings buttons); no scale at all | Readers need the scale to read the dots; the top-left stack never meets the map's buttons
 2026-11-15 | Alex (Claude Code) | Record the Vercel project setup in docs/deploy.md (team PEA, project, deploy hook, protection, caching) and leave every sentinel1/assets* folder out of the deployment | keep it only in the Vercel dashboard | The live site is byte-identical to main, but the hosting configuration lived only in Vercel; the newer grid folders (25 MB for assets_all) were uploaded on every deploy though the page never reads them
+- 2026-11-15 (all, via Alexandru): Prepared the repository for submission.
+  - **Added** `SUBMISSION.md`, the text for each field of the Space Apps form, with every NASA and partner source.
+  - **Rewrote** `STATUS.md` as the final state, and updated the status line in `CLAUDE.md`.
+  - **README:** links to the submission; the stale "updated by" line and the "still open" list became "Next steps"; the floating colour scale is no longer mentioned; the owner line moved to the top so the owners test passes.
+  - **The one-sentence story** in `common.py` replaces the placeholder and is copied into the manifest by `export.py --labels-only`.
+  - **The pin's hint and title** no longer promise a build answer.
+  - **Removed:** the 11 screenshots of the old interface (`docs/figures/ui-review-14nov/`).
+  - **Moved:** `ocnele-mari-geography.md` to `docs/geography.md`.

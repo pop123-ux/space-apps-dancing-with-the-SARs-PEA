@@ -1,14 +1,14 @@
 # Dancing on Salt
 
+**Owner:** 01 · Lead and story (Mario)
+
 <img width="474" height="145" alt="Logo" src="https://github.com/user-attachments/assets/dd8b923a-0575-47a9-9471-942fd5a546a3" />
 
 **AI-Disclosure:** https://docs.google.com/spreadsheets/d/124X3eaWHZTHrb_MgZriIy63Y4Zvm6VaW4JnVFfrDwhg/edit?usp=sharing
 
-**Owner:** 01 · Lead and story (Mario)
+*Our submission to NASA Space Apps 2026, challenge [Dancing with the SARs](https://www.spaceappschallenge.org/2026/challenges/dancing-with-the-sars/). The submission text is in [SUBMISSION.md](SUBMISSION.md).*
 
-*Updated Sun 15 Nov 2026, about 15:45 Europe/Bucharest, by Darius (06) with Claude Code, from `main` at `0457a0c` and the live site. For 01 to review before it is merged.*
-
-This is the team repo for NASA Space Apps 2026, challenge **Dancing with the SARs**, on 14 to 15 Nov 2026 in Cluj-Napoca. Six people, one site: **Ocnele Mari**, in Vâlcea county, Romania, where salt has been extracted by dissolving it with water through wells since the 1950s and 1960s, and where the ground above the brine fields has sunk and collapsed before, most visibly in September 2001 at Lacul Țeica ([ocnele-mari-geography.md](ocnele-mari-geography.md)).
+This is the team repo for NASA Space Apps 2026, challenge **Dancing with the SARs**, on 14 to 15 Nov 2026 in Cluj-Napoca. Six people, one site: **Ocnele Mari**, in Vâlcea county, Romania, where salt has been extracted by dissolving it with water through wells since the 1950s and 1960s, and where the ground above the brine fields has sunk and collapsed before, most visibly in September 2001 at Lacul Țeica ([docs/geography.md](docs/geography.md)).
 
 **Live app: https://pea-dancingwiththesars.vercel.app** (deployed from `main` by Vercel).
 
@@ -33,7 +33,7 @@ What is live on https://pea-dancingwiththesars.vercel.app, checked 15 Nov 2026, 
 
 | Part | What it does |
 | --- | --- |
-| **Map** | Opens on Ocnele Mari with the town boundary, the four salt zones (1 Lacul Țeica, 2 Țeica east, 3 Ocnița · Goruniș, 4 Slătioarele), the GNSS stations HORE and VLC with their own motion, and one coloured dot per measured spot. A colour scale sits top left. The background is a light map or satellite imagery, with adjustable overlay opacity. A click on a dot shows its value |
+| **Map** | Opens on Ocnele Mari with the town boundary, the four salt zones (1 Lacul Țeica, 2 Țeica east, 3 Ocnița · Goruniș, 4 Slătioarele), the GNSS stations HORE and VLC with their own motion, and one coloured dot per measured spot. The background is a light map or satellite imagery, with adjustable overlay opacity. A click on a dot shows its value |
 | **Satellite menu** | NISAR, Sentinel-1, or Compare (side by side, same months only: 7 Jul to 4 Oct 2026), each with its pass times over Romania |
 | **Views** | Motion (change since the first date, or the yearly rate), Coverage (when each satellite looked and how many usable pixels each zone has), Compare (the two radars side by side, paired by viewing geometry) |
 | **Morning and evening passes** | NISAR 129A (morning, from the east) and 094D (evening, from the west, flagged); Sentinel-1 007D (morning) and 029A (evening) |
@@ -136,7 +136,7 @@ Smaller choices are logged with their reasons in [DECISIONS.md](DECISIONS.md).
 ## Repository layout
 
 ```
-README.md  STATUS.md  OWNERS.md  CLAUDE.md                  plan, status, owners, rules for Claude Code
+README.md  SUBMISSION.md  STATUS.md  OWNERS.md  CLAUDE.md   overview, submission text, status, owners, rules
 DECISIONS.md  CITATIONS.md  AI-DISCLOSURE.md                logs everyone appends to
 common.py                                                   site, zones, stations, thresholds, helpers
 fetch.py stack.py refs.py calibrate.py split.py             the NISAR pipeline
@@ -156,6 +156,7 @@ vercel.json  .vercelignore                                  hosting
 - [docs/overview.md](docs/overview.md) and [docs/synopsis.md](docs/synopsis.md): why it matters, the claims and how each could fail.
 - [docs/ui.md](docs/ui.md): the page's design and the honest comparison rules.
 - [docs/data.md](docs/data.md), [docs/rehearsal.md](docs/rehearsal.md), [docs/validation-log.md](docs/validation-log.md), [docs/forecast.md](docs/forecast.md): data, traps, validation and the prediction.
+- [SUBMISSION.md](SUBMISSION.md): the Space Apps submission text, with every NASA and partner source.
 - [docs/handoff-15nov-session.md](docs/handoff-15nov-session.md): a compact summary of the 15 Nov session.
 - `logs/`: each role's running log. [products/README.md](products/README.md): every product file and who writes it.
 - [CLAUDE.md](CLAUDE.md) and `prompts/`: the rules and prompts for Claude Code. [INFO.md](INFO.md): site notes in Romanian.
@@ -164,17 +165,12 @@ vercel.json  .vercelignore                                  hosting
 
 Each of the six of us ran Claude Code (Anthropic) for our own role, under shared rules in [CLAUDE.md](CLAUDE.md). ChatGPT (OpenAI) helped summarise the advisor's material before the event and with some Sentinel-1 and forecast work; Figma Make gave a first visual design that was replaced. The prediction comes from Chronos-2, a pretrained forecasting model, used without retraining. The radar measurements and checks come from our scripts on open data. The validator (05) owns the checks and edits no science code; the current check results were run by the 02/03 session and are marked as a draft until 05 reviews them. Every substantive use, and what a person checked, is logged in [AI-DISCLOSURE.md](AI-DISCLOSURE.md).
 
-## Still open before submitting
+## Next steps
 
-From `docs/handoff-15nov-session.md` and the 06 data audit (15 Nov 2026):
-
-1. `SUBMISSION.md` and the 7 slides do not exist yet, and the page's one-sentence story is still a placeholder in `common.py` (01).
-2. The numbers on the slides must be copied from the live page or `products/`; the windows changed on 15 Nov.
-3. "Which way the ground moves" uses the evening NISAR pass, which failed its sign test: hide it or say so.
-4. The prediction shows values to 2029 that were tested only 60 days ahead, and NISAR's are not tested at all.
-5. The pin's hint still says "Can I build here?", although the pin no longer answers yes or no.
-6. The NISAR stacks are not in git, so only Sentinel-1 can be rebuilt from the repository.
-7. Test the live site on two phones.
+- **More NISAR passes.** Each new pass, every 12 days, narrows the noise. At the current rate a 25 mm-a-year sink becomes visible to NISAR around 2029 (`noise_floor.json`).
+- **The evening NISAR pass (094D)** failed the phase-sign test; the "Which way the ground moves" card still uses it, so read that card as unconfirmed.
+- **Reproducibility.** The NISAR stacks in `data/work/` are not in git, so only Sentinel-1 can be rebuilt from the repository alone.
+- **Hosting.** Vercel's Hobby plan blocks commits by anyone but the account owner. `.github/workflows/vercel-deploy-hook.yml` deploys every push to `main` once the `VERCEL_DEPLOY_HOOK` secret is set ([docs/handoff-15nov-session.md](docs/handoff-15nov-session.md)).
 
 ## License
 

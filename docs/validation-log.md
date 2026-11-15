@@ -116,7 +116,7 @@ Done on the committed Sentinel-1 grids (`sentinel1/assets`, checksums verified) 
 
 ## Station misfit, 094D and the Compare pairing (14 Nov 2026, about 21:45)
 
-Done by Alex with Claude Code, on Matei's session. Figure: [04_height_and_pairing.png](figures/04_height_and_pairing.png). UI before the fix: [ui-review-14nov/](figures/ui-review-14nov/).
+Done by Alex with Claude Code, on Matei's session. Figure: [04_height_and_pairing.png](figures/04_height_and_pairing.png).
 
 ![Rate by height, zones by reference, and pairing bias](figures/04_height_and_pairing.png)
 
@@ -197,7 +197,7 @@ Check 8 scales NISAR by the ratio of the up components and assumes no east-west 
   - A rate needs at least 6 dates over at least 0.3 years (`MIN_RATE_DATES`, `MIN_RATE_SPAN_YR`).
   - Each date's change uses exactly the same pairs as before, so the Change map gains coverage without extra noise.
 - **Zone histories are unchanged:** `export.nisar_series` still uses only pixels with every date.
-- **Screenshots:** [before](figures/ui-review-14nov/04_change_town_before.jpg) and [after, local preview](figures/ui-review-14nov/05_change_town_after_preview.jpg).
+- **Screenshots:** before and after, local preview.
 - **The preview is not committed.** It was made from this machine's copy of the 129A pairs. Rebuild the products from the team pipeline: `stack.py`, `calibrate.py`, `export.py`, `validate.py`, `export.py`.
 
 ### 5 · Zone names (about 22:30)
