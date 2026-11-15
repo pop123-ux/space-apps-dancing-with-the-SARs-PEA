@@ -83,11 +83,11 @@ const BASEMAPS = {
     style: 'https://tiles.openfreemap.org/styles/positron',
     attribution: '<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a>, data from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>',
   },
-  satellite: {
+  satellite: {   // aerial imagery, sharp down to single houses (the earlier Sentinel-2 mosaic is 10 m per pixel and blurs past zoom 15)
     label: 'Satellite',
-    tiles: ['https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg'],
-    maxzoom: 15,
-    attribution: '<a href="https://s2maps.eu" target="_blank" rel="noopener">Sentinel-2 cloudless 2020</a> by EOX IT Services GmbH (contains modified Copernicus Sentinel data 2020)',
+    tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+    maxzoom: 19,
+    attribution: 'Imagery <a href="https://www.esri.com/en-us/legal/terms/full-master-agreement" target="_blank" rel="noopener">Esri</a>, Maxar, Earthstar Geographics, and the GIS User Community',
   },
 };
 const PLAY_PATH = 'M8 5v14l11-7z', PAUSE_PATH = 'M7 5h4v14H7zM13 5h4v14h-4z';
@@ -269,7 +269,7 @@ function makeMap(container, interactive) {
     center: [v.center[1], v.center[0]],            // manifest is [lat, lon]; MapLibre wants [lon, lat]
     zoom: v.zoom - ZOOM_OFFSET,
     minZoom: (v.min_zoom ?? 6) - ZOOM_OFFSET,
-    maxZoom: 16,
+    maxZoom: 17.5,
     attributionControl: false, dragRotate: true, pitchWithRotate: false,
   });
   // rotation on: right-drag or Ctrl+drag, two-finger twist; the compass resets north
@@ -346,8 +346,8 @@ function setPoints(m, sat, L) {
     if (m._ptsWant !== want) return;            // the user moved on while the file loaded
     if (m._pts !== file) { m.getSource('pts').setData(gj); m._pts = file; S.spacing = gj.meta.spacing; renderLegend(); }
     const cov = S.view === 'coverage';   // Coverage: where a connected series exists, whatever its value
-    m.setPaintProperty('pts', 'circle-color', cov ? (S.basemap === 'satellite' ? '#FAFAF9' : '#57534E') : rdbuExpr(key, want.vmax));
-    m.setPaintProperty('pts', 'circle-stroke-color', S.basemap === 'satellite' ? '#0C0A09' : '#1C1917');
+    m.setPaintProperty('pts', 'circle-color', cov ? SATS[sat].color : rdbuExpr(key, want.vmax));
+    m.setPaintProperty('pts', 'circle-stroke-color', cov ? '#FFFFFF' : S.basemap === 'satellite' ? '#0C0A09' : '#1C1917');
     m.setFilter('pts', ['has', cov ? 'r' : key]);
     m.setLayoutProperty('pts', 'visibility', 'visible');
   }).catch(() => { done(); m.setLayoutProperty('pts', 'visibility', 'none'); });
@@ -511,7 +511,7 @@ function renderSat() {
   const sn = sensors();
   const cur = S.sat === 'compare'
     ? '<span aria-hidden="true">⇆</span> Compare'
-    : `<span class="${SATS[S.sat].cls}" aria-hidden="true">${SATS[S.sat].mark}</span> ${esc(sn[S.sat].label)} <span class="meta sub">${esc(sn[S.sat].band)}</span>`;
+    : `<span class="${SATS[S.sat].cls}" aria-hidden="true">${SATS[S.sat].mark}</span> ${esc(sn[S.sat].label)}`;
   $('#sat-btn').innerHTML = `${cur} <span class="caret" aria-hidden="true">▼</span>`;
   const w = S.man.common_window;
   const items = ['nisar', 's1'].map(k => {
@@ -648,7 +648,7 @@ function renderTracks() {
       const dir = dirOf(s, t);
       const b = document.createElement('button'); b.type = 'button';
       const flag = frames(s)[t]?.flag;
-      b.textContent = `${passInfo(s, t) ? passInfo(s, t).when[0].toUpperCase() + passInfo(s, t).when.slice(1) + ' · from ' + passInfo(s, t).from : t}${flag ? ' ⚠' : ''}`;
+      { const pi = passInfo(s, t); b.innerHTML = pi ? `${pi.when[0].toUpperCase() + pi.when.slice(1)}<span class="trk-from"> · from ${pi.from}</span>${flag ? ' ⚠' : ''}` : `${esc(t)}${flag ? ' ⚠' : ''}`; }
       if (flag) b.classList.add('flagged');
       b.title = passTitle(s, t);
       b.setAttribute('aria-label', b.title);
@@ -668,7 +668,7 @@ function renderTracks() {
   arrowKeys(g);
 }
 function axisRange() {
-  const all = sensorKeys().flatMap(s => tracksOf(s).flatMap(t => datesOf(s, t))).sort();
+  const all = sensorKeys().flatMap(s => tracksOf(s).flatMap(t => [...datesOf(s, t), ...allDates(s, t)])).sort();
   if (!all.length) { const t = Date.now() / 864e5; return { start: t - 365, end: t, x: () => 0 }; }
   const a = new Date(all[0] + 'T00:00:00Z'), b = new Date(all[all.length - 1] + 'T00:00:00Z');
   const start = Date.UTC(a.getUTCFullYear(), a.getUTCMonth(), 1) / 864e5;
@@ -1320,7 +1320,7 @@ function zoneCoverage(id) {
     }
   }
   return `<h2>${esc(zoneName(z))}: coverage</h2><div class="kicker">${esc(win()?.label || '')} · usable pixels with a connected series</div>
-    <p class="reason">The map shows every pixel with a connected series on the active track and window (grey dots, whatever their value). The timeline shows catalog acquisitions, which exist even where the ground is not coherent enough to measure.</p>
+    <p class="reason">The map shows every pixel with a connected series on the active track and window (dots in the satellite's colour, whatever their value). The timeline shows catalog acquisitions, which exist even where the ground is not coherent enough to measure.</p>
     <table class="data"><thead><tr><th>Track</th><th>Zone pixels</th><th>Support or reason</th></tr></thead><tbody>${rows.join('')}</tbody></table>`;
 }
 // Compare for one zone: parallel observations over the common window, each in its own line of sight
@@ -1848,7 +1848,10 @@ const field = (() => {
     arrows = out; const strong = out.filter(a2 => !a2.weak).length;
     S.fieldInfo = { cells, shown: out.length, strong, noise, ref };
     const note = document.querySelector('.arrow-note');
-    if (note) note.innerHTML = `Inside the selected area, arrows point to where the ground moved further from the satellite (often: sank more), compared with the terrain around it. Colour = the legend.<br><b>${strong} of ${out.length}</b> stand out from the terrain's own random variation${noise == null ? ' (too few points around to tell)' : ''}; faded arrows do not.`;
+    if (note) note.innerHTML = `<div class="an-head"><b>Arrows</b><span class="an-count">${strong} of ${out.length} stand out</span></div>
+      <div class="an-row"><svg viewBox="0 0 30 10" aria-hidden="true"><path d="M2 5H24M18 1L25 5L18 9" fill="none" stroke="#B2182B" stroke-width="2.4" stroke-linecap="round"/></svg>points to where the ground sank more</div>
+      <div class="an-row"><svg viewBox="0 0 30 10" aria-hidden="true"><path d="M2 5H24M18 1L25 5L18 9" fill="none" stroke="#B2182B" stroke-width="2.4" stroke-linecap="round" opacity=".35"/></svg>faded: within the terrain's normal variation${noise == null ? ' (too few points around to tell)' : ''}</div>
+      <div class="an-row muted">Colour follows the legend, relative to the ground around the area.</div>`;
     if (!raf) raf = requestAnimationFrame(draw);
   }
   function draw(now) {
@@ -1881,7 +1884,7 @@ function addArrowToggle(m) {
   box.innerHTML = `<button type="button" id="arrow-btn" aria-pressed="false" title="Show arrows pointing to where the ground sank more">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 L13 7 M13 7 H7 M13 7 V13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M11 21 L21 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2 3" stroke-linecap="round"/></svg>
       <span>Arrows</span></button>
-      <button type="button" id="bldg-btn" aria-pressed="true" title="Building outlines from OpenStreetMap, shown when zoomed in (experimental)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V9l8-5 8 5v11z M9 20v-6h6v6" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>Buildings</span><small>experimental</small></button><div class="arrow-note" hidden>Inside the selected area, arrows point to where the ground moved further from the satellite (often: sank more), relative to the terrain around it. Colour = the legend. Select an area to see them.</div>`;
+      <button type="button" id="bldg-btn" aria-pressed="true" title="Building outlines from OpenStreetMap, shown when zoomed in (experimental)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V9l8-5 8 5v11z M9 20v-6h6v6" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>Buildings</span><small>experimental</small></button><div class="arrow-note" hidden><div class="an-head"><b>Arrows</b></div><div class="an-row muted">Press the map to choose an area.</div></div>`;
   box.classList.remove('maplibregl-ctrl'); m.getContainer().append(box);   // lower-left corner of the map
   box.querySelector('#bldg-btn').addEventListener('click', (e) => {
     e.stopPropagation(); S.buildings = S.buildings === false; e.currentTarget.setAttribute('aria-pressed', String(S.buildings));
@@ -1926,7 +1929,7 @@ async function renderMenu() {
   const L = layerFor(d.sat); const rng = await areaRange(d, L);
   const vm = Math.abs(L?.meta?.vmax ?? 20); let lo = -vm, hi = vm;
   $('#dm-legend').style.removeProperty('--ramp');
-  if (rng) { [lo, hi] = rng; mapA.setPaintProperty('pts', 'circle-color', rangeExpr(rng.key, lo, hi)); $('#dm-legend').style.setProperty('--ramp', rampCss(lo, hi)); }
+  if (rng) { [lo, hi] = rng; if (S.view !== 'coverage') mapA.setPaintProperty('pts', 'circle-color', rangeExpr(rng.key, lo, hi)); $('#dm-legend').style.setProperty('--ramp', rampCss(lo, hi)); }
   S.menuRange = rng ? [lo, hi] : null; field.refresh();
   const f1 = (v) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toFixed(1)}`;
   const lat = mapA.getCenter().lat, mpp = 40075016.686 * Math.cos(lat * Math.PI / 180) / (512 * 2 ** mapA.getZoom());
@@ -2041,7 +2044,7 @@ function renderAbout() {
     <h3>1. What this page is</h3>
     <p>A map of how the ground moved around the salt-brine fields of Ocnele Mari, measured from space by two radar satellites, NISAR and Sentinel-1, and a short look ahead.</p>
     <h3>2. What it is not</h3>
-    <p><b>Not a hazard forecast, an evacuation guide, or a building permit or safety assessment.</b> The "Can you build here?" answer is a screen from satellite data: before building, ask for a geotechnical study. For official notices, follow ISU Vâlcea and the Ocnele Mari town hall.</p>
+    <p><b>Not a hazard forecast, an evacuation guide, or a building permit or safety assessment.</b> The "Can you build here?" answer is a screen from satellite data: before building, ask for a geotechnical study. For official notices, follow <a href="https://www.igsu.ro" target="_blank" rel="noopener">the emergency inspectorate (IGSU, which ISU Vâlcea belongs to)</a> and <a href="https://www.ocne.ro" target="_blank" rel="noopener">the Ocnele Mari town hall</a>.</p>
     <h3>3. How to read it</h3>
     <ul class="tc"><li>Each satellite measures movement toward or away from itself, and relative to the terrain a few kilometres around, not absolute height.</li>
       <li>Red: the ground moved away from the satellite, usually sinking. Blue: it moved toward it.</li>
@@ -2050,11 +2053,18 @@ function renderAbout() {
     <h3>4. The satellites and when they pass over Romania</h3>
     <table class="data"><thead><tr><th>Pass</th><th>Time over Ocnele Mari (Romanian time)</th><th></th></tr></thead><tbody>${passRows}</tbody></table>
     <p class="sub">${sn.map(x => `<b>${esc(x.label)}</b>: ${esc(x.agency)}, ${esc(x.band)} (${esc(x.wavelength_cm)} cm wavelength), ${esc(x.status)}.`).join(' ')}</p>
-    <h3>5. Data, licences and credits</h3>
+    <h3>5. Official sources</h3>
+    <ul class="tc">
+      <li>NISAR mission (NASA–ISRO): <a href="https://nisar.jpl.nasa.gov" target="_blank" rel="noopener">nisar.jpl.nasa.gov</a>; its data at the Alaska Satellite Facility: <a href="https://asf.alaska.edu/nisar/" target="_blank" rel="noopener">asf.alaska.edu/nisar</a></li>
+      <li>Sentinel-1 mission (ESA / Copernicus): <a href="https://sentiwiki.copernicus.eu/web/s1-mission" target="_blank" rel="noopener">sentiwiki.copernicus.eu/web/s1-mission</a>; the interferograms were made with <a href="https://hyp3-docs.asf.alaska.edu/" target="_blank" rel="noopener">ASF HyP3</a></li>
+      <li>Every acquisition date and pass time comes from ASF's catalogue: <a href="https://search.asf.alaska.edu/" target="_blank" rel="noopener">search.asf.alaska.edu</a></li>
+      <li>Our code, data lists and checksums: <a href="https://github.com/pop123-ux/space-apps-dancing-with-the-SARs-PEA" target="_blank" rel="noopener">the project repository</a></li>
+    </ul>
+    <h3>6. Data, licences and credits</h3>
     <p class="sub">${esc(S.man.credits)}</p>
     ${sn.map(x => `<p class="sub">${esc(x.credit)}</p>`).join('')}
     <p class="sub">Maps: ${BASEMAPS.light.attribution}; ${BASEMAPS.satellite.attribution}. Building outlines: © OpenStreetMap contributors (ODbL), via OpenFreeMap. Map library: MapLibre GL JS.</p>
-    <h3>6. Use</h3>
+    <h3>7. Use</h3>
     <p class="sub">Free to view and share with attribution. Provided as is, without warranty, for NASA Space Apps 2026. Built ${esc(S.man.built)}.</p>
     ${Object.keys(m).length ? more('Methods (for specialists)', `${['s1', 'sign', 'rate', 'zones'].filter(k => m[k]).map(k => `<p class="sub">${esc(m[k])}</p>`).join('')}
       ${m.links ? `<p>${m.links.map(l => `<a href="${esc(l.href)}" target="_blank" rel="noopener">${esc(l.label)}</a>`).join(' · ')}</p>` : ''}`, 'h') : ''}
