@@ -1889,12 +1889,6 @@ const rampCss = (lo, hi) => `linear-gradient(90deg, ${rangeStops(lo, hi).map(([v
 // down that plane: towards where the ground moved further away from the satellite (often: sank more). Its colour is the
 // legend's colour for the value at the node; its length grows with the steepness, relative to the steepest in view.
 // A light pulse runs along each arrow, like a wind map. Nodes with fewer than 4 points nearby (forest) get no arrow.
-// vector-field colours, dim violet (weak) through pink to orange (strong)
-function vfColour(t) {
-  const st = [[0, [185, 150, 255]], [0.5, [255, 90, 150]], [1, [255, 190, 70]]];
-  const i = t <= 0.5 ? 0 : 1, a = st[i], b2 = st[i + 1], k = (t - a[0]) / (b2[0] - a[0]);
-  return `rgb(${a[1].map((v, j) => Math.round(v + (b2[1][j] - v) * k)).join(',')})`;
-}
 const field = (() => {
   let canvas = null, arrows = [], raf = 0, busy = 0, lastSig = null, lastArea = null;
   const shownKey = (sat) => {
@@ -1986,7 +1980,7 @@ const field = (() => {
         if (pl) { gx[k] = pl.gx; gy[k] = pl.gy; all.push(pl.g); any = true; } else if (k) { gx[k] = gx[k - 1]; gy[k] = gy[k - 1]; }
       }
       const sm = (arr) => { const o = new Float32Array(nd); for (let k = 0; k < nd; k++) { let t = 0, c = 0; for (let j = Math.max(0, k - 3); j <= Math.min(nd - 1, k + 3); j++) { const wj = 4 - Math.abs(j - k); t += arr[j] * wj; c += wj; } o[k] = t / c; } return o; };
-      if (any) out.push({ at: [lon, lat], gx: sm(gx), gy: sm(gy), spacing, mPerDegX: 111320 * Math.cos(lat * Math.PI / 180) });
+      if (any) out.push({ at: [lon, lat], v: f.properties[key], gx: sm(gx), gy: sm(gy), spacing, mPerDegX: 111320 * Math.cos(lat * Math.PI / 180) });
     }
     all.sort((x, y) => x - y); const gref = all.length ? all[Math.floor(all.length * 0.95)] || 1e-9 : 1e-9;
     for (const a2 of out) a2.gref = gref;
@@ -1998,9 +1992,9 @@ const field = (() => {
     S.fieldInfo = { cells, shown: out.length, strong, noise, ref };
     const note = document.querySelector('.arrow-note');
     if (note) note.innerHTML = `<div class="an-head"><b>Arrows</b><span class="an-count vf-date"></span></div>
-      <div class="an-row"><svg viewBox="0 0 30 10" aria-hidden="true"><path d="M2 5H24M18 1L25 5L18 9" fill="none" stroke="#F5A63C" stroke-width="2" stroke-linecap="round"/></svg>points to where the ground sank more</div>
-      <div class="an-row"><svg viewBox="0 0 30 10" aria-hidden="true"><path d="M2 5H12M8 2L13 5L8 8" fill="none" stroke="#B996FF" stroke-width="2" stroke-linecap="round"/></svg>short and violet: a weak difference, likely within the terrain's normal wobble</div>
-      <div class="an-row muted">Arrows start at each dot and point to where the ground had sunk more by the date shown (move the timeline to change it). Longer and more orange = steeper difference; short violet = weak.</div>`;
+      <div class="an-row"><svg viewBox="0 0 30 10" aria-hidden="true"><path d="M2 5H24M18 1L25 5L18 9" fill="none" stroke="#B2182B" stroke-width="2" stroke-linecap="round"/></svg>points to where the ground sank more</div>
+      <div class="an-row"><svg viewBox="0 0 30 10" aria-hidden="true"><path d="M2 5H12M8 2L13 5L8 8" fill="none" stroke="#B2182B" stroke-width="2" stroke-linecap="round"/></svg>short: a weak difference, likely within the terrain's normal wobble</div>
+      <div class="an-row muted">Arrows start at each dot and point to where the ground had sunk more by the date shown (move the timeline to change it). Colour follows the legend (the dot's own value); longer = steeper difference.</div>`;
     if (!raf) raf = requestAnimationFrame(draw);
   }
   // the arrows hold still on the shown date. They float: when the map moves, their tips carry a
@@ -2020,6 +2014,7 @@ const field = (() => {
     const anc = arrows.length ? mapA.project(arrows[0].at) : null;
     const ix = anc && sp.last ? (anc.x - sp.last.x) * 0.05 : 0, iy = anc && sp.last ? (anc.y - sp.last.y) * 0.05 : 0; sp.last = anc;
     let active = false;
+    const stD = stops(S.sat === 'compare' ? 'nisar' : S.sat);   // the legend's gradient: each arrow takes its dot's colour
     // which arrows show is fixed on the ground per zoom level (one per ~26 px cell at that zoom),
     // so panning never swaps arrows; when the zoom level changes, arrows fade in or out instead of popping
     const cellPx = 26, zl = Math.floor(mapA.getZoom());
@@ -2044,7 +2039,7 @@ const field = (() => {
       const len = Math.max(10, Math.max(dotPx, cellPx) * 1.2 * (0.2 + 0.8 * rel)); const ex = p.x + ux * len + st.ox, ey = p.y + uy * len + st.oy;   // the base stays on the dot; only the tip floats
       { const d = Math.hypot(ex - p.x, ey - p.y) || 1; ux = (ex - p.x) / d; uy = (ey - p.y) / d; }
       const hl = Math.max(5, Math.min(10, len * 0.32)), hw = hl * 0.55, bx = ex - ux * hl, by = ey - uy * hl;
-      const col = vfColour(rel); ctx.globalAlpha = (0.6 + 0.4 * rel) * a.vis;
+      const col = colourAt(stD, Math.max(stD[0][0], Math.min(stD.at(-1)[0], a.v))); ctx.globalAlpha = (0.6 + 0.4 * rel) * a.vis;
       const shaft = () => { ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(bx, by); };
       const tip = () => { ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(bx - uy * hw, by + ux * hw); ctx.lineTo(bx + uy * hw, by - ux * hw); ctx.closePath(); };
       ctx.strokeStyle = 'rgba(12,10,9,.7)'; ctx.lineWidth = 4.6; shaft(); ctx.stroke(); ctx.lineWidth = 2.4; tip(); ctx.stroke();
