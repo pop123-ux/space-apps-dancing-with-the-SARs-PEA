@@ -6,6 +6,68 @@ This is the running log for role 04, newest entry first, so the team can follow 
 
 ---
 
+## Sun 15 Nov 2026, about 15:30 · T3 from the product itself, NASA's tide layer has the wrong sign, and the ionosphere is not 094D's problem
+
+Branch `r04/t3-tides`. Done with Claude Code (see the `AI-DISCLOSURE.md` log). New exploration scripts in `notebooks/04/`: `set_sign_test.py` and `iono_ablation_094d.py`. They change no product and no other role's file.
+
+### 1. The phase convention (T3, convention half): `PHASE_SIGN = -1` is right
+
+The GUNW radar-grid cube carries NASA's own correction layers. Their sign rules are in ISCE3's source code (`isce-framework/isce3`, branch `develop`, read 15 Nov):
+
+| Layer | Code | Its sign |
+| --- | --- | --- |
+| `hydrostatic/wetTroposphericPhaseScreen` | `troposphere.py:450`: `-(delay_ref - delay_sec) · 4π/λ` | +4π/λ × range increase: positive = **away** |
+| `slantRangeSolidEarthTidesPhase` | `solid_earth_tides.py:386-396`: `(ref - sec)` projected on the LOS, `· -4π/λ` | +4π/λ × motion **towards** the satellite |
+
+**Measured on the first 129A pair (full HDF5):** the window phase (ionosphere removed) against the troposphere layer at each pixel's DEM height gives slope **+0.68**, r = **+0.74** on 345,245 pixels, and the elevation slopes agree in sign (ratio +0.76). So `unwrappedPhase` shares the troposphere layer's convention: positive = away. That gives mm towards the satellite = -phase · λ/4π, which is `PHASE_SIGN = -1`. The convention is the same for every NISAR GUNW, so it holds for 094D too.
+
+**What this does not settle:** whether the ground in the zones moves. That is the measurement half of T3 (03, 05), and it is below the noise (see `r04/noise-floor`).
+
+### 2. NASA's solid-Earth-tide layer is opposite to the interferogram
+
+The tide is known physics. Model: degree 2, IERS 2010 eq. 7.5, h2 = 0.6078, l2 = 0.0847, Sun and Moon from astropy. Sanity check: the model's uplift follows the Moon's tidal term (r = +0.85, range ±13 cm). For every pair tested so far, the layer read with our rule equals **minus** the model to within a few percent:
+
+| Pair | Layer, our rule (mm) | Tide model (mm) |
+| --- | --- | --- |
+| 129A 2026-06-23 → 07-05 | +73.33 | -71.02 |
+| 094D 2026-06-20 → 07-02 | +50.94 | -53.66 |
+| 094D 2026-07-02 → 07-14 | +63.23 | -63.75 |
+| 094D 2026-07-14 → 07-26 | -5.71 | +3.93 |
+| 094D 2026-07-26 → 08-19 | -17.91 | +16.83 |
+
+This matches the code: the tide layer is built towards-positive, the troposphere layer away-positive. **Subtracting `set_rad` as published doubles the tide instead of removing it.** The run over all 22 pairs continues; its JSON (with the troposphere slope per pair) replaces this table when it lands.
+
+**Effect on us:** small. The tide varies by about 0.03 rad (0.6 mm) per pair across the 50 km window, and referencing to stable ground removes the rest. **Proposal for 03:** in `stack.py --gunw-corrections`, use `tropo_rad - set_rad`, or drop `set_rad`. **For the write-up:** it is worth reporting to ASF.
+
+### 3. 094D: NASA's ionosphere layer is not what makes the zones look like uplift
+
+Same 94D pairs (`data/work/ocnele_mari/094D/`, 02's stream), same pixels, 04's stand-in stack, with and without the ionosphere layer:
+
+| 094D | Ionosphere subtracted (default) | Layer added back |
+| --- | --- | --- |
+| Robust scatter on stable ground | **51.6 mm/yr** | 105.7 mm/yr |
+| All zones, median | +18.7 | +27.6 |
+| z1 / z2 / z3 / z4, minus their 1 to 3 km ring | -17.0 / +16.2 / +0.9 / +0.3 | +1.8 / +41.9 / -5.8 / -8.3 |
+
+- **The correction halves the noise.** Keep it.
+- **094D's "uplift" is regional.** Against their own 1 to 3 km ring the zones are inside the zone noise (about 25 mm/yr); the +18.7 comes with the whole valley.
+- **Sentinel-1 has the same pattern.** Its 6.5 to 8 km control band reads +20.8 (029A) and +17.0 (007D) mm/yr (`sentinel1/analysis/matched_geometry_exploratory.json`).
+
+So the absolute zone numbers of both radars carry a large common offset from the reference and the atmosphere. Zone minus band, the build-spec rule, is the only fair comparison.
+
+### 4. The noise is per date, not the chain of pairs
+
+Rerun of `gslc_chain_vs_network.py` (094D single-look data, 12 km box, common pixels): the redundant network (21 pairs) gives a zone σ of 11.7 mm/yr against 12.5 mm/yr for NASA's chain. That is about 6 % better. The other 04 session reached the same conclusion on `r04/noise-floor` (49b8654). **More independent dates** are the lever: Sentinel-1's 6-day revisit, and NISAR's own passes as they accumulate.
+
+### Still open
+
+1. The full 22-pair JSON of `set_sign_test.py`.
+2. 03: the `set_rad` sign in `stack.py`.
+3. 05: T3's measurement half stays with the zone test.
+4. A joint NISAR + Sentinel-1 zone-minus-band comparison on the same months and the same band.
+
+---
+
 ## Sat 14 Nov 2026, about 17:40 · 129A on the team's own stream: HDF5 verified, 13 pairs, real tie
 
 Branch `r04/129a-series`. Done with Claude Code (see the `AI-DISCLOSURE.md` log). Earthdata: Matei signed in himself; the token sits in `.env` (git-ignored) and was never printed or copied.
