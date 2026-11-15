@@ -238,3 +238,13 @@ A decision recorded here is not a question. Nobody blocks on one. If a line look
     - the pin's no-data explanation, cut to one sentence;
     - in the satellite panel, the sentences on the catalogue, orbit period, 12-day repeat and the 500 to 600 km side offset;
     - the unused older build rule in the code.
+- 2026-11-15 (06, via Alexandru):
+  - **House picker.** A new button under the compass. Press it, then press a building outline (OpenStreetMap): that building fills red and the menu gives the same check as the pin, at the building's centre, titled "Is this house on moving ground?". Only the pressed part of a multi-part outline is filled.
+  - **Buildings is a regular feature now:** the "experimental" label is removed.
+  - **Weak arrows:** arrows whose slope is no steeper than the surrounding terrain's normal wobble were drawn faded. They are now small hollow circles, meaning "measured, but no clear direction", because their direction is effectively random. If the ring around the area is too sparse, it widens (1.6× and 2.2× the area) before the note says "can't tell".
+  - **Confidence** is now a button in the verdict's top-right corner, opening a score out of 100 made of four parts of up to 25 each:
+    - radar points nearby (full at 8);
+    - dates in the series (full at 60);
+    - precision of the trend (how much of the 15 mm limit the 2029 uncertainty leaves);
+    - the second satellite: same direction, or both without clear movement, gives 25; no data gives 12.5; the opposite direction gives 0.
+  - Scores of 70 or more are high, 40 to 69 medium, below 40 low. The thresholds are our choice.
