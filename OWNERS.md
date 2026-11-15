@@ -126,6 +126,7 @@ Whoever creates these adds the owner line from this table.
 | `vercel.json` | 06 · App developer (Darius) | Vercel config: static site, no build step (JSON has no owner line) |
 | `.vercelignore` | 06 · App developer (Darius) | Files Vercel does not serve |
 | `docs/handoff-02-03.md` | 02 · NISAR data and 03 · InSAR analyst (Alexandru, Eric) | End-of-day-1 handoff for roles 02 and 03 |
+| `docs/handoff-15nov-session.md` | 02 · NISAR data and 03 · InSAR analyst (Alexandru, Eric) | Compact summary of the 15 Nov 2026 session for the next agent |
 | `docs/deploy.md` | 06 · App developer (Darius) | How to host the page on Vercel |
 | `sentinel1/` | 03 · InSAR analyst (Alexandru, Eric) | Sentinel-1 data manifest, fitted results, and team handoff |
 | `docs/forecast.md` | 03 · InSAR analyst (Alexandru, Eric) | Forecast results and environmental screening handoff |
