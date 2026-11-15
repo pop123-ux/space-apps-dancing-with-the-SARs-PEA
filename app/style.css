@@ -538,3 +538,39 @@ body.pin-mode #map .maplibregl-canvas-container { cursor: crosshair; }
 .dm-card.verdict h3 { display: block; margin-bottom: 4px; }
 .marker.hall { width: 58px; }
 .marker.hall svg { width: 58px; height: 58px; }
+
+/* arrow field */
+.field-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.arrow-ctrl { position: absolute; left: 12px; bottom: 30px; z-index: 3; display: grid; gap: 6px; justify-items: start; }
+.arrow-ctrl .arrow-note { order: -1; }
+.arrow-ctrl button { display: flex; align-items: center; gap: 6px; padding: 7px 12px; background: #FAFAF9; color: #1C1917; border: 1.5px solid #1C1917;
+  font: 600 13px/1 inherit; font-family: inherit; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,.25); }
+.arrow-ctrl button svg { width: 18px; height: 18px; }
+.arrow-ctrl button[aria-pressed="true"] { background: #1C1917; color: #FAFAF9; }
+.arrow-note { max-width: 250px; background: rgba(250,250,249,.95); color: #1C1917; font-size: 12px; padding: 6px 8px; border: 1px solid #D6D3D1; }
+/* the pin you pick up: it follows the cursor, leaning, and drops point-down on a press */
+#pin-cursor { position: fixed; left: 0; top: 0; z-index: 9999; pointer-events: none; }
+#pin-cursor .pc-in { width: 40px; height: 48px; margin: -48px 0 0 -20px; transform-origin: 50% 100%; animation: pin-hold 1.1s ease-in-out infinite; filter: drop-shadow(3px 8px 4px rgba(0,0,0,.35)); }
+#pin-cursor .pc-in svg { width: 40px; height: 48px; display: block; }
+#pin-cursor.drop .pc-in { animation: pin-drop .35s cubic-bezier(.5,0,.75,0) forwards; }
+@keyframes pin-hold { 0%, 100% { transform: translateY(-10px) rotate(-16deg); } 50% { transform: translateY(-16px) rotate(-10deg); } }
+@keyframes pin-drop { 0% { transform: translateY(-14px) rotate(-12deg); } 70% { transform: translateY(0) rotate(0); } 85% { transform: translateY(0) scale(1.08, .88); } 100% { transform: translateY(0) scale(1); filter: none; } }
+.pin-btn[aria-pressed="true"] svg { animation: pin-wiggle .9s ease-in-out infinite; transform-origin: 50% 100%; }
+@keyframes pin-wiggle { 0%, 100% { transform: rotate(-10deg); } 50% { transform: rotate(10deg); } }
+.pin-mark { display: grid; justify-items: center; }
+.pin-mark.landed svg { animation: pin-land .45s ease-out; transform-origin: 50% 100%; }
+@keyframes pin-land { 0% { transform: translateY(-24px); } 60% { transform: translateY(0) scale(1.12, .85); } 100% { transform: scale(1); } }
+.pin-badge { margin-bottom: 4px; padding: 5px 10px; font-size: 13px; font-weight: 700; white-space: nowrap; color: #FFF; border: 1.5px solid #1C1917; box-shadow: 0 3px 8px rgba(0,0,0,.35); animation: badge-in .4s ease-out; }
+.pin-badge.no { background: #B2182B; }
+.pin-badge.ok { background: #2166AC; }
+@keyframes badge-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+#pin-hint { position: absolute; top: 96px; right: 56px; z-index: 3; background: #1C1917; color: #FAFAF9; font-size: 13px; font-weight: 600; padding: 7px 10px; cursor: pointer;
+  box-shadow: 0 3px 10px rgba(0,0,0,.35); animation: hint-bob 1.6s ease-in-out infinite; }
+#pin-hint::after { content: ''; position: absolute; right: -7px; top: 50%; margin-top: -7px; border: 7px solid transparent; border-right: 0; border-left-color: #1C1917; }
+@keyframes hint-bob { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-5px); } }
+/* the verdict comes first, across the whole menu */
+.dm-card.verdict.hero { grid-column: 1 / -1; display: block; padding: 18px 20px; }
+.dm-card.verdict.hero.no { background: #FDECEA; border: 2px solid #B2182B; border-left-width: 8px; }
+.dm-card.verdict.hero.ok { background: #EAF2FA; border: 2px solid #2166AC; border-left-width: 8px; }
+.verdict-q { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: #57534E; }
+.verdict.hero .verdict-word { font-size: 34px; line-height: 1.1; margin: 6px 0 8px; }

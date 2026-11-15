@@ -161,3 +161,14 @@ A decision recorded here is not a question. Nobody blocks on one. If a line look
   - "Build here?", a yes-or-no rule, not a trained model, because we have no labelled examples of good and bad building ground. It answers "Not advised" if the spot lies inside a salt-brine zone, or if its straight-line trend moves away from the satellite faster than 10 mm/yr and by more than twice the trend's own uncertainty. Otherwise it answers "No warning sign". The 10 mm/yr limit is our choice, not a standard. The card says this is a screen from satellite data, not a ground survey.
   - "Where it heads": that straight line carried on to 1 Jan 2029, with an 80 % prediction band. Chronos-2 runs offline, so it can't run for any spot in the browser.
   Known limit: on January to November series the winter dates can tilt the straight line, so a spot with little net change can still read as "Not advised".
+
+- 2026-11-15 (06, via Alexandru): Replaced the per-point arrows with an arrow field. It is off by default; an "Arrows" button in the lower-left corner of the map turns it on.
+  - Placement: one arrow per node of a 46 px screen grid, so arrows never overlap.
+  - Direction: at each node a plane is fitted to the measured points around it at the shown date, and the arrow points down that plane, towards where the ground moved further from the satellite (often: sank more). This gives a real two-dimensional field from the measurement. The east-west estimate alone could only point east or west, and it depends on the descending NISAR track that failed its sign test.
+  - Look: colour = the legend's colour for the value at the node; length grows with the steepness relative to the steepest arrow in view; a light pulse runs along each arrow. Nodes with fewer than 4 points nearby get no arrow.
+- 2026-11-15 (06, via Alexandru): The pin is now the main way in.
+  - First visit: a hint next to the button says "Can I build here? Pick up the pin" until the pin has been used once (remembered in browser storage).
+  - Holding: the pin replaces the cursor and leans while you hold it.
+  - Pressing: it straightens point-down and drops. The placed pin lands with a bounce and carries the verdict as a badge on the map.
+  - The menu: the verdict comes first, across the whole menu, in large type: "✘ Not recommended" or "✔ No warning sign" (the earlier "Not advised" was renamed).
+  - Legend: the menu's colour scale now uses the lowest and highest values of whatever is selected (the pin's 120 m circle, a zone or a pressed area), also in the rate and coverage views.
