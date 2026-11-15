@@ -239,7 +239,8 @@ async function load() {
   ]);
   Object.assign(S, { man, series, stations, checks: checks || [], cov, sens, forecast });
   S.updates = await opt('updates.json');
-  S.fz = await opt('forecast_zones.json');   // forecast_zones.py: Chronos-2 for every zone and track   // update.py --check: acquisitions newer than the fits
+  S.fz = await opt('forecast_zones.json');
+  S.fa = await opt('forecast_area.json');   // forecast_area.py: Chronos-2 for every 240 m cell of the town   // forecast_zones.py: Chronos-2 for every zone and track   // update.py --check: acquisitions newer than the fits
   S.window = sens ? (sens.default_window || Object.keys(sens.windows || {})[0]) : null;
   if (sens) S.window = longestWindow(tracksOf('s1')[0]);
   const d = man.default || {};
@@ -1776,11 +1777,10 @@ function plainWords(d, d2) {
     const a = clip(P), b = clip(d2.pts);
     if (a != null && b != null) out.push(`Over the months both satellites watched, NISAR saw ${sgn(a, 0)} mm and Sentinel-1 ${sgn(b, 0)} mm: ${Math.sign(a) === Math.sign(b) ? 'they agree on the direction' : 'they disagree, so treat this place with caution'}.`);
   }
-  const zf = S.fz?.zones?.[S.fcZone]; const sat = d.sat; const k = zf && (zf[`${sat}:${S.track[sat]}`] ? `${sat}:${S.track[sat]}` : Object.keys(zf)[0]);
-  if (zf && k) {
-    const f = zf[k], further = f.median.at(-1) - f.observed_mm.at(-1);
-    const z = zones().find(p => p.id === S.fcZone);
-    out.push(`For ${zoneName(z)}${S.menu?.kind === 'area' ? ', the nearest salt field' : ''}, ${sensors()[k.split(':')[0]]?.label || ''}'s forecast expects ${Math.abs(further) < 2 ? 'little further change' : `about ${Math.abs(further).toFixed(0)} mm more ${further < 0 ? 'sinking' : 'rising'}`} by ${human(S.fz.end)}. It is a guide, not a promise.`);
+  const af = areaFc(d.sat, d.test);
+  if (af) {
+    const further = af.med.at(-1)[1] - af.obs.at(-1)[1];
+    out.push(`From every measured point in this area, ${sensors()[d.sat]?.label || ''}'s forecast expects ${Math.abs(further) < 2 ? 'little further change' : `about ${Math.abs(further).toFixed(0)} mm more ${further < 0 ? 'sinking' : 'rising'}`} by ${human(S.fa.end)}. It is a guide, not a promise.`);
   }
   out.push(clear && Math.abs(rate) >= 15 && net < 0 ? 'Worth a closer look before building: drop the pin on a spot for a yes-or-no check.'
     : 'Nothing here stands out from normal ground movement. For one exact spot, drop the pin.');
@@ -1791,7 +1791,7 @@ function plainCard(d, d2) {
   const text = s.join(' '); const fresh = S.plainLast !== text; S.plainLast = text;
   let i = 0;   // each word fades in after the one before ("typed out"), only when the text is new
   const words = s.map(p => `<p>${p.split(' ').map(w => `<span class="tk" style="--i:${i++}">${esc(w)} </span>`).join('')}</p>`).join('');
-  const P = d.pts; const span = P?.length ? `${human(P[0][0])} – ${human(P.at(-1)[0])}${S.fz ? ` · forecast to ${human(S.fz.end)}` : ''}` : '';
+  const P = d.pts; const span = P?.length ? `${human(P[0][0])} – ${human(P.at(-1)[0])}${S.fa ? ` · forecast to ${human(S.fa.end)}` : ''}` : '';
   return `<div class="block dm-card plain${fresh ? ' typing' : ''}"><h3><span class="spark" aria-hidden="true">✦</span> In plain words <span class="badge pw-dates">${esc(span)}</span></h3><div class="pw">${words}</div></div>`;
 }
 function compareTrend(a, b) {   // the honest-comparison rules: same months, each re-zeroed at the first shared date
@@ -1811,32 +1811,48 @@ function fcAt(f, d) {   // the Chronos-2 median on the forecast date nearest d
   let best = 0; f.dates.forEach((x, i) => { if (Math.abs(day(x) - day(d)) < Math.abs(day(f.dates[best]) - day(d))) best = i; });
   return f.median[best];
 }
-function forecastCard(sel) {
-  const fz = S.fz?.zones; if (!fz) return '';
-  if (!S.fcZone || !fz[S.fcZone]) S.fcZone = sel.kind === 'zone' && fz[sel.id] ? sel.id : (fz.z4 ? 'z4' : Object.keys(fz)[0]);
-  const zf = fz[S.fcZone]; const z = zones().find(p => p.id === S.fcZone);
-  const pickKey = (sat) => zf[`${sat}:${S.track[sat]}`] ? `${sat}:${S.track[sat]}` : Object.keys(zf).find(k => k.startsWith(sat + ':'));
-  const keys = S.sat === 'compare' ? ['nisar', 's1'].map(pickKey).filter(Boolean) : [pickKey(S.sat) || Object.keys(zf)[0]];
-  const buttons = zones().map(p => `<button type="button" data-fcz="${esc(p.id)}" aria-pressed="${p.id === S.fcZone}"${fz[p.id] ? '' : ' disabled title="No series on any track"'}>${esc(zoneShort(p))}</button>`).join('');
+// The cells of forecast_area.json inside the selection (or, for a small selection, the three nearest within 500 m),
+// combined date by date with the median: the measured line and the Chronos-2 line come from the same cells.
+function areaFc(sat, test) {
+  const tk = S.fa?.tracks?.[`${sat}:${S.track[sat]}`]; if (!tk || !test) return null;
+  let cells = tk.cells.filter(c => test([c.lon, c.lat]));
+  if (!cells.length) {
+    const at = S.menu?.at || (() => { const z = zones().find(q => q.id === S.menu?.id); return z ? [z.lon, z.lat] : null; })();
+    if (!at) return null;
+    cells = tk.cells.map(c => [metres([c.lon, c.lat], at), c]).filter(([d]) => d <= 500).sort((x, y) => x[0] - y[0]).slice(0, 3).map(x => x[1]);
+    if (!cells.length) return null;
+  }
+  const byDate = (key, val) => { const m = new Map(); for (const c of cells) c[key].forEach((d, i) => { (m.get(d) || m.set(d, []).get(d)).push(c[val][i]); }); return [...m.entries()].sort().map(([d, v]) => [d, median(v)]); };
+  const obs = byDate('obs_dates', 'obs').filter(([, v]) => v != null);
+  const med = byDate('dates', 'median');
+  if (obs.length < 2 || !med.length) return null;
+  return { obs, med: [obs.at(-1), ...med.filter(([d]) => d > obs.at(-1)[0])], cells: cells.length, points: cells.reduce((s, c) => s + c.n, 0), backtest: tk.backtest, window: tk.window, sat };
+}
+const fcValue = (f, d) => { let best = f.med[0]; for (const x of f.med) if (Math.abs(day(x[0]) - day(d)) < Math.abs(day(best[0]) - day(d))) best = x; return best[1]; };
+function forecastCard(d) {
+  if (!S.fa) return '';
+  const sats = S.sat === 'compare' ? ['nisar', 's1'] : [d.sat];
+  const fcs = sats.map(s => areaFc(s, d.test)).filter(Boolean);
+  if (!fcs.length) return `<div class="block dm-card"><h3>The prediction</h3><p class="reason">No measured ground in this area to forecast from (forest or steep slopes).</p></div>`;
   const lines = [], marks = [], rows = [], tests = [];
   let from = null, divider = null;
-  for (const k of keys) {
-    const f = zf[k]; const [s_, trk] = k.split(':'); const col = SATS[s_]?.color || '#1C1917';
-    const obs = f.observed_dates.map((d, i) => [d, f.observed_mm[i]]); const last = obs.at(-1);
-    const med = [[last[0], last[1]], ...f.dates.map((d, i) => [d, f.median[i]])];
-    lines.push({ pts: obs, color: col, dots: true, grow: true }, { pts: med, color: col, dash: true });
-    if (!from || obs[0][0] < from) from = obs[0][0];
-    if (!divider || last[0] > divider) divider = last[0];
-    const vals = YEARS.map(y => fcAt(f, y));
+  for (const f of fcs) {
+    const col = SATS[f.sat].color, lab = sensors()[f.sat]?.label || f.sat;
+    lines.push({ pts: f.obs, color: col, dots: true, grow: true }, { pts: f.med, color: col, dash: true });
+    if (!from || f.obs[0][0] < from) from = f.obs[0][0];
+    if (!divider || f.obs.at(-1)[0] > divider) divider = f.obs.at(-1)[0];
+    const vals = YEARS.map(y => fcValue(f, y));
     YEARS.forEach((y, i) => marks.push({ d: y, v: vals[i], color: col, label: `${sgn(vals[i])}` }));
-    const rate = (f.median.at(-1) - last[1]) / ((day(f.dates.at(-1)) - day(last[0])) / 365.25);
-    const b = f.backtest;   // forecast_zones.py: the last 60 days forecast from the data before them
-    tests.push(b ? `${esc(sensors()[s_]?.label || s_)}: tested on its last ${b.days} days, off by ${b.mae_chronos.toFixed(1)} mm on average (a "no change" guess: ${b.mae_no_change.toFixed(1)} mm).` : `${esc(sensors()[s_]?.label || s_)}: too few dates to test yet.`);
-    rows.push(`<tr><th><span style="color:${col}">●</span> ${esc(sensors()[s_]?.label || s_)} ${esc(trk)}</th>${vals.map(v => `<td>${sgn(v)} mm</td>`).join('')}<td>${sgn(rate)} mm/yr</td></tr>`);
+    const last = f.obs.at(-1), end = f.med.at(-1);
+    const rate = (end[1] - last[1]) / Math.max((day(end[0]) - day(last[0])) / 365.25, 0.1);
+    const b = f.backtest;
+    tests.push(b ? `${esc(lab)}: tested on the last ${b.days} days of ${b.cells} cells, off by ${b.mae_chronos.toFixed(1)} mm (a "no change" guess: ${b.mae_no_change.toFixed(1)} mm).` : `${esc(lab)}: too few dates to test yet.`);
+    rows.push(`<tr><th><span style="color:${col}">●</span> ${esc(lab)} ${esc(S.track[f.sat])}</th>${vals.map(v => `<td>${sgn(v)} mm</td>`).join('')}<td>${sgn(rate)} mm/yr</td></tr>`);
   }
-  return `<div class="block dm-card"><h3>The prediction <span class="seg dm-zones" role="group" aria-label="Zone">${buttons}</span></h3>
-    <div class="sub small">${esc(zoneName(z))} · forecast, mm</div>
-    ${miniChart([], { from, to: S.fz.end, extra: lines, marks, divider, height: 150, upto: S.playing ? S.date : null })}
+  const f0 = fcs[0];
+  return `<div class="block dm-card"><h3>The prediction <span class="badge">${f0.cells} cell${f0.cells > 1 ? 's' : ''} · ${f0.points} points</span></h3>
+    <div class="sub small">This area, from every measured point in it · forecast, mm</div>
+    ${miniChart([], { from, to: S.fa.end, extra: lines, marks, divider, height: 150, upto: S.playing ? S.date : null })}
     <table class="fc-table"><tr><th></th>${YEARS.map(y => `<th>${esc(human(y))}</th>`).join('')}<th>trend after today</th></tr>${rows.join('')}</table><p class="sub small fc-test">${tests.join(' ')}</p></div>`;
 }
 async function arrowsCard(test) {
@@ -2102,6 +2118,7 @@ async function renderMenu() {
   field.setArea(d.test && d.shape ? { test: d.test, shape: d.shape } : null);
   let html = `<div class="dm-head"><h2>${S.menu.house ? 'Is this house on moving ground?' : S.menu.kind === 'pin' ? 'Can you build here?' : 'How the ground moved here'}</h2><div class="kicker">${esc(d.label)}${d.n ? ` · ${d.n} points` : ''}</div></div>`;
   const d2 = S.sat === 'compare' && S.menu.kind !== 'pin' ? await menuData('s1') : null;
+  if (S.menu.kind !== 'pin' && d.pts.length < 3) { const af = areaFc(d.sat, d.test); if (af) d.pts = af.obs; }   // e.g. the morning pass: its long window keeps almost no town points, its July to November cells do
   if (S.menu.kind === 'pin') html += await pinCards(d);
   else if (d2 && d.pts.length && d2.pts.length) html += compareTrend(d, d2);
   else if (!d.pts.length) html += `<div class="block dm-card"><p class="reason">No measurement here on this satellite.</p></div>`;
@@ -2113,13 +2130,13 @@ async function renderMenu() {
       ${miniChart(d.pts, { from: d.pts[0][0], to: d.pts.at(-1)[0], gaps, on: S.date, color: SATS[d.sat].color, height: 140, upto: S.playing ? S.date : null })}</div>`;
   }
   if (S.menu.kind !== 'pin') {
-    html += forecastCard(S.menu);
+    html += forecastCard(d);
     html += await arrowsCard(d.test || (() => false));
     html += plainCard(d, d2);
   }
   if (S.menu !== want) return;
   $('#dm-body').innerHTML = html;
-  document.querySelectorAll('#dm-body [data-fcz]').forEach(btn => btn.addEventListener('click', () => { S.fcZone = btn.dataset.fcz; renderMenu(); }));
+
   // legend: the colour scale with its mm values, and how much ground one centimetre of screen covers
   // the scale runs over the selected area's own lowest and highest value at this date, and the map is recoloured to match
   const L = layerFor(d.sat); const rng = await areaRange(d, L);

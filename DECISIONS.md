@@ -279,3 +279,15 @@ A decision recorded here is not a question. Nobody blocks on one. If a line look
   - **"In plain words"** shows the measured period and the forecast date in its title.
   - **Map clicks:** a plain click on the map now opens a small note for the nearest single dot (its value on the date shown). The 1 km square needs the new dashed-square button under the house picker. The Arrows button still opens a square at the map centre.
   - **No restart dates on the timeline.** The first date after a gap restarts the count at zero, so its map is blank by construction (NISAR 23 Jun 2026). It is kept in the data but removed from the timeline and from Play, and a link to it moves on to the next date.
+- 2026-11-15 (03 and 06, via Alexandru): **The prediction now covers the whole town, not only the four salt zones.** `sentinel1/scripts/forecast_area.py` groups every measured point inside Ocnele Mari's administrative boundary (OpenStreetMap) into 240 m cells and forecasts each cell's median series with Chronos-2, zero-shot, to 1 Jan 2029 (`products/ocnele_mari/forecast_area.json`).
+  - **Cells per pass:**
+    - Sentinel-1 evening pass (029A), May 2025 to November 2026: 65 cells, 375 points;
+    - Sentinel-1 morning pass (007D), July to November 2026: 161 cells, 1,004 points (its long window keeps only 8 town points through the winters);
+    - NISAR morning pass: 443 cells; NISAR evening pass: 375 cells (both from June 2026).
+  - **Backtest on each cell's last 60 days** (median error over cells):
+    - 029A: 2.2 mm, against 2.5 mm for "no change"; Chronos-2 better in 49 % of cells;
+    - 007D: 2.1 mm, against 3.1 mm; better in 78 %;
+    - NISAR: too few dates to test.
+  - **On the page:** the prediction card combines, date by date, the cells inside whatever is selected (square, zone or house), or the 3 nearest within 500 m when none is inside. It shows how many cells and points it used. The zone buttons are removed, and "In plain words" uses the same forecast. When an area has no long-window points (the morning pass), the trend chart uses the cells' measured series.
+  - **Points outside the boundary** have no forecast, and the card says so.
+  - `forecast_zones.json` stays for reference but is no longer shown.
