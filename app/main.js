@@ -1366,7 +1366,7 @@ function openMenu(sel) {
 }
 function closeMenu() {
   S.menu = null; $('#dmenu').hidden = true; document.body.classList.remove('dmenu-open');
-  setTimeout(() => mapA?.resize(), 220); drawSelection(null); drawVectors(null);
+  setTimeout(() => mapA?.resize(), 220); drawSelection(null); drawVectors(null); changed(false);
 }
 const insideBox = (coords, [w, s, e, n]) => coords[0] >= w && coords[0] <= e && coords[1] >= s && coords[1] <= n;
 async function menuData() {
@@ -1484,6 +1484,34 @@ async function drawVectors(test) {
   }
   mapA.getSource('mvec').setData({ type: 'FeatureCollection', features: feats });
 }
+// lowest and highest value of the measured points inside the selection, for the layer on the map
+async function areaRange(d, L) {
+  const file = pointFile(d.sat); const f = frames(d.sat)?.[S.track[d.sat]];
+  if (!file || !L || !d.test || S.view === 'coverage') return null;
+  const key = L.kind === 'rate' ? 'r' : L.kind === 'change' && L.date && f ? `c${f.dates.indexOf(L.date)}` : null;
+  if (!key) return null;
+  const gj = await loadPoints(file); const v = [];
+  for (const p of gj.features) { const x = p.properties[key]; if (x != null && d.test(p.geometry.coordinates)) v.push(x); }
+  if (v.length < 2) return null;
+  let lo = Math.min(...v), hi = Math.max(...v);
+  if (hi - lo < 0.2) { lo -= 0.1; hi += 0.1; }
+  const r = [lo, hi]; r.key = key; return r;
+}
+// RdBu from the area's minimum to its maximum; 0 stays white when the range crosses it
+const RD = ['#67001F', '#D6604D', '#F7F7F7', '#4393C3', '#053061'];
+function rangeStops(lo, hi) {
+  if (lo < 0 && hi > 0) return [[lo, RD[0]], [lo / 2, RD[1]], [0, RD[2]], [hi / 2, RD[3]], [hi, RD[4]]];
+  if (hi <= 0) return [[lo, RD[0]], [(lo + hi) / 2, RD[1]], [hi, RD[2]]];
+  return [[lo, RD[2]], [(lo + hi) / 2, RD[3]], [hi, RD[4]]];
+}
+function colourAt(stops, v) {
+  const hex = (c) => [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16));
+  let i = 1; while (i < stops.length - 1 && v > stops[i][0]) i++;
+  const [a, ca] = stops[i - 1], [b, cb] = stops[i]; const k = b === a ? 0 : Math.max(0, Math.min(1, (v - a) / (b - a)));
+  const A = hex(ca), B = hex(cb); return `rgb(${A.map((x, j) => Math.round(x + (B[j] - x) * k)).join(',')})`;
+}
+const rangeExpr = (key, lo, hi) => ['interpolate', ['linear'], ['get', key], ...rangeStops(lo, hi).flat()];
+const rampCss = (lo, hi) => `linear-gradient(90deg, ${rangeStops(lo, hi).map(([v, c]) => `${c} ${((v - lo) / (hi - lo) * 100).toFixed(1)}%`).join(', ')})`;
 async function renderMenu() {
   if (!S.menu) return;
   const want = S.menu;
@@ -1506,13 +1534,28 @@ async function renderMenu() {
   $('#dm-body').innerHTML = html;
   document.querySelectorAll('#dm-body [data-fcz]').forEach(btn => btn.addEventListener('click', () => { S.fcZone = btn.dataset.fcz; renderMenu(); }));
   // legend: the colour scale with its mm values, and how much ground one centimetre of screen covers
-  const L = layerFor(d.sat); const vm = Math.abs(L?.meta?.vmax ?? 20);
+  // the scale runs over the selected area's own lowest and highest value at this date, and the map is recoloured to match
+  const L = layerFor(d.sat); const rng = await areaRange(d, L);
+  const vm = Math.abs(L?.meta?.vmax ?? 20); let lo = -vm, hi = vm;
+  $('#dm-legend').style.removeProperty('--ramp');
+  if (rng) { [lo, hi] = rng; mapA.setPaintProperty('pts', 'circle-color', rangeExpr(rng.key, lo, hi)); $('#dm-legend').style.setProperty('--ramp', rampCss(lo, hi)); }
+  const f1 = (v) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toFixed(1)}`;
   const lat = mapA.getCenter().lat, mpp = 40075016.686 * Math.cos(lat * Math.PI / 180) / (512 * 2 ** mapA.getZoom());
   const cmPx = 96 / 2.54, perCm = mpp * cmPx;
   const scale = perCm >= 1000 ? `${(perCm / 1000).toFixed(perCm >= 10000 ? 0 : 1)} km` : `${Math.round(perCm / 10) * 10} m`;
   const unit = S.view === 'rate' ? 'mm/yr' : 'mm';
-  $('#dm-legend').innerHTML = `<div class="dm-leg"><div><div class="dm-ramp"></div><div class="dm-ticks"><span>−${vm} ${unit}</span><span>0</span><span>+${vm} ${unit}</span></div></div>
+  $('#dm-legend').innerHTML = `<div class="dm-leg"><div><div class="dm-ramp"></div><div class="dm-ticks"><span>${f1(lo)} ${unit}</span><span>${rng ? 'lowest to highest in this area' : '0'}</span><span>${f1(hi)} ${unit}</span></div></div>
     <div class="dm-scale"><i style="width:${(cmPx * 2).toFixed(0)}px"></i><span>1 cm on screen = ${scale} on the map</span></div></div>`;
+  // hovering the ramp shows the value under the cursor and its colour
+  const ramp = $('#dm-legend .dm-ramp'); const stops = rng ? rangeStops(lo, hi) : rangeStops(-vm, vm);
+  const tip = document.createElement('div'); tip.className = 'dm-tip'; tip.hidden = true; ramp.append(tip);
+  ramp.addEventListener('mousemove', (e) => {
+    const r = ramp.getBoundingClientRect(); const fx = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+    const v = stops[0][0] + fx * (stops.at(-1)[0] - stops[0][0]); const col = colourAt(stops, v);
+    tip.hidden = false; tip.style.left = `${fx * 100}%`;
+    tip.innerHTML = `<b style="background:${col}"></b>${f1(v)} ${unit}`;
+  });
+  ramp.addEventListener('mouseleave', () => { tip.hidden = true; });
 }
 
 function renderSheet() {

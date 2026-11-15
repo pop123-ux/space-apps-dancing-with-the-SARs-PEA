@@ -1,5 +1,5 @@
 # Owner: 03 · InSAR analyst (Alexandru, Eric)
-"""Zero-shot Chronos-2 forecasts to 1 January 2027 for every zone and track that has a series, for the page's menu.
+"""Zero-shot Chronos-2 forecasts to 1 January 2029 for every zone and track that has a series, for the page's menu.
 
     python forecast_zones.py ../../products/ocnele_mari    (environment with chronos-forecasting >= 2, CPU torch)
 
@@ -17,7 +17,7 @@ from pathlib import Path
 
 import numpy as np
 
-END, STEP, Q = date(2027, 1, 1), 6.0, [0.1, 0.5, 0.9]
+END, STEP, Q = date(2029, 1, 1), 6.0, [0.1, 0.5, 0.9]
 d_ = lambda s: date(int(s[:4]), int(s[5:7]), int(s[8:10]))
 
 
@@ -67,7 +67,7 @@ def main():
             dates=fd, median=[round(float(y[-1] + v), 2) for v in q[:, 1]],
             q10=[round(float(y[-1] + v), 2) for v in q[:, 0]], q90=[round(float(y[-1] + v), 2) for v in q[:, 2]],
             backtested=(sat == "s1" and trk == "029A" and zid == "z4"))
-        print(zid, sat, trk, f"{len(pts)} dates → 1 Jan 2027 median {y[-1] + q[-1, 1]:+.1f} mm")
+        print(zid, sat, trk, f"{len(pts)} dates → {END} median {y[-1] + q[-1, 1]:+.1f} mm")
     (prod / "forecast_zones.json").write_text(json.dumps(dict(model="amazon/chronos-2 (zero-shot)", end=END.isoformat(),
         level=0.8, note="Zone 4 on 029A is backtested (forecast.json); the others use the same method without their own test.",
         zones=res), indent=1) + "\n")
