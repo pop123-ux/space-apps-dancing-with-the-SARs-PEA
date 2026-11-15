@@ -115,6 +115,9 @@ def on_page(site):
 
 
 # ------------------------------------------------------------------------------------------------ the checks
+SIGN_FAILED: set[str] = set()   # tracks whose sign test failed in this run; check_sentinel1 does not compare them
+
+
 def check_sign(site, add):
     import numpy as np
     for t in fitted_tracks(site):
@@ -123,6 +126,8 @@ def check_sign(site, add):
         v = np.concatenate([ts["vel"][m[z] & np.isfinite(ts["vel"])] for z in ZONES])
         r = float(np.median(v))
         local = same_height(site, t, ts["vel"], m)
+        if r >= SIGN_MAX:
+            SIGN_FAILED.add(t)
         add(f"sign-{t}", "pass" if r < SIGN_MAX else "fail", f"Salt zones sink on NISAR {t}",
             f"Median line-of-sight rate over the zone pixels: {r:+.1f} mm/yr from {v.size} pixels "
             f"(needs < {SIGN_MAX:+.0f}; phase sign {int(ts['phase_sign']):+d}). "
@@ -370,6 +375,10 @@ def check_sentinel1(site, add):
         masks = zone_masks(site, meta)
         ctl = next(p for p in series if p["id"] == "outer_control")
         for z in ZONES:
+            if t in SIGN_FAILED:   # one known fault, reported once by its sign check; its rates cannot judge agreement
+                add(f"agree-z{z[1:]}-{t}", "info", f"{zlabel(z, site)}: NISAR {t} against Sentinel-1 {s1t}",
+                    f"Not compared: NISAR {t} failed its sign check (sign-{t}), so its rates are not trusted for agreement.", None)
+                continue
             p = next(q for q in series if q["id"] == z)
             a, b = p["series"].get(f"nisar:{t}"), p["series"].get(f"s1:{s1t}")
             ca, cb = ctl["series"].get(f"nisar:{t}"), ctl["series"].get(f"s1:{s1t}")
