@@ -72,7 +72,7 @@ jobs:
           cd sentinel1/scripts
           RAIN=../../notebooks/05/z4_screen_inputs.csv; [ -f "$RAIN" ] && R="--rain-csv $RAIN" || R=""
           python forecast.py /tmp/raw ../analysis_jul_nov/forecast_from_10nov.json --as-of 2026-11-15 --end-date 2027-01-01 --last-date 2026-11-10 $R
-          python forecast_check.py /tmp/raw ../../products/ocnele_mari/forecast.json --last-date 2026-11-10 -o ../analysis_jul_nov/forecast_check.json --attach ../analysis_jul_nov/forecast_from_10nov.json
+          python forecast_check.py /tmp/raw ../analysis_jul_nov/forecast_issued_5oct.json --last-date 2026-11-10 -o ../analysis_jul_nov/forecast_check.json --attach ../analysis_jul_nov/forecast_from_10nov.json
       - name: Chronos-2 on the re-issued forecast (zero-shot, CPU)
         continue-on-error: true
         run: |

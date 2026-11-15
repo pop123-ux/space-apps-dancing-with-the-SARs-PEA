@@ -95,7 +95,7 @@ ZONE_NOTES = {
     "z3": dict(label="Historically subsiding · 2026 trend inconclusive",
                detail="EGMS history shows this zone sinking, but the 2026 Sentinel-1 evidence is limited: no connected "
                       "ascending (029A) series in July to October, and the descending (007D) result changes sign across "
-                      "processing runs. Over January to October no zone pixel stays connected on either track.",
+                      "processing runs. Over January to November no zone pixel stays connected on either track.",
                source=REVIEW),
 }
 TRACK_NOTES = {
@@ -517,6 +517,7 @@ def s1_extra_only(site_key: str) -> None:
         windows[k] = extra_window(out, site, k)
     sens["windows"] = windows
     man["windows"] = {k: w["label"] for k, w in windows.items()}
+    man["zone_notes"], man["track_notes"] = ZONE_NOTES, TRACK_NOTES    # text only; they name the long window
     for k in old:
         shutil.rmtree(out / S1_WINDOWS[k]["prefix"], ignore_errors=True)
     C.save_json(out / "sensitivity.json", sens)
