@@ -86,7 +86,7 @@ const BASEMAPS = {
   satellite: {   // aerial imagery, sharp down to single houses (the earlier Sentinel-2 mosaic is 10 m per pixel and blurs past zoom 15)
     label: 'Satellite',
     tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
-    maxzoom: 19,
+    maxzoom: 17,   // Esri has imagery here to zoom 17 everywhere; 18 is patchy and 19 is placeholder tiles, so deeper zooms enlarge 17
     attribution: 'Imagery <a href="https://www.esri.com/en-us/legal/terms/full-master-agreement" target="_blank" rel="noopener">Esri</a>, Maxar, Earthstar Geographics, and the GIS User Community',
   },
 };
@@ -190,7 +190,7 @@ function writeHash() {
   if (S.window && S.windowPicked) p.set('window', S.window);
   if (S.sens) p.set('scenario', S.scenario);
   if (S.selected?.kind === 'zone') p.set('zone', S.selected.id);
-  if (getLang() === 'ro') p.set('lang', 'ro');
+
   history.replaceState(null, '', '#' + p.toString().replace(/%2C/g, ','));
 }
 function applyHash(h) {
@@ -201,7 +201,7 @@ function applyHash(h) {
   if (h.track) for (const t of h.track.split(',')) for (const s of keys) if (tracksOf(s).includes(t)) S.track[s] = t;
   if (h.view && (S.man.views || []).includes(h.view)) S.view = h.view;
   if (h.date && /^\d{4}-\d{2}-\d{2}$/.test(h.date)) { S.date = h.date; S.dateUser = true; }
-  if (h.exp) S.exp = h.exp === '1';
+
   if (h.zone && zones().some(z => z.id === h.zone)) S.selected = { kind: 'zone', id: h.zone };
   if (h.preset === 'zone4') applyPreset(false);
   if (!viewAllowed(S.view)) S.view = 'coverage';
@@ -291,6 +291,12 @@ function addOverlay(m) {
     m.addLayer({ id: 'osmb', type: 'line', source: 'osmb', 'source-layer': 'building', minzoom: 14,
       layout: { visibility: S.buildings === false ? 'none' : 'visible' },
       paint: { 'line-color': '#FDE68A', 'line-width': ['interpolate', ['linear'], ['zoom'], 14, 0.6, 17, 1.6], 'line-opacity': ['interpolate', ['linear'], ['zoom'], 14, 0, 14.6, 0.9] } }, firstLabel);
+  }
+  if (!m.getLayer('osmb-hit')) m.addLayer({ id: 'osmb-hit', type: 'fill', source: 'osmb', 'source-layer': 'building', minzoom: 14, paint: { 'fill-color': '#000', 'fill-opacity': 0 } }, 'osmb');
+  if (!m.getSource('house')) {
+    m.addSource('house', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+    m.addLayer({ id: 'house-fill', type: 'fill', source: 'house', paint: { 'fill-color': '#DC2626', 'fill-opacity': 0.75 } });
+    m.addLayer({ id: 'house-line', type: 'line', source: 'house', paint: { 'line-color': '#7F1D1D', 'line-width': 2.5 } });
   }
   m.addSource('pts', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
   m.addLayer({ id: 'pts', type: 'circle', source: 'pts', layout: { visibility: 'none' }, paint: {
@@ -507,6 +513,8 @@ function passLine(s) {   // "about 05:20 (morning, from the east) and 19:30 (eve
   return tracksOf(s).map(t => { const p = passInfo(s, t); const n = nextPass(s, t); return p && n ? `${roTime(n, { hour: '2-digit', minute: '2-digit' })} ${p.when}, from the ${p.from}` : ''; }).filter(Boolean).join(' · ')
     + ` · every ${Math.min(...tracksOf(s).map(t => repeatDays(s, t)))} days`;
 }
+// counted from checks.json itself, so the badge always matches the checks list (manifest counts can be older)
+const checkCounts = () => (S.checks || []).reduce((n, c) => (n[c.status] = (n[c.status] || 0) + 1, n), {});
 function renderSat() {
   const sn = sensors();
   const cur = S.sat === 'compare'
@@ -565,7 +573,7 @@ function renderChecksButton() {
   }
   delete $('#checks-btn').dataset.target;
   $('#checks-btn').setAttribute('aria-label', 'All checks');
-  const n = S.man.checks || {};
+  const n = checkCounts();
   $('#checks-btn').innerHTML = `<span class="c-pass">✔ ${n.pass ?? 0}</span><span class="c-warn">! ${n.warn ?? 0}</span><span class="c-fail">✘ ${n.fail ?? 0}</span>${n.info ? `<span class="c-info">· ${n.info}</span>` : ''}`;
   $('#checks-btn').setAttribute('aria-label', `Checks: ${n.pass ?? 0} pass, ${n.warn ?? 0} warn, ${n.fail ?? 0} fail, ${n.info ?? 0} info. Open the list.`);
 }
@@ -573,11 +581,7 @@ function renderLayersMenu() {
   pressGroup($('#base-group'), Object.entries(BASEMAPS).map(([k, b]) => ({ key: k, html: b.label })), k => k === S.basemap, setBasemap);
   $('#opacity').value = Math.round(S.opacity * 100);
   $('#opacity-val').textContent = `${Math.round(S.opacity * 100)}%`;
-  const up = hasUpLayer();
-  $('#exp').disabled = !up;
-  $('#exp').checked = S.exp && up;
-  $('#exp').closest('label').title = up ? '' : 'No supported up/east export yet (open team decision: how to compare the two radars)';
-  $('#exp-why').hidden = up;
+  S.exp = false;   // the up/east map option is removed from the layers menu
 }
 
 // ------------------------------------------------------------------------------------------------ dock: views, tracks, timeline
@@ -1451,13 +1455,25 @@ function openMenu(sel) {
 }
 function closeMenu() {
   S.menu = null; $('#dmenu').hidden = true; document.body.classList.remove('dmenu-open');
-  setTimeout(() => mapA?.resize(), 220); drawSelection(null); showPin(null); S.menuRange = null; field.setArea(null); changed(false);
+  setTimeout(() => mapA?.resize(), 220); drawSelection(null); showPin(null); showHouse(null); S.menuRange = null; field.setArea(null); changed(false);
 }
 const insideBox = (coords, [w, s, e, n]) => coords[0] >= w && coords[0] <= e && coords[1] >= s && coords[1] <= n;
 function pinCursor() {
   let el = $('#pin-cursor');
   if (!el) { el = document.createElement('div'); el.id = 'pin-cursor'; el.innerHTML = `<div class="pc-in"><svg viewBox="0 0 40 48" aria-hidden="true"><path d="M20 46 C20 46 4 28 4 18 A16 16 0 0 1 36 18 C36 28 20 46 20 46 Z" fill="#DC2626" stroke="#1C1917" stroke-width="2.4"/><circle cx="20" cy="18" r="10.5" fill="#FFF" stroke="#1C1917" stroke-width="1.6"/><path d="M13.5 19 L20 13 L26.5 19" fill="#7C2D12" stroke="#1C1917" stroke-width="1.2" stroke-linejoin="round"/><rect x="15" y="18.5" width="10" height="7" fill="#C2410C" stroke="#1C1917" stroke-width="1.1"/><rect x="18.6" y="21" width="2.8" height="4.5" fill="#7C2D12"/></svg></div>`; el.hidden = true; document.body.append(el); }
   return el;
+}
+function setHouseMode(on) {
+  S.houseMode = on; if (on && S.pinMode) setPinMode(false);
+  $('#house-btn')?.setAttribute('aria-pressed', String(on));
+  if (mapA) mapA.getCanvas().style.cursor = on ? 'pointer' : '';
+  if (on) {
+    if (S.buildings === false) $('#bldg-btn')?.click();
+    if (mapA.getZoom() < 15.5) mapA.easeTo({ zoom: 16 });
+  }
+}
+function showHouse(geom) {
+  for (const mm of [mapA, mapB]) mm?.getSource('house')?.setData(geom ? { type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: geom }] } : { type: 'FeatureCollection', features: [] });
 }
 function setPinMode(on) {
   S.pinMode = on; const b = $('#pin-btn'); b?.setAttribute('aria-pressed', String(on));
@@ -1554,21 +1570,63 @@ function buildCheck(at, fc, around) {
     return { ok: false, kind: 'sink', why: `Its own trend (${sgn(fc.slope)} ± ${fc.sigSlope.toFixed(1)} mm/yr), carried on to ${human(fc.end)}, moves it a further ${sgn(further)} mm away from the satellite: more than the ${Math.abs(SINK_LIMIT)} mm limit.` };
   return { ok: true, kind: 'ok', why: `It is outside the salt-brine zones, and its own trend (${sgn(fc.slope)} ± ${fc.sigSlope.toFixed(1)} mm/yr), carried on to ${human(fc.end)}, ${further >= 0 ? `moves it ${sgn(further)} mm toward the satellite: no sinking ahead` : `moves it a further ${sgn(further)} mm away: less than the ${Math.abs(SINK_LIMIT)} mm limit for sinking`}.` };
 }
+// Shares are the actual weights in the code: the answer comes from the shown satellite's trend (or a salt-field
+// outline), the confidence score is 75 points from the shown satellite and 25 from the other one, and the GNSS
+// stations take no part in a spot's answer: they check the radar where they stand.
+function sourcesBox(d, p, fc, fo, other, agree, parts, chk) {
+  const shown = sensors()[d.sat].label, oth = sensors()[other]?.label || 'other satellite';
+  const zone = chk?.kind === 'zone';
+  const confShown = Math.round(parts.slice(0, 3).reduce((s, x) => s + x[1], 0)), confOther = Math.round(parts[3][1]);
+  const st = (S.stations?.features || []).filter(f => !f.properties.combined).map(f => ({ name: f.properties.station, km: metres(f.geometry.coordinates, S.menu.at) / 1000, up: f.properties.gnss_up }));
+  const row = (color, name, share, what) => `<div class="src-row"><div class="src-name"><i style="background:${color}"></i>${esc(name)}</div>
+    <div class="src-bar"><b style="width:${share}%;background:${color}"></b></div><div class="src-pct">${share}%</div>
+    <details class="src-more"><summary>Extend</summary><div class="src-what">${what}</div></details></div>`;
+  return `<details class="srcs"><summary>What went into this answer ›</summary>
+    <p class="sub small">Share of the yes-or-no answer, and what each source did here.</p>
+    ${zone ? row('#57534E', 'Salt-field outlines', 100, 'This spot is inside a known salt field. That alone gives the answer.') : ''}
+    ${row(SATS[d.sat].color, shown, zone ? 0 : 100, `${zone ? 'Not needed here: the salt field decides. ' : 'This satellite decides the answer. '}${fc ? `It saw the ground move ${sgn(fc.slope)} mm a year here` : 'It has no trend here'}, from ${p.n} radar points and ${p.pts.length} images. It earns ${confShown} of its 75 confidence points.`)}
+    ${row(SATS[other]?.color || '#A8A29E', oth, 0, fo ? `Only a double-check. It saw ${sgn(fo.slope)} mm a year here, which ${agree ? 'agrees, so confidence goes up' : 'disagrees, so confidence goes down'} (${confOther} of 25 points).` : 'It has no measurement at this spot.')}
+    ${row('#0F766E', `GNSS stations (${st.map(s => s.name).join(', ')})`, 0, `Not used for this spot. These are ground stations that check the satellites are measuring correctly. Nearest: ${st.slice().sort((a2, b2) => a2.km - b2.km).map(s => `${s.name}, ${s.km.toFixed(1)} km away`).join('; ')}.${vlcLine()}`)}
+  </details>`;
+}
+function vlcLine() {   // from the validator's VLC check (checks.json): NISAR's morning pass against the station
+  const c = (S.checks || []).find(x => x.id === 'station-VLC-combined'); const m = c && /NISAR 129A: ([+\-−]?[\d.]+) vs GNSS ([+\-−]?[\d.]+)/.exec(c.detail);
+  if (!m) return '';
+  const a = parseFloat(m[1].replace('−', '-')), g = parseFloat(m[2].replace('−', '-'));
+  return ` At VLC, NISAR's morning pass reads ${sgn(a)} mm/yr against the station's ${sgn(g)}: ${Math.abs(a - g).toFixed(1)} mm/yr apart.`;
+}
+function markSvg(ok, draw) {   // a hand-drawn tick or cross; "draw" animates the strokes
+  const path = ok ? '<path d="M5 17 L12 24 L27 7"/>' : '<path d="M7 7 L25 25"/><path class="s2" d="M25 7 L7 25"/>';
+  return `<svg class="vmark${draw ? ' draw' : ''}" viewBox="0 0 32 32" aria-hidden="true">${path}</svg>`;
+}
 async function pinCards(d) {
   const at = S.menu.at; const p = await pinPoint(at, d.sat);
   if (!p || p.pts.length < 2) {
     const z = zones().find(q => metres(at, [q.lon, q.lat]) <= (q.r_m || 250));
     pinBadge(z ? { ok: false } : null);
-    if (z) return `<div class="block dm-card verdict hero no"><p class="verdict-word">✘ Not recommended</p><p class="verdict-say">This spot is inside a salt-brine field (${esc(zoneName(z))}), where the ground has sunk before.</p></div>`;
+    if (z) return `<div class="block dm-card verdict hero no"><p class="verdict-word">${markSvg(false, true)}Not recommended</p><p class="verdict-say">This spot is inside a salt-brine field (${esc(zoneName(z))}), where the ground has sunk before.</p></div>`;
     return `<div class="block dm-card"><p class="reason">The radar can't see the ground here (forest or steep slope). Try a spot on open ground.</p></div>`;
   }
   const fc = lineForecast(p.pts); const around = fc ? await surroundings(at, d.sat) : null; const chk = buildCheck(at, fc, around);
   // confidence: how many radar points and dates, how noisy, and whether the other radar points the same way
   const other = d.sat === 's1' ? 'nisar' : 's1'; const po = sensors()[other] ? await pinPoint(at, other) : null; const fo = po && lineForecast(po.pts);
-  let level = p.n >= 5 && p.pts.length >= 30 ? 2 : p.n >= 2 && p.pts.length >= 12 ? 1 : 0;
-  const agree = fo ? Math.sign(fo.slope) === Math.sign(fc?.slope ?? 0) : null;
-  if (agree === false && Math.abs(fo.slope) > 2 * fo.sigSlope) level = Math.max(0, level - 1);
-  if (fc && Math.abs(fc.slope) < 2 * fc.sigSlope) level = Math.max(0, level - 1);
+  // the two satellites agree if both show no clear movement, or both move clearly in the same direction
+  const still = (f) => Math.abs(f.slope) <= 2 * f.sigSlope;
+  const agree = fo && fc ? (still(fo) && still(fc)) || (!still(fo) && !still(fc) && Math.sign(fo.slope) === Math.sign(fc.slope)) : null;
+  // the score (0 to 100), four parts of up to 25 each:
+  //  radar points: how many measured points the spot's series is the median of (8 or more: full)
+  //  dates: how long the series is (60 or more: full)
+  //  precision: how far the 2029 projection's uncertainty stays inside the 15 mm limit (none left: zero)
+  //  second radar: the other satellite's trend at the same spot points the same way (25), is missing (12.5), or the other way (0)
+  const yrs = fc ? (day(fc.end) - day(fc.line[0][0])) / 365.25 : 0;
+  const parts = [
+    ['Radar points nearby', Math.min(p.n / 8, 1) * 25, `${p.n} (full at 8)`],
+    ['Dates in the series', Math.min(p.pts.length / 60, 1) * 25, `${p.pts.length} (full at 60)`],
+    ['Precision of the trend', fc ? Math.max(0, 1 - (fc.sigSlope * yrs) / Math.abs(SINK_LIMIT)) * 25 : 0, fc ? `± ${(fc.sigSlope * yrs).toFixed(1)} mm by ${human(fc.end).replace(/^1 Jan /, '')}` : 'no trend'],
+    ['Second satellite agrees', agree == null ? 12.5 : agree ? 25 : 0, agree == null ? 'no data there' : agree ? (still(fo) && still(fc) ? 'both: no clear movement' : 'same direction') : 'opposite direction'],
+  ];
+  const score = Math.round(parts.reduce((s, x) => s + x[1], 0));
+  const level = score >= 70 ? 2 : score >= 40 ? 1 : 0;
   const first = p.pts[0], last = p.pts.at(-1);
   const gaps = gapsOf(d.sat, d.trk);
   pinBadge(chk);
@@ -1582,14 +1640,20 @@ async function pinCards(d) {
   const facts = [
     fc && [`${sgn(fc.slope, Math.abs(fc.slope) < 10 ? 1 : 0)} mm/yr`, 'trend'],
     fc && [`${further < 0 ? '−' : '+'}${cm(further)}`, `by ${human(fc.end).replace(/^1 Jan /, '')}`],
-    [['low', 'medium', 'high'][level], 'confidence'],
     diffOk != null && [diffOk ? 'like around it' : 'unlike around it', 'vs. the ground 300 m away'],
   ].filter(Boolean);
   const conf = `Confidence ${['low', 'medium', 'high'][level]}: ${p.n} radar point${p.n > 1 ? 's' : ''} within ${PIN_RADIUS_M} m, ${p.pts.length} dates${fo ? `; ${sensors()[other].label} here: ${sgn(fo.slope)} mm/yr, ${agree ? 'same direction' : 'opposite direction'}` : ''}.`;
+  const vkey = `${at.join(',')}|${chk?.ok}`; const fresh = S.verdictLast !== vkey; S.verdictLast = vkey;
   let html = chk ? `<div class="block dm-card verdict hero ${chk.ok ? 'ok' : 'no'}">
-    <p class="verdict-word">${chk.ok ? '✔ No warning sign' : '✘ Not recommended'}</p>
+    <div class="v-top"><p class="verdict-word">${markSvg(chk.ok, fresh)}${chk.ok ? 'No warning sign' : 'Not recommended'}</p>
+      <details class="conf-btn conf-${level}"><summary>Confidence: ${['low', 'medium', 'high'][level]} ›</summary>
+        <div class="conf-pop"><div class="conf-score"><b>${score}</b><span>/ 100</span></div>
+          <div class="conf-bar"><i style="width:${score}%"></i></div>
+          ${parts.map(([k, v, note]) => `<div class="conf-part"><span>${esc(k)}<small>${esc(note)}</small></span><b>${v.toFixed(0)} / 25</b></div>`).join('')}
+</div></details></div>
     <p class="verdict-say">${esc(say)}</p>
     <div class="facts">${facts.map(([v, k]) => `<div class="fact"><b>${esc(v)}</b><span>${esc(k)}</span></div>`).join('')}</div>
+    ${sourcesBox(d, p, fc, fo, other, agree, parts, chk)}
     <details class="why"><summary>Why?</summary><p>${esc(chk.why)}</p><p>${esc(conf)}</p>
       ${around && fc ? `<p>Against the ground ${RING_M} m around (${around.n} spots): ${sgn(fc.slope - around.med)} mm/yr different; they vary by ± ${around.spread.toFixed(1)} mm/yr.</p>` : ''}
       <p>A satellite screen, not a ground survey: ask for a geotechnical study before building.</p></details></div>` : '';
@@ -1609,7 +1673,7 @@ async function menuData(satArg) {
   const sat = satArg || (S.sat === 'compare' ? 'nisar' : S.sat); const trk = S.track[sat];
   const out = { sat, trk, pts: [], label: '', shape: null, test: null };
   if (S.menu.kind === 'pin') {
-    out.label = `The spot you pinned · ${trackText(sat, trk)}`;
+    out.label = `${S.menu.house ? 'The house you picked' : 'The spot you pinned'} · ${trackText(sat, trk)}`;
     const at = S.menu.at; out.test = (c) => metres(c, at) <= PIN_RADIUS_M;
     out.shape = zoneCircle({ lon: at[0], lat: at[1], r_m: PIN_RADIUS_M });
     return out;
@@ -1730,7 +1794,7 @@ function forecastCard(sel) {
   const pickKey = (sat) => zf[`${sat}:${S.track[sat]}`] ? `${sat}:${S.track[sat]}` : Object.keys(zf).find(k => k.startsWith(sat + ':'));
   const keys = S.sat === 'compare' ? ['nisar', 's1'].map(pickKey).filter(Boolean) : [pickKey(S.sat) || Object.keys(zf)[0]];
   const buttons = zones().map(p => `<button type="button" data-fcz="${esc(p.id)}" aria-pressed="${p.id === S.fcZone}"${fz[p.id] ? '' : ' disabled title="No series on any track"'}>${esc(zoneShort(p))}</button>`).join('');
-  const lines = [], marks = [], rows = [];
+  const lines = [], marks = [], rows = [], tests = [];
   let from = null, divider = null;
   for (const k of keys) {
     const f = zf[k]; const [s_, trk] = k.split(':'); const col = SATS[s_]?.color || '#1C1917';
@@ -1742,12 +1806,14 @@ function forecastCard(sel) {
     const vals = YEARS.map(y => fcAt(f, y));
     YEARS.forEach((y, i) => marks.push({ d: y, v: vals[i], color: col, label: `${sgn(vals[i])}` }));
     const rate = (f.median.at(-1) - last[1]) / ((day(f.dates.at(-1)) - day(last[0])) / 365.25);
+    const b = f.backtest;   // forecast_zones.py: the last 60 days forecast from the data before them
+    tests.push(b ? `${esc(sensors()[s_]?.label || s_)}: tested on its last ${b.days} days, off by ${b.mae_chronos.toFixed(1)} mm on average (a "no change" guess: ${b.mae_no_change.toFixed(1)} mm).` : `${esc(sensors()[s_]?.label || s_)}: too few dates to test yet.`);
     rows.push(`<tr><th><span style="color:${col}">●</span> ${esc(sensors()[s_]?.label || s_)} ${esc(trk)}</th>${vals.map(v => `<td>${sgn(v)} mm</td>`).join('')}<td>${sgn(rate)} mm/yr</td></tr>`);
   }
   return `<div class="block dm-card"><h3>The prediction <span class="seg dm-zones" role="group" aria-label="Zone">${buttons}</span></h3>
     <div class="sub small">${esc(zoneName(z))} · forecast, mm</div>
     ${miniChart([], { from, to: S.fz.end, extra: lines, marks, divider, height: 150, upto: S.playing ? S.date : null })}
-    <table class="fc-table"><tr><th></th>${YEARS.map(y => `<th>${esc(human(y))}</th>`).join('')}<th>trend after today</th></tr>${rows.join('')}</table></div>`;
+    <table class="fc-table"><tr><th></th>${YEARS.map(y => `<th>${esc(human(y))}</th>`).join('')}<th>trend after today</th></tr>${rows.join('')}</table><p class="sub small fc-test">${tests.join(' ')}</p></div>`;
 }
 async function arrowsCard(test) {
   const ue = await loadUpEast(); const info = sensors().nisar?.up_east;
@@ -1764,16 +1830,25 @@ async function arrowsCard(test) {
     : `The estimate reads ${Math.abs(up) >= su ? `${up < 0 ? 'sinking' : 'rising'} of about ${Math.abs(up).toFixed(0)} mm a year` : 'no up-down motion beyond the noise'}${Math.abs(east) >= se ? ` and a ${east > 0 ? 'eastward' : 'westward'} shift of about ${Math.abs(east).toFixed(0)} mm a year` : ' and no east-west motion beyond the noise'}. Treat it as unconfirmed: it combines both NISAR tracks, and the descending one failed its sign check.`;
   return `<div class="block dm-card"><h3>Which way the ground moves</h3>
     <svg class="chart arrows" viewBox="0 0 400 140" role="img" aria-label="Up-down and east-west motion">
-      <defs><marker id="dm-ah" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1C1917"/></marker></defs>
       <line x1="40" x2="200" y1="${cy}" y2="${cy}" stroke="#D6D3D1"/><line x1="${cx}" x2="${cx}" y1="14" y2="126" stroke="#D6D3D1"/>
       <text x="44" y="${cy - 6}">west</text><text x="196" y="${cy - 6}" text-anchor="end">east</text><text x="${cx + 5}" y="22">up</text><text x="${cx + 5}" y="124">down</text>
-      ${Math.abs(len(east)) > 2 ? `<line x1="${cx}" x2="${cx + len(east)}" y1="${cy}" y2="${cy}" stroke="#1C1917" stroke-width="2.5" marker-end="url(#dm-ah)"/>` : ''}
-      ${Math.abs(len(up)) > 2 ? `<line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy - len(up)}" stroke="#1C1917" stroke-width="2.5" marker-end="url(#dm-ah)"/>` : ''}
+      ${arrowPoly(cx, cy, east, 0, '#57534E')}
+      ${arrowPoly(cx, cy, 0, up, up > 0 ? '#2166AC' : '#B2182B')}
+      <circle cx="${cx}" cy="${cy}" r="3" fill="#1C1917"/>
       <text x="230" y="44" class="v">Up-down: ${sgn(up)} mm/yr</text><text x="230" y="62">± ${su.toFixed(0)} mm/yr</text>
       <text x="230" y="92" class="v">East-west: ${sgn(east)} mm/yr</text><text x="230" y="110">± ${se.toFixed(0)} mm/yr</text>
     </svg>
     ${S.date ? `<p class="dm-big">By ${esc(human(S.date))}: <b>${sgn(up * elapsedYears())} mm</b> up-down, <b>${sgn(east * elapsedYears())} mm</b> east-west</p>` : ''}
 </div>`;
+}
+// a pointy arrow from (x, y): east > 0 points right, up > 0 points up (screen y runs down). Length 18 px at the
+// smallest, 52 px at 30 mm/yr or more, so a small rate still shows its direction; a dark outline keeps it readable.
+function arrowPoly(x, y, east, up, color) {
+  const v = Math.hypot(east, up); if (v < 0.5) return '';
+  const ux = east / v, uy = -up / v, L = 18 + Math.min(1, v / 30) * 34, hl = 13, hw = 7.5, sw = 2.2;
+  const tx = x + ux * L, ty = y + uy * L, bx = tx - ux * hl, by = ty - uy * hl, px = -uy, py = ux;
+  const pts = [[x + px * sw, y + py * sw], [bx + px * sw, by + py * sw], [bx + px * hw, by + py * hw], [tx, ty], [bx - px * hw, by - py * hw], [bx - px * sw, by - py * sw], [x - px * sw, y - py * sw]];
+  return `<polygon points="${pts.map(([a, b]) => `${a.toFixed(1)},${b.toFixed(1)}`).join(' ')}" fill="${color}" stroke="#1C1917" stroke-width="1.6" stroke-linejoin="miter"/>`;
 }
 function elapsedYears() {   // the up/east rates are NISAR's, over its own window (June to October 2026): count only that time
   const w = sensors().nisar?.up_east?.window; if (!w || !S.date) return 0;
@@ -1875,7 +1950,8 @@ const field = (() => {
     // Its median value is the local reference: values are coloured relative to it.
     const bw = e - w, bh = n_ - s, around = [];
     const outside = (c) => !area.test(c);
-    for (const dist of [0.8, 1.1]) for (let i = 0; i < 16; i++) {
+    for (const dist of [0.8, 1.1, 1.6, 2.2]) for (let i = 0; i < 16; i++) {
+      if (dist > 1.1 && around.length >= 8) break;          // the wider rings only when the near ones are too sparse
       const ang = i / 16 * 2 * Math.PI, lon = (w + e) / 2 + Math.cos(ang) * bw * dist, lat = (s + n_) / 2 + Math.sin(ang) * bh * dist;
       const pl = plane(pointsIn(b, lon, lat, Math.max(120, cellM * 0.75), key, outside)); if (pl) around.push(pl);
     }
@@ -1895,9 +1971,9 @@ const field = (() => {
     arrows = out; const strong = out.filter(a2 => !a2.weak).length;
     S.fieldInfo = { cells, shown: out.length, strong, noise, ref };
     const note = document.querySelector('.arrow-note');
-    if (note) note.innerHTML = `<div class="an-head"><b>Arrows</b><span class="an-count">${strong} of ${out.length} stand out</span></div>
+    if (note) note.innerHTML = `<div class="an-head"><b>Arrows</b><span class="an-count">${noise == null ? "can't tell" : `${strong} of ${out.length} clear`}</span></div>
       <div class="an-row"><svg viewBox="0 0 30 10" aria-hidden="true"><path d="M2 5H24M18 1L25 5L18 9" fill="none" stroke="#B2182B" stroke-width="2.4" stroke-linecap="round"/></svg>points to where the ground sank more</div>
-      <div class="an-row"><svg viewBox="0 0 30 10" aria-hidden="true"><path d="M2 5H24M18 1L25 5L18 9" fill="none" stroke="#B2182B" stroke-width="2.4" stroke-linecap="round" opacity=".35"/></svg>faded: within the terrain's normal variation${noise == null ? ' (too few points around to tell)' : ''}</div>
+      <div class="an-row"><svg viewBox="0 0 30 10" aria-hidden="true"><circle cx="15" cy="5" r="3.6" fill="none" stroke="#57534E" stroke-width="1.8"/></svg>${noise == null ? 'too few points around to judge, so all are drawn as arrows' : 'measured, but no clear direction (within normal wobble)'}</div>
       <div class="an-row muted">Colour follows the legend, relative to the ground around the area.</div>`;
     if (!raf) raf = requestAnimationFrame(draw);
   }
@@ -1913,12 +1989,14 @@ const field = (() => {
       const sx = p.x - ux * a.len / 2, sy = p.y - uy * a.len / 2, ex = p.x + ux * a.len / 2, ey = p.y + uy * a.len / 2;
       const hx = -uy, hy = ux, hl = Math.min(14, Math.max(7, a.len * 0.22));
       const path = () => { ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.moveTo(ex - ux * hl + hx * hl * 0.55, ey - uy * hl + hy * hl * 0.55); ctx.lineTo(ex, ey); ctx.lineTo(ex - ux * hl - hx * hl * 0.55, ey - uy * hl - hy * hl * 0.55); };
-      ctx.globalAlpha = a.weak ? 0.35 : 1;
+      if (a.weak) {   // measured, but no slope beyond the terrain's own wobble: a hollow circle, no direction
+        ctx.beginPath(); ctx.arc(p.x, p.y, 5, 0, 7); ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(12,10,9,.45)'; ctx.stroke();
+        ctx.lineWidth = 1.8; ctx.strokeStyle = '#FAFAF9'; ctx.stroke(); continue;
+      }
       ctx.strokeStyle = 'rgba(12,10,9,.55)'; ctx.lineWidth = 4.5; path(); ctx.stroke();
       const lw = Math.max(2.4, Math.min(6, a.len / 18));
       ctx.lineWidth = lw + 2.5; ctx.strokeStyle = 'rgba(12,10,9,.55)'; path(); ctx.stroke();
       ctx.strokeStyle = a.col; ctx.lineWidth = lw; path(); ctx.stroke();
-      if (a.weak) { ctx.globalAlpha = 1; continue; }
       const k = ((now / 1400) + a.ph) % 1, px = sx + (ex - sx) * k, py = sy + (ey - sy) * k;   // the travelling pulse
       ctx.fillStyle = `rgba(255,255,255,${(0.85 * Math.sin(Math.PI * k)).toFixed(2)})`; ctx.beginPath(); ctx.arc(px, py, 2.2, 0, 7); ctx.fill();
     }
@@ -1931,7 +2009,7 @@ function addArrowToggle(m) {
   box.innerHTML = `<button type="button" id="arrow-btn" aria-pressed="false" title="Show arrows pointing to where the ground sank more">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 L13 7 M13 7 H7 M13 7 V13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M11 21 L21 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2 3" stroke-linecap="round"/></svg>
       <span>Arrows</span></button>
-      <button type="button" id="bldg-btn" aria-pressed="true" title="Building outlines from OpenStreetMap, shown when zoomed in (experimental)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V9l8-5 8 5v11z M9 20v-6h6v6" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>Buildings</span><small>experimental</small></button><div class="arrow-note" hidden><div class="an-head"><b>Arrows</b></div><div class="an-row muted">Press the map to choose an area.</div></div>`;
+      <button type="button" id="bldg-btn" aria-pressed="true" title="Building outlines from OpenStreetMap, shown when zoomed in"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V9l8-5 8 5v11z M9 20v-6h6v6" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>Buildings</span></button><div class="arrow-note" hidden><div class="an-head"><b>Arrows</b></div><div class="an-row muted">Press the map to choose an area.</div></div>`;
   box.classList.remove('maplibregl-ctrl'); m.getContainer().append(box);   // lower-left corner of the map
   box.querySelector('#bldg-btn').addEventListener('click', (e) => {
     e.stopPropagation(); S.buildings = S.buildings === false; e.currentTarget.setAttribute('aria-pressed', String(S.buildings));
@@ -1949,9 +2027,9 @@ async function renderMenu() {
   const want = S.menu;
   const d = await menuData();
   if (S.menu !== want) return;
-  drawSelection(d.shape); showPin(S.menu.kind === 'pin' ? S.menu.at : null);
+  drawSelection(d.shape); showPin(S.menu.kind === 'pin' && !S.menu.house ? S.menu.at : null); showHouse(S.menu.house || null);
   field.setArea(d.test && d.shape ? { test: d.test, shape: d.shape } : null);
-  let html = `<div class="dm-head"><h2>${S.menu.kind === 'pin' ? 'Can you build here?' : 'How the ground moved here'}</h2><div class="kicker">${esc(d.label)}${d.n ? ` · ${d.n} points` : ''}</div></div>`;
+  let html = `<div class="dm-head"><h2>${S.menu.house ? 'Is this house on moving ground?' : S.menu.kind === 'pin' ? 'Can you build here?' : 'How the ground moved here'}</h2><div class="kicker">${esc(d.label)}${d.n ? ` · ${d.n} points` : ''}</div></div>`;
   const d2 = S.sat === 'compare' && S.menu.kind !== 'pin' ? await menuData('s1') : null;
   if (S.menu.kind === 'pin') html += await pinCards(d);
   else if (d2 && d.pts.length && d2.pts.length) html += compareTrend(d, d2);
@@ -2082,7 +2160,7 @@ function openTracker() {
 }
 function renderAbout() {
   const sn = sensorKeys().map(s => sensors()[s]);
-  const n = S.man.checks || {};
+  const n = checkCounts();
   const m = S.man.methods || {};
   const others = (S.index || []).filter(s => s.site !== S.site);
   const passRows = sensorKeys().flatMap(s => tracksOf(s).map(tk => { const p = passInfo(s, tk); return p ? `<tr><td>${trackHtml(s, tk)}</td><td>${esc(roTime(Date.parse(`2026-01-15T${p.utc}:00Z`), { hour: '2-digit', minute: '2-digit' }))} in winter, an hour later in summer</td><td>flies ${p.north ? 'north' : 'south'}, every ${repeatDays(s, tk)} days</td></tr>` : ''; })).join('');
@@ -2112,7 +2190,7 @@ function renderAbout() {
     ${sn.map(x => `<p class="sub">${esc(x.credit)}</p>`).join('')}
     <p class="sub">Maps: ${BASEMAPS.light.attribution}; ${BASEMAPS.satellite.attribution}. Building outlines: © OpenStreetMap contributors (ODbL), via OpenFreeMap. Map library: MapLibre GL JS.</p>
     <h3>7. Use</h3>
-    <p class="sub">Free to view and share with attribution. Provided as is, without warranty, for NASA Space Apps 2026. Built ${esc(S.man.built)}.</p>
+    <p class="sub">Free to view and share with attribution. Provided as is, without warranty, for NASA Space Apps 2026. Built ${esc(String(S.man.built || '').slice(0, 10))}.</p>
     ${Object.keys(m).length ? more('Methods (for specialists)', `${['s1', 'sign', 'rate', 'zones'].filter(k => m[k]).map(k => `<p class="sub">${esc(m[k])}</p>`).join('')}
       ${m.links ? `<p>${m.links.map(l => `<a href="${esc(l.href)}" target="_blank" rel="noopener">${esc(l.label)}</a>`).join(' · ')}</p>` : ''}`, 'h') : ''}
     <details class="more" id="checks-more"><summary id="checks-h">Validation checks (for reviewers) · ${n.pass ?? 0} pass, ${n.warn ?? 0} warn, ${n.fail ?? 0} fail</summary>
@@ -2155,6 +2233,11 @@ async function main() {
     b.innerHTML = `<svg viewBox="0 0 40 48" aria-hidden="true"><path d="M20 46 C20 46 4 28 4 18 A16 16 0 0 1 36 18 C36 28 20 46 20 46 Z" fill="#DC2626" stroke="#1C1917" stroke-width="2.4"/><circle cx="20" cy="18" r="10.5" fill="#FFF" stroke="#1C1917" stroke-width="1.6"/><path d="M13.5 19 L20 13 L26.5 19" fill="#7C2D12" stroke="#1C1917" stroke-width="1.2" stroke-linejoin="round"/><rect x="15" y="18.5" width="10" height="7" fill="#C2410C" stroke="#1C1917" stroke-width="1.1"/><rect x="18.6" y="21" width="2.8" height="4.5" fill="#7C2D12"/></svg>`;
     b.addEventListener('click', (e) => { e.stopPropagation(); setPinMode(!S.pinMode); });
     const comp = document.querySelector('#map .maplibregl-ctrl-compass'); comp?.parentNode.insertBefore(b, comp);
+    const hb = document.createElement('button'); hb.type = 'button'; hb.id = 'house-btn'; hb.className = 'pin-btn';
+    hb.title = 'Pick a house: press a building outline to check the ground under it'; hb.setAttribute('aria-label', hb.title); hb.setAttribute('aria-pressed', 'false');
+    hb.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 L11 4 L19 11 V19 H3 Z" fill="#DC2626" stroke="#1C1917" stroke-width="1.6" stroke-linejoin="round"/><path d="M14 14 L22 17 L18.5 18.5 L17 22 Z" fill="#fff" stroke="#1C1917" stroke-width="1.4" stroke-linejoin="round"/></svg>`;
+    hb.addEventListener('click', (e) => { e.stopPropagation(); setHouseMode(!S.houseMode); });
+    comp?.parentNode.insertBefore(hb, comp.nextSibling);
     let used = false; try { used = localStorage.getItem('dos-pin-used') === '1'; } catch (e) { /* storage blocked */ }
     if (!used) {   // a hint for first-time visitors, gone once the pin has been used
       const h = document.createElement('div'); h.id = 'pin-hint'; h.textContent = 'Can I build here? Pick up the pin';
@@ -2180,6 +2263,17 @@ async function main() {
   mapA.on('click', (e) => {
     closeMenus();
     const at = [e.lngLat.lng, e.lngLat.lat];
+    if (S.houseMode) {
+      const f = mapA.queryRenderedFeatures([[e.point.x - 3, e.point.y - 3], [e.point.x + 3, e.point.y + 3]], { layers: ['osmb-hit'] })[0];
+      if (!f) return;   // stay in house mode until a building is pressed
+      // one building only: of a multi-part outline, the part that contains the pressed point
+      const inside = (pt, r) => { let c = false; for (let i = 0, j = r.length - 1; i < r.length; j = i++) if ((r[i][1] > pt[1]) !== (r[j][1] > pt[1]) && pt[0] < (r[j][0] - r[i][0]) * (pt[1] - r[i][1]) / (r[j][1] - r[i][1]) + r[i][0]) c = !c; return c; };
+      const polys = f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates;
+      const at = [e.lngLat.lng, e.lngLat.lat]; const poly = polys.find(pg => inside(at, pg[0])) || polys[0];
+      const ring = poly[0];
+      const c = [ring.reduce((s, p) => s + p[0], 0) / ring.length, ring.reduce((s, p) => s + p[1], 0) / ring.length];
+      setHouseMode(false); return openMenu({ kind: 'pin', at: c, house: { type: 'Polygon', coordinates: poly } });
+    }
     if (S.pinMode) { dropPinCursor(e); S.pinMode = false; setTimeout(() => { setPinMode(false); openMenu({ kind: 'pin', at }); }, 330); return; }
     openMenu({ kind: 'area', at });
   });
@@ -2217,7 +2311,7 @@ async function main() {
   });
   $('#about').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.close(); });
   $('#table-dlg').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.close(); });
-  $('#exp').addEventListener('change', (e) => { S.exp = e.target.checked; changed(); });
+
   $('#opacity').addEventListener('input', (e) => {
     S.opacity = Number(e.target.value) / 100;
     $('#opacity-val').textContent = `${e.target.value}%`;
@@ -2235,8 +2329,8 @@ async function main() {
   handle.addEventListener('keydown', (e) => { if (e.key === 'ArrowLeft') setSplit(S.split - 5); else if (e.key === 'ArrowRight') setSplit(S.split + 5); });
 
   wireTimeline(); renderChecksButton(); renderAbout();
-  initLang(readHash().lang);
-  document.querySelectorAll('[data-lang]').forEach(b => b.addEventListener('click', () => { setLang(b.dataset.lang); writeHash(); }));
+  initLang('en'); setLang('en');   // the EN/RO switch is gone: English only
+
   changed();
 }
 main();

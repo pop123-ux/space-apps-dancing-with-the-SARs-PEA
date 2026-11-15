@@ -238,6 +238,41 @@ A decision recorded here is not a question. Nobody blocks on one. If a line look
     - the pin's no-data explanation, cut to one sentence;
     - in the satellite panel, the sentences on the catalogue, orbit period, 12-day repeat and the 500 to 600 km side offset;
     - the unused older build rule in the code.
+- 2026-11-15 (06, via Alexandru):
+  - **House picker.** A new button under the compass. Press it, then press a building outline (OpenStreetMap): that building fills red and the menu gives the same check as the pin, at the building's centre, titled "Is this house on moving ground?". Only the pressed part of a multi-part outline is filled.
+  - **Buildings is a regular feature now:** the "experimental" label is removed.
+  - **Weak arrows:** arrows whose slope is no steeper than the surrounding terrain's normal wobble were drawn faded. They are now small hollow circles, meaning "measured, but no clear direction", because their direction is effectively random. If the ring around the area is too sparse, it widens (1.6× and 2.2× the area) before the note says "can't tell".
+  - **Confidence** is now a button in the verdict's top-right corner, opening a score out of 100 made of four parts of up to 25 each:
+    - radar points nearby (full at 8);
+    - dates in the series (full at 60);
+    - precision of the trend (how much of the 15 mm limit the 2029 uncertainty leaves);
+    - the second satellite: same direction, or both without clear movement, gives 25; no data gives 12.5; the opposite direction gives 0.
+  - Scores of 70 or more are high, 40 to 69 medium, below 40 low. The thresholds are our choice.
+- 2026-11-15 (06, via Alexandru):
+  - **Removed the EN/RO language switch.** The page is English only; a saved Romanian choice from earlier visits is overridden. `app/i18n.js` stays, unused for switching.
+  - **The verdict's tick and cross draw themselves** (stroke animation, then a small pop) once per new verdict, not on every Play frame.
+  - **New "What went into this answer"** under each pin and house verdict. It shows the real weights in the code, not estimates:
+    - the shown satellite's trend decides the answer (100 %), unless the spot is inside a salt-field outline, which then decides alone;
+    - the confidence score is 75 points from the shown satellite and 25 from the other satellite;
+    - the GNSS stations HORE, VLC1 and VLC2 take 0 % of a spot's answer, because they check the radar where they stand. The box lists their distance and ground motion, and the NISAR-versus-VLC difference read from the validator's VLC check.
+  - **Stricter "the satellites agree":** both show no clear movement, or both move clearly the same way. One still and one clearly moving now counts as disagreement.
+- 2026-11-15 (06, via Alexandru): The 'Which way the ground moves' arrows are now pointy, outlined shapes: at least 18 px long, so a small rate still shows its direction (a +2.3 mm/yr arrow used to vanish under its own head); 52 px at 30 mm/yr or more. Up is blue, down red, east-west dark grey (red means sinking on this page). Checked in the browser: −48.6 mm/yr east-west points west, +26.5 mm/yr up-down points up.
+- 2026-11-15 (06, via Alexandru): In 'What went into this answer' each source shows only its name, bar and share; its explanation sits behind an 'Extend' button, rewritten in plain words.
+- 2026-11-15 (03, 05 and 06, via Alexandru): The checks and the prediction.
+  - **The three "NISAR 094D against Sentinel-1 029A" failures** are now "Not compared": 094D failed its own sign check, so its rates can't judge agreement, and the three failures repeated that one fault. The sign failure itself (sign-094D) stays visible as the single "fail". `validate.py` keeps the list of failed tracks from the sign check (SIGN_FAILED). No threshold changed.
+  - **Running the current `validate.py` also turned the four held-out station checks from warn into info.** This comes from a rule already in the code, not from this change: a station check whose tolerance is wider than 20 mm/yr has no decisive answer ("?" on the pin). The committed products were older than that rule.
+  - **Result:** 5 pass, 6 warn, 1 fail, 12 info. The page now counts the badge from `checks.json` itself.
+  - **The remaining warnings cannot honestly be turned into passes with today's data:**
+    - NISAR's per-pixel scatter on stable ground is 38.9 mm/yr (target under 6);
+    - there are only 6 NISAR dates in the shared window;
+    - the fair partner of NISAR's morning pass (Sentinel-1 007D) has no usable town points over the long window.
+    More NISAR passes (one every 12 days) are the fix.
+- 2026-11-15 (03, via Alexandru): Chronos-2 rerun on the longest series (Sentinel-1 029A: 94 dates from May 2025), and every series now backtested on its last 60 days against a "no further change" guess.
+  - **029A:** mean errors 1.0 to 1.9 mm against 1.2 to 2.0 mm for no change.
+  - **007D (July to November):** 1.0 to 2.9 mm against 1.2 to 2.5 mm.
+  - **Verdict:** Chronos-2 is better on 3 of 7 series and about equal on 1; NISAR series (10 dates) are too short to test.
+  - **On the page:** the prediction card shows this test under its table. New 1 Jan 2029 medians on 029A: Zone 1 −28.3 mm, Zone 2 −8.6 mm, Zone 4 −22.2 mm.
+- 2026-11-15 (06, via Alexandru): Removed the "Up and east (experimental)" map option and its "No supported up/east export yet" note, the time from "Built" in Terms & Conditions (date only), and the "70 or more: high…" line in the confidence score. Satellite imagery is requested to zoom 17 only (Esri has imagery there everywhere; zoom 18 is patchy and 19 placeholder tiles), and deeper zooms enlarge zoom-17 tiles, so the map never shows "Map data not yet available".
 
 ## Sun 15 Nov 2026
 
