@@ -192,3 +192,9 @@ A decision recorded here is not a question. Nobody blocks on one. If a line look
   - Their median is how the area moves; their robust spread (1.4826 × median absolute deviation) is the terrain's own random variation.
   - "Not recommended" also if the spot's trend differs from the surroundings by more than twice that spread and by at least 5 mm/yr. The 5 mm/yr floor is our choice.
   - The verdict shows the comparison in a line of its own.
+- 2026-11-15 (03, via Alexandru): Fitted Sentinel-1 from May 2025 to November 2026: 374 HyP3 jobs; 029A 94 dates, 007D 96 dates (`sentinel1/analysis_all/`). The page opens Sentinel-1 029A on this window (the longest that keeps at least 5 % of the town: 11 %). 007D keeps July to October (0 % of the town over the long windows). There is no weather-model run here because the weather service was unreachable. Chronos-2 was not rerun, at Alexandru's request: the prediction is indicative for the demo.
+- 2026-11-15 (06, via Alexandru): The page:
+  - Track codes are replaced by plain names: "morning pass, from the east" and so on, with the code kept in a small box and the details on hover. Pass times come from ASF's catalogue and the look sides from `common.py`.
+  - Removed the uncertainty circle and its caption from "Which way the ground moves". Its "By <date>" line now counts time only over NISAR's own June to October window, since the rates are NISAR's.
+  - Pressing "Arrows" with nothing selected now selects the square at the map centre, so the arrows appear at once. Arrows also work in the Coverage view (on the yearly rate).
+  - Added an experimental "Buildings" layer: OpenStreetMap building outlines from OpenFreeMap's vector tiles, drawn from zoom 14, on by default, with a toggle in the lower-left corner.

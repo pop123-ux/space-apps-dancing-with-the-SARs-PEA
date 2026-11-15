@@ -130,3 +130,4 @@ Whoever creates these adds the owner line from this table.
 | `sentinel1/` | 03 · InSAR analyst (Alexandru, Eric) | Sentinel-1 data manifest, fitted results, and team handoff |
 | `docs/forecast.md` | 03 · InSAR analyst (Alexandru, Eric) | Forecast results and environmental screening handoff |
 | `sentinel1/scripts/order_all.py` | 03 · InSAR analyst (Alexandru and Eric) |
+| `sentinel1/analysis_all/README.md` | 03 · InSAR analyst (Alexandru and Eric) |

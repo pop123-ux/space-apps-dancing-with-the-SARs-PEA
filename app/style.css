@@ -581,3 +581,8 @@ body.pin-mode #map .maplibregl-canvas-container { cursor: crosshair; }
 .fc-table { table-layout: fixed; font-size: 12px; }
 .fc-table th, .fc-table td { white-space: normal; padding: 3px 4px; }
 .fc-table th:first-child { width: 30%; }
+
+.trk-code { font-size: .78em; color: #78716C; border: 1px solid #D6D3D1; padding: 0 4px; margin-left: 2px; cursor: help; white-space: nowrap; }
+.arrow-ctrl { grid-auto-flow: row; }
+.arrow-ctrl #bldg-btn small { font-weight: 500; font-size: 10.5px; color: #B45309; margin-left: 2px; }
+.arrow-ctrl #bldg-btn[aria-pressed="true"] small { color: #FDE68A; }

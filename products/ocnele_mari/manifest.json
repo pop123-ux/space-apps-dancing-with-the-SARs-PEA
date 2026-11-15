@@ -388,7 +388,8 @@
  "windows": {
   "jul_oct": "July to October 2026",
   "jul_nov": "July to November 2026",
-  "jan_nov": "January to November 2026"
+  "jan_nov": "January to November 2026",
+  "all": "May 2025 to November 2026"
  },
  "default_window": "jul_oct",
  "checks": {
