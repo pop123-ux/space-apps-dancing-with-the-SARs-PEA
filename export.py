@@ -44,6 +44,8 @@ import pathlib
 
 import common as C
 
+S1_PAIR = {"129A": "007D", "094D": "029A"}   # same table as validate.S1_PAIR (validate imports export)
+
 S1_DIR = C.ROOT / "sentinel1"
 SCENES = C.DATA / "scenes" / "ocnele_mari_gunw.csv"
 CHANGE_VMAX = 20.0      # mm, frames (same scale as mock_products.py, shared by both satellites)
@@ -528,7 +530,7 @@ def run(site_key: str) -> None:
                      pairs={"129A": "007D", "094D": "029A"},   # same east sensitivity: NISAR looks left, Sentinel-1 right
                      reason=("Side by side, each satellite in its own line of sight. Tracks are paired by geometry (NISAR "
                              "129A with Sentinel-1 007D: both see east-west motion the same way). The verdict per zone "
-                             "comes from the validator; a shared quantity (open team decision: how to compare the two radars) is still open.")),
+                             "comes from the automatic checks.")),
         windows={k: v["label"] for k, v in windows.items()}, default_window=WINDOW,
         checks={k: sum(c.get("status") == k for c in checks) for k in ("pass", "warn", "fail", "info")},
         zone_notes=ZONE_NOTES, track_notes=TRACK_NOTES,
