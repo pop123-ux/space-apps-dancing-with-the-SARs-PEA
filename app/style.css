@@ -617,7 +617,7 @@ ul.tc { padding-left: 18px; } ul.tc li { margin: 3px 0; }
 #dmenu #dm-legend { position: relative; inset: auto; height: auto; min-height: 15%; flex: none; }
 .lbl-short { display: none; }
 @media (max-width: 700px) {
-  #track-btn .lbl, #about-btn .lbl { display: none; }
+  #track-btn .lbl, #about-btn .lbl, #reset-site .lbl { display: none; }
   #about-btn .lbl-short { display: inline; }
   .bar-right { min-width: 0; gap: 6px; }
   .bar-right .pill { padding: 0 12px; }
