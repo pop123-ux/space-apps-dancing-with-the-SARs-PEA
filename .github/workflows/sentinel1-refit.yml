@@ -9,7 +9,7 @@ on:
   workflow_dispatch: {}
   push:
     branches: ["r03/sentinel1-**"]
-    paths: ["sentinel1/provenance/hyp3_jobs_jan_nov.csv"]
+    paths: ["sentinel1/provenance/hyp3_jobs_jan_nov.csv", "sentinel1/scripts/**", ".github/workflows/sentinel1-refit.yml"]
 permissions:
   contents: write
 jobs:
