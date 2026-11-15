@@ -244,7 +244,9 @@ def export_s1(out: pathlib.Path, summary: dict, window: str = WINDOW):
         print(f"  s1 {window} {track}: {len(dates)} frames + rate map + {n_pts} points, {grid.shape[1]}×{grid.shape[0]} px, "
               f"{dates[0]}..{dates[-1]}, {summary[track]['pair_count']} pairs, town covered {cover[track]} %")
     block = {k: meta[k] for k in ("label", "agency", "band", "wavelength_cm", "status", "reference", "credit")}
-    block.update(layers=layers, frames=frames, points=points, look=meta["look"], product=meta["product"], town_cover=cover)
+    xmin, ymin, xmax, ymax = z["bounds_utm"]
+    block.update(layers=layers, frames=frames, points=points, look=meta["look"], product=meta["product"], town_cover=cover,
+                 grid_m=round((xmax - xmin) / z["rate_mm_yr"].shape[1]))
     return block, bounds
 
 
@@ -429,7 +431,7 @@ def export_nisar(out: pathlib.Path, site_key: str, series: list[dict]):
             e = nisar_series(dates, cum, groups, masks[p["id"]])
             if e:
                 p["series"][f"nisar:{track}"] = e
-        notes[track] = dict(tied=v["tied"], pairs=int(ts["n_pairs"]), groups=len(set(groups)),
+        notes[track] = dict(tied=v["tied"], pairs=int(ts["n_pairs"]), groups=len(set(groups)), grid_m=round(meta["dx"]),
                             phase_sign=int(ts["phase_sign"]), iono_used=int(np.sum(ts["iono_used"])))
         print(f"  nisar {track}: {len(dates)} frames + rate map + {n_pts} points, {grid.shape[1]}×{grid.shape[0]} px, "
               f"{dates[0]}..{dates[-1]}, {int(ts['n_pairs'])} pairs, {'GNSS-tied' if v['tied'] else 'terrain-relative'}")
