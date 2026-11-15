@@ -811,10 +811,11 @@ function stopPlay() {
 function renderLegend() {
   const L = layerFor(sideSats().find(measured) || sideSats()[0]);
   $('#legend').hidden = !L;
-  if (!L) return;
+  if (!L) { $('#legend-scale').hidden = true; return; }
   const m = L.meta || {};
   const cov = S.view === 'coverage';
   $('#legend').classList.toggle('cov', cov);
+  $('#legend-scale').hidden = cov;                  // the colour scale floats under the notices, top left (Alex, 15 Nov)
   $('#legend-title').textContent = cov ? 'Usable measurements' : S.exp ? 'Vertical rate' : S.view === 'rate' ? 'Annualized line-of-sight rate' : 'Line-of-sight change';
   $('#legend-units').textContent = m.units || '';
   $('#legend-min').textContent = fmt(m.vmin);
