@@ -134,7 +134,7 @@ function writeHash() {
   p.set('view', S.view);
   if (S.date) p.set('date', S.date);
   p.set('exp', S.exp ? '1' : '0');
-  if (S.window) p.set('window', S.window);
+  if (S.window && S.windowPicked) p.set('window', S.window);
   if (S.sens) p.set('scenario', S.scenario);
   if (S.selected?.kind === 'zone') p.set('zone', S.selected.id);
   if (getLang() === 'ro') p.set('lang', 'ro');
@@ -323,27 +323,7 @@ function updateBlur() {
 }
 
 // markers: the salt zones, the stations, and the town label shown when zoomed out
-// Ocnele Mari town hall (Primăria Ocnele Mari, Strada Alexandru Ioan Cuza), OpenStreetMap node 5947938076, checked 15 Nov 2026
-const TOWN_HALL = [24.297756, 45.0881573];
-const HALL_SVG = `<svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="58" rx="20" ry="4" fill="#000" opacity=".28"/>
-  <path d="M10 30 L32 10 L54 30 Z" fill="#B91C1C"/><path d="M32 10 L54 30 L48 30 L32 16 Z" fill="#7F1D1D"/>
-  <rect x="14" y="30" width="36" height="24" fill="#DC2626"/><rect x="40" y="30" width="10" height="24" fill="#991B1B"/>
-  <rect x="14" y="52" width="36" height="4" fill="#7F1D1D"/>
-  <rect x="19" y="35" width="6" height="7" fill="#FEF3C7"/><rect x="29" y="35" width="6" height="7" fill="#FEF3C7"/>
-  <rect x="27" y="44" width="10" height="10" fill="#FEF3C7"/><rect x="31" y="20" width="2" height="8" fill="#FEF3C7"/>
-  <path d="M33 20 L39 22 L33 24 Z" fill="#FEF3C7"/>
-  <path d="M10 30 L32 10 L54 30" fill="none" stroke="#1C1917" stroke-width="2" stroke-linejoin="round"/>
-  <rect x="14" y="30" width="36" height="26" fill="none" stroke="#1C1917" stroke-width="2"/></svg>`;
-function addTownHall(m) {
-  const el = document.createElement('button');
-  el.type = 'button'; el.className = 'marker hall'; el.title = 'Ocnele Mari town hall (Primăria): press for the ground history here';
-  el.setAttribute('aria-label', 'Ocnele Mari town hall: show the ground history and building check here');
-  el.innerHTML = `${HALL_SVG}<span>Town hall</span>`;
-  el.addEventListener('click', (e) => { e.stopPropagation(); openMenu({ kind: 'pin', at: TOWN_HALL, hall: true }); });
-  new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat(TOWN_HALL).addTo(m);
-}
 function addMarkers(m) {
-  addTownHall(m);
   for (const p of zones()) {
     const el = document.createElement('button');
     el.type = 'button'; el.className = 'marker zone'; el.dataset.id = p.id;
@@ -578,10 +558,20 @@ function renderContext() {
     const run = s === 's1' && S.sens ? scenarioLabel(S.scenario) : 'Single run';
     const ref = s === 's1' && /west|east/.test(S.scenario) ? `${S.scenario.startsWith('west') ? 'West' : 'East'} half of the terrain band` : cleanLabel(sn.reference).replace(/\s*\(.*\)\s*$/, '');
     parts.push(head, metric, `Run: ${esc(run)}`, `Reference: ${esc(ref)}`);
-    if (frames(s)[trk]?.flag) parts.push(`<span class="flagtxt">⚠ ${esc(frames(s)[trk].flag)}</span>`);
+
   } else parts.push(`<b>${esc(s ? sensors()[s].label : 'Compare')}</b> · ${esc(s ? pendingText(s) : 'side by side')}`);
   parts.push(`<span class="neg">${esc(NEG_TEXT)}</span>`);
-  $('#ctx-what').innerHTML = parts.join('<span class="sep" aria-hidden="true"> · </span>');
+  let plain;
+  if (s && measured(s)) {
+    const L = layerFor(s); const head = `<b><span class="${SATS[s].cls}" aria-hidden="true">${SATS[s].mark}</span> ${esc(sensors()[s].label)}</b>`;
+    plain = S.view === 'rate' ? `${head}: how fast the ground moves each year. Red: sinking or moving away from the satellite.`
+      : S.view === 'coverage' ? `${head}: the dots are where the radar can measure the ground. Forest and steep slopes give no dot.`
+      : L?.date ? `${head}: how much the ground moved from ${esc(human(L.first))} to ${esc(human(L.date))}. Red: sank or moved away from the satellite.` : `${head}: no image on this date.`;
+  } else plain = `<b>NISAR and Sentinel-1 side by side</b>, over the months both measured.`;
+  const flag = s && frames(s)[S.track[s]]?.flag ? ` <span class="flagtxt">⚠ ${esc(frames(s)[S.track[s]].flag)}</span>` : '';
+  $('#ctx-what').innerHTML = `<span class="ctx-plain">${plain}</span> <button type="button" class="ctx-more" aria-expanded="${!!S.ctxOpen}">${S.ctxOpen ? 'Hide details' : 'About this data'}</button>${flag}`
+    + `<div class="ctx-expert"${S.ctxOpen ? '' : ' hidden'}>${parts.join('<span class="sep" aria-hidden="true"> · </span>')}</div>`;
+  $('#ctx-what .ctx-more').onclick = () => { S.ctxOpen = !S.ctxOpen; renderContext(); requestAnimationFrame(measure); };
 }
 function renderTracks() {
   const g = $('#track-group'); g.innerHTML = '';
@@ -1397,7 +1387,7 @@ function openMenu(sel) {
 }
 function closeMenu() {
   S.menu = null; $('#dmenu').hidden = true; document.body.classList.remove('dmenu-open');
-  setTimeout(() => mapA?.resize(), 220); drawSelection(null); showPin(null); S.menuRange = null; changed(false);
+  setTimeout(() => mapA?.resize(), 220); drawSelection(null); showPin(null); S.menuRange = null; field.setArea(null); changed(false);
 }
 const insideBox = (coords, [w, s, e, n]) => coords[0] >= w && coords[0] <= e && coords[1] >= s && coords[1] <= n;
 function pinCursor() {
@@ -1467,8 +1457,18 @@ function lineForecast(pts, end = '2029-01-01') {
 // the build check, a yes-or-no rule written out in DECISIONS.md:
 // "Not advised" when the spot lies inside a salt-brine zone, or its own trend moves away from the satellite
 // faster than 10 mm/yr and that is more than twice the trend's own uncertainty; otherwise "No warning sign"
-const BUILD_LIMIT = -10;
+const BUILD_LIMIT = -10;    // kept for older notes; the rule below uses the 2029 projection
+const SINK_LIMIT = -15;    // mm of further line-of-sight change from the last measurement to 1 Jan 2029
 function buildCheck(at, fc) {
+  const z0 = zones().find(p => metres(at, [p.lon, p.lat]) <= (p.r_m || 250));
+  if (z0) return { ok: false, why: `It lies inside ${zoneName(z0)}, one of the salt-brine fields where the ground has sunk or collapsed before.` };
+  if (!fc) return null;
+  const further = fc.line.at(-1)[1] - fc.line[0][1], sure = Math.abs(fc.slope) > 2 * fc.sigSlope;
+  if (further <= SINK_LIMIT && sure)
+    return { ok: false, why: `Its own trend (${sgn(fc.slope)} ± ${fc.sigSlope.toFixed(1)} mm/yr), carried on to ${human(fc.end)}, moves it a further ${sgn(further)} mm away from the satellite: more than the ${Math.abs(SINK_LIMIT)} mm limit.` };
+  return { ok: true, why: `It is outside the salt-brine zones, and its own trend (${sgn(fc.slope)} ± ${fc.sigSlope.toFixed(1)} mm/yr), carried on to ${human(fc.end)}, ${further >= 0 ? `moves it ${sgn(further)} mm toward the satellite: no sinking ahead` : `moves it a further ${sgn(further)} mm away: less than the ${Math.abs(SINK_LIMIT)} mm limit for sinking`}.` };
+}
+function oldBuildCheck(at, fc) {
   const z = zones().find(p => metres(at, [p.lon, p.lat]) <= (p.r_m || 250));
   if (z) return { ok: false, why: `It lies inside ${zoneName(z)}, one of the salt-brine fields where the ground has sunk or collapsed before.` };
   if (!fc) return null;
@@ -1485,11 +1485,18 @@ async function pinCards(d) {
     return `<div class="block dm-card"><p class="reason">No measured point within ${PIN_RADIUS_M} m of this spot on ${esc(sensors()[d.sat].label)} ${esc(d.trk)} (forest and steep slopes lose the radar signal). ${z ? `It lies inside ${esc(zoneName(z))}, a salt-brine field: <b>not advised</b> for building.` : 'Try another track or a spot on open ground.'}</p></div>`;
   }
   const fc = lineForecast(p.pts); const chk = buildCheck(at, fc);
+  // confidence: how many radar points and dates, how noisy, and whether the other radar points the same way
+  const other = d.sat === 's1' ? 'nisar' : 's1'; const po = sensors()[other] ? await pinPoint(at, other) : null; const fo = po && lineForecast(po.pts);
+  let level = p.n >= 5 && p.pts.length >= 30 ? 2 : p.n >= 2 && p.pts.length >= 12 ? 1 : 0;
+  const agree = fo ? Math.sign(fo.slope) === Math.sign(fc?.slope ?? 0) : null;
+  if (agree === false && Math.abs(fo.slope) > 2 * fo.sigSlope) level = Math.max(0, level - 1);
+  if (fc && Math.abs(fc.slope) < 2 * fc.sigSlope) level = Math.max(0, level - 1);
+  const conf = `<p class="conf conf-${level}"><b>Confidence: ${['low', 'medium', 'high'][level]}</b> · ${p.n} radar point${p.n > 1 ? 's' : ''} within ${PIN_RADIUS_M} m, ${p.pts.length} dates${fo ? ` · ${esc(sensors()[other].label)} ${esc(S.track[other])} here: ${sgn(fo.slope)} mm/yr, ${agree ? 'same direction' : 'opposite direction'}` : ` · no ${esc(sensors()[other]?.label || 'other radar')} point here to cross-check`}</p>`;
   const first = p.pts[0], last = p.pts.at(-1);
   const gaps = gapsOf(d.sat, d.trk);
   pinBadge(chk);
   let html = chk ? `<div class="block dm-card verdict hero ${chk.ok ? 'ok' : 'no'}"><div class="verdict-q">Can you build here?</div>
-    <p class="verdict-word">${chk.ok ? '✔ No warning sign' : '✘ Not recommended'}</p><p>${esc(chk.why)}</p>
+    <p class="verdict-word">${chk.ok ? '✔ No warning sign' : '✘ Not recommended'}</p><p>${esc(chk.why)}</p>${conf}
     <p class="sub small">A screen from satellite data, not a ground survey: ask for a geotechnical study before building.</p></div>` : '';
   html += `<div class="block dm-card"><h3>The history of this spot <span class="badge">${p.pts.length} dates</span></h3>
     <div class="sub small">Line-of-sight change, mm · median of ${p.n} measured point${p.n > 1 ? 's' : ''} within ${PIN_RADIUS_M} m</div>
@@ -1503,11 +1510,11 @@ async function pinCards(d) {
   }
   return html;
 }
-async function menuData() {
-  const sat = S.sat === 'compare' ? 'nisar' : S.sat; const trk = S.track[sat];
+async function menuData(satArg) {
+  const sat = satArg || (S.sat === 'compare' ? 'nisar' : S.sat); const trk = S.track[sat];
   const out = { sat, trk, pts: [], label: '', shape: null, test: null };
   if (S.menu.kind === 'pin') {
-    out.label = `${S.menu.hall ? 'Ocnele Mari town hall' : 'The spot you pinned'} · ${sensors()[sat].label} ${trk}`;
+    out.label = `The spot you pinned · ${sensors()[sat].label} ${trk}`;
     const at = S.menu.at; out.test = (c) => metres(c, at) <= PIN_RADIUS_M;
     out.shape = zoneCircle({ lon: at[0], lat: at[1], r_m: PIN_RADIUS_M });
     return out;
@@ -1534,7 +1541,7 @@ async function menuData() {
   return out;
 }
 // a small chart in the app's own style (the zone panels use the same proportions, fonts and greys)
-function miniChart(series, { from, to, gaps = [], on = null, band = null, extra = [], height = 150, color = '#1C1917', upto = null } = {}) {
+function miniChart(series, { from, to, gaps = [], on = null, band = null, extra = [], height = 150, color = '#1C1917', upto = null, marks = [], divider = null } = {}) {
   const W = 400, H = height, pl = 40, pr = 8, pt = 10, pb = 20;
   const all = [...series, ...extra.flatMap(x => x.pts), ...(band ? band.flatMap(([d, lo, hi]) => [[d, lo], [d, hi]]) : [])].map(([, v]) => v);
   const lo = Math.floor(Math.min(0, ...all)), hi = Math.ceil(Math.max(0, ...all));
@@ -1555,27 +1562,59 @@ function miniChart(series, { from, to, gaps = [], on = null, band = null, extra 
   };
   const shown = upto ? series.filter(([d]) => d <= upto) : series;   // while Play runs, the line grows date by date
   line(shown, color, false);
-  for (const x of extra) line(x.pts, x.color, x.dash);
+  if (divider && day(divider) > t0 && day(divider) < t1) o.push(`<line x1="${X(divider)}" x2="${X(divider)}" y1="${pt}" y2="${H - pb}" stroke="#1C1917" stroke-opacity=".35" stroke-dasharray="2 3"/><text x="${X(divider) - 4}" y="${pt + 9}" text-anchor="end">measured</text><text x="${X(divider) + 4}" y="${pt + 9}">predicted</text>`);
+  for (const x of extra) {
+    const xs = upto && x.grow ? x.pts.filter(([d]) => d <= upto) : x.pts;
+    line(xs, x.color, x.dash);
+    if (x.dots) for (const [d, v] of xs) o.push(`<circle cx="${X(d).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="2.2" fill="${x.color}" stroke="#fff" stroke-width=".8"><title>${d}: ${v.toFixed(1)} mm</title></circle>`);
+  }
+  for (const k of marks) o.push(`<circle cx="${X(k.d).toFixed(1)}" cy="${Y(k.v).toFixed(1)}" r="3.6" fill="${k.color}" stroke="#fff" stroke-width="1.2"/><text x="${Math.min(W - pr, X(k.d) + 3).toFixed(1)}" y="${(Y(k.v) - 7).toFixed(1)}" text-anchor="${X(k.d) > W - 60 ? 'end' : 'middle'}" class="mk">${esc(k.label)}</text>`);
   for (const [d, v] of shown) o.push(`<circle cx="${X(d).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="${d === on ? 4 : 2.4}" fill="${d === on ? MENU_LINE : color}" stroke="#fff" stroke-width=".8"><title>${d}: ${v.toFixed(1)} mm</title></circle>`);
   o.push('</svg>');
   return o.join('');
 }
+function compareTrend(a, b) {   // the honest-comparison rules: same months, each re-zeroed at the first shared date
+  const lo = a.pts[0][0] > b.pts[0][0] ? a.pts[0][0] : b.pts[0][0], hi = a.pts.at(-1)[0] < b.pts.at(-1)[0] ? a.pts.at(-1)[0] : b.pts.at(-1)[0];
+  const clip = (pts) => { const c = pts.filter(([d]) => d >= lo && d <= hi); return c.length ? c.map(([d, v]) => [d, v - c[0][1]]) : []; };
+  const A = lo < hi ? clip(a.pts) : [], B = lo < hi ? clip(b.pts) : [];
+  if (!A.length || !B.length) return `<div class="block dm-card"><h3>The trend</h3><p class="reason">NISAR and Sentinel-1 have no months in common here.</p></div>`;
+  const lab = (x) => `${esc(sensors()[x.sat].label)} ${esc(x.trk)}`;
+  const end = (P) => P.at(-1)[1];
+  return `<div class="block dm-card"><h3>The trend: both radars <span class="badge">${esc(human(lo))} to ${esc(human(hi))}</span></h3>
+    <div class="sub small"><span style="color:${SATS.nisar.color}">●</span> ${lab(a)} &nbsp; <span style="color:${SATS.s1.color}">●</span> ${lab(b)} · each in its own line of sight, both from 0 on ${esc(human(lo))}</div>
+    ${miniChart(A, { from: lo, to: hi, gaps: gapsOf(a.sat, a.trk), on: S.date, color: SATS.nisar.color, height: 150, upto: S.playing ? S.date : null, extra: [{ pts: B, color: SATS.s1.color, dots: true, grow: true }] })}
+    <p class="dm-big">By ${esc(human(hi))}: NISAR <b>${sgn(end(A))} mm</b>, Sentinel-1 <b>${sgn(end(B))} mm</b> · ${Math.sign(end(A)) === Math.sign(end(B)) ? 'same direction' : 'opposite directions'}, ${Math.abs(end(A) - end(B)).toFixed(1)} mm apart</p></div>`;
+}
+const YEARS = ['2027-01-01', '2028-01-01', '2029-01-01'];
+function fcAt(f, d) {   // the Chronos-2 median on the forecast date nearest d
+  let best = 0; f.dates.forEach((x, i) => { if (Math.abs(day(x) - day(d)) < Math.abs(day(f.dates[best]) - day(d))) best = i; });
+  return f.median[best];
+}
 function forecastCard(sel) {
   const fz = S.fz?.zones; if (!fz) return '';
-  const sat = S.sat === 'compare' ? 'nisar' : S.sat; const key = `${sat}:${S.track[sat]}`;
   if (!S.fcZone || !fz[S.fcZone]) S.fcZone = sel.kind === 'zone' && fz[sel.id] ? sel.id : (fz.z4 ? 'z4' : Object.keys(fz)[0]);
-  const zf = fz[S.fcZone]; const k = zf[key] ? key : Object.keys(zf)[0]; const f = zf[k];
-  const z = zones().find(p => p.id === S.fcZone);
+  const zf = fz[S.fcZone]; const z = zones().find(p => p.id === S.fcZone);
+  const pickKey = (sat) => zf[`${sat}:${S.track[sat]}`] ? `${sat}:${S.track[sat]}` : Object.keys(zf).find(k => k.startsWith(sat + ':'));
+  const keys = S.sat === 'compare' ? ['nisar', 's1'].map(pickKey).filter(Boolean) : [pickKey(S.sat) || Object.keys(zf)[0]];
   const buttons = zones().map(p => `<button type="button" data-fcz="${esc(p.id)}" aria-pressed="${p.id === S.fcZone}"${fz[p.id] ? '' : ' disabled title="No series on any track"'}>${esc(zoneShort(p))}</button>`).join('');
-  const obs = f.observed_dates.map((d, i) => [d, f.observed_mm[i]]);
-  const last = obs.at(-1);
-  const band = [[last[0], last[1], last[1]], ...f.dates.map((d, i) => [d, f.q10[i], f.q90[i]])];
-  const med = [[last[0], last[1]], ...f.dates.map((d, i) => [d, f.median[i]])];
-  const [s_, trk] = k.split(':');
+  const lines = [], marks = [], rows = [];
+  let from = null, divider = null;
+  for (const k of keys) {
+    const f = zf[k]; const [s_, trk] = k.split(':'); const col = SATS[s_]?.color || '#1C1917';
+    const obs = f.observed_dates.map((d, i) => [d, f.observed_mm[i]]); const last = obs.at(-1);
+    const med = [[last[0], last[1]], ...f.dates.map((d, i) => [d, f.median[i]])];
+    lines.push({ pts: obs, color: col, dots: true, grow: true }, { pts: med, color: col, dash: true });
+    if (!from || obs[0][0] < from) from = obs[0][0];
+    if (!divider || last[0] > divider) divider = last[0];
+    const vals = YEARS.map(y => fcAt(f, y));
+    YEARS.forEach((y, i) => marks.push({ d: y, v: vals[i], color: col, label: `${sgn(vals[i])}` }));
+    const rate = (f.median.at(-1) - last[1]) / ((day(f.dates.at(-1)) - day(last[0])) / 365.25);
+    rows.push(`<tr><th><span style="color:${col}">●</span> ${esc(sensors()[s_]?.label || s_)} ${esc(trk)}</th>${vals.map(v => `<td>${sgn(v)} mm</td>`).join('')}<td>${sgn(rate)} mm/yr</td></tr>`);
+  }
   return `<div class="block dm-card"><h3>The prediction <span class="seg dm-zones" role="group" aria-label="Zone">${buttons}</span></h3>
-    <div class="sub small">${esc(zoneName(z))} · ${esc(sensors()[s_]?.label || s_)} ${esc(trk)} · Chronos-2</div>
-    ${miniChart(obs, { from: obs[0][0], to: S.fz.end, band, extra: [{ pts: med, color: '#7C3AED', dash: true }], color: SATS[s_]?.color || '#1C1917', height: 130, upto: S.playing ? S.date : null })}
-    <p class="dm-big">${esc(human(S.fz.end))}: <b>${sgn(f.median.at(-1))} mm</b> <span class="sub">(80 % range ${sgn(f.q10.at(-1))} to ${sgn(f.q90.at(-1))} mm)</span></p></div>`;
+    <div class="sub small">${esc(zoneName(z))} · Chronos-2 median, line-of-sight change in mm from each radar's first date${keys.length > 1 ? ' · each radar in its own line of sight' : ''}</div>
+    ${miniChart([], { from, to: S.fz.end, extra: lines, marks, divider, height: 150, upto: S.playing ? S.date : null })}
+    <table class="fc-table"><tr><th></th>${YEARS.map(y => `<th>${esc(human(y))}</th>`).join('')}<th>trend after today</th></tr>${rows.join('')}</table></div>`;
 }
 async function arrowsCard(test) {
   const ue = await loadUpEast(); const info = sensors().nisar?.up_east;
@@ -1644,7 +1683,7 @@ const rampCss = (lo, hi) => `linear-gradient(90deg, ${rangeStops(lo, hi).map(([v
 // legend's colour for the value at the node; its length grows with the steepness, relative to the steepest in view.
 // A light pulse runs along each arrow, like a wind map. Nodes with fewer than 4 points nearby (forest) get no arrow.
 const field = (() => {
-  const STEP = 46; let canvas = null, arrows = [], raf = 0, busy = 0;
+  let canvas = null, arrows = [], raf = 0, busy = 0;
   const shownKey = (sat) => {
     const L = layerFor(sat); const f = frames(sat)?.[S.track[sat]];
     if (!L) return null;
@@ -1664,38 +1703,68 @@ const field = (() => {
     const cc = mapA.getCanvasContainer(); cc.insertBefore(canvas, mapA.getCanvas().nextSibling);
     mapA.on('moveend', () => refresh()); mapA.on('resize', () => refresh());
   }
+  let area = null;
+  const pointsIn = (b, lon, lat, rad, key, keep) => {   // points within rad metres of (lon, lat), as local metres and value
+    const kx = Math.floor(lon / 0.002), ky = Math.floor(lat / 0.0015), span = Math.ceil(rad / 150) + 1, out = [];
+    for (let i = -span; i <= span; i++) for (let j = -span; j <= span; j++) for (const f of b.get(`${kx + i},${ky + j}`) || []) {
+      const v = f.properties[key]; if (v == null || (keep && !keep(f.geometry.coordinates))) continue;
+      const dx = (f.geometry.coordinates[0] - lon) * 111320 * Math.cos(lat * Math.PI / 180), dy = (f.geometry.coordinates[1] - lat) * 110540;
+      if (dx * dx + dy * dy <= rad * rad) out.push([dx, dy, v]);
+    }
+    return out;
+  };
+  const plane = (pts) => {   // least-squares plane v = a + gx*dx + gy*dy; returns the value at the centre and the slope
+    const n = pts.length; if (n < 4) return null;
+    let sx = 0, sy = 0, sv = 0, sxx = 0, syy = 0, sxy = 0, sxv = 0, syv = 0;
+    for (const [dx, dy, v] of pts) { sx += dx; sy += dy; sv += v; sxx += dx * dx; syy += dy * dy; sxy += dx * dy; sxv += dx * v; syv += dy * v; }
+    const mx = sx / n, my = sy / n, mv = sv / n;
+    const cxx = sxx / n - mx * mx, cyy = syy / n - my * my, cxy = sxy / n - mx * my, cxv = sxv / n - mx * mv, cyv = syv / n - my * mv;
+    const det = cxx * cyy - cxy * cxy; if (Math.abs(det) < 1e-6) return null;
+    const gx = (cxv * cyy - cyv * cxy) / det, gy = (cyv * cxx - cxv * cxy) / det;
+    return { val: mv - gx * mx - gy * my, gx, gy, g: Math.hypot(gx, gy) };
+  };
   async function refresh() {
-    if (!S.arrows || !mapA) { arrows = []; if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height); cancelAnimationFrame(raf); raf = 0; return; }
+    if (!S.arrows || !mapA || !area) { arrows = []; if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height); cancelAnimationFrame(raf); raf = 0; return; }
     ensureCanvas();
     const sat = S.sat === 'compare' ? 'nisar' : S.sat; const file = pointFile(sat); const key = shownKey(sat);
     if (!file || !key || S.view === 'coverage') { arrows = []; return; }
     const job = ++busy; const b = await index(file); if (job !== busy) return;
-    const st = stops(sat); const r = mapA.getContainer().getBoundingClientRect();
-    const out = [];
-    for (let y = STEP / 2; y < r.height; y += STEP) for (let x = STEP / 2; x < r.width; x += STEP) {
-      const c = mapA.unproject([x, y]); const lon = c.lng, lat = c.lat;
-      const far = mapA.unproject([x + STEP, y]); const rad = Math.max(120, 0.75 * metres([far.lng, far.lat], [lon, lat]));
-      const kx = Math.floor(lon / 0.002), ky = Math.floor(lat / 0.0015), span = Math.ceil(rad / 150) + 1, pts = [];
-      for (let i = -span; i <= span; i++) for (let j = -span; j <= span; j++) for (const f of b.get(`${kx + i},${ky + j}`) || []) {
-        const v = f.properties[key]; if (v == null) continue;
-        const dx = (f.geometry.coordinates[0] - lon) * 111320 * Math.cos(lat * Math.PI / 180), dy = (f.geometry.coordinates[1] - lat) * 110540;
-        if (dx * dx + dy * dy <= rad * rad) pts.push([dx, dy, v]);
-      }
-      if (pts.length < 4) continue;
-      // least-squares plane v = a + gx*dx + gy*dy
-      let n = pts.length, sx = 0, sy = 0, sv = 0, sxx = 0, syy = 0, sxy = 0, sxv = 0, syv = 0;
-      for (const [dx, dy, v] of pts) { sx += dx; sy += dy; sv += v; sxx += dx * dx; syy += dy * dy; sxy += dx * dy; sxv += dx * v; syv += dy * v; }
-      const mx = sx / n, my = sy / n, mv = sv / n;
-      const cxx = sxx / n - mx * mx, cyy = syy / n - my * my, cxy = sxy / n - mx * my, cxv = sxv / n - mx * mv, cyv = syv / n - my * mv;
-      const det = cxx * cyy - cxy * cxy; if (Math.abs(det) < 1e-6) continue;
-      const gx = (cxv * cyy - cyv * cxy) / det, gy = (cyv * cxx - cxv * cxy) / det;
-      const val = mv - gx * mx - gy * my; const g = Math.hypot(gx, gy); if (!(g > 0)) continue;
-      const head = [lon - gx / g * 10 / (111320 * Math.cos(lat * Math.PI / 180)), lat - gy / g * 10 / 110540];   // 10 m downhill
-      out.push({ at: [lon, lat], head, g, col: colourAt(st, Math.max(st[0][0], Math.min(st.at(-1)[0], val))), ph: Math.random() });
+    const st = stops(sat);
+    // the selection's bounding box, in degrees and on screen
+    const ring = area.shape.geometry.coordinates[0];
+    const w = Math.min(...ring.map(c => c[0])), e = Math.max(...ring.map(c => c[0])), s = Math.min(...ring.map(c => c[1])), n_ = Math.max(...ring.map(c => c[1]));
+    const p0 = mapA.project([w, n_]), p1 = mapA.project([e, s]); const sidePx = Math.max(Math.abs(p1.x - p0.x), Math.abs(p1.y - p0.y));
+    // how many arrows across: one per ~70 px of the square on screen; zoomed out that is 1 (the whole area) or 2
+    const cells = Math.max(1, Math.min(10, Math.floor(sidePx / 70)));
+    const cw = (e - w) / cells, ch = (n_ - s) / cells;
+    const cellM = Math.max(metres([w, s], [w + cw, s]), metres([w, s], [w, s + ch]));
+    // the terrain around the selection: a ring as wide as the selection. Its typical slope (the 80th percentile of
+    // plane slopes fitted the same way) is what random noise alone produces; arrows weaker than that are not drawn.
+    // Its median value is the local reference: values are coloured relative to it.
+    const bw = e - w, bh = n_ - s, around = [];
+    const outside = (c) => !area.test(c);
+    for (const dist of [0.8, 1.1]) for (let i = 0; i < 16; i++) {
+      const ang = i / 16 * 2 * Math.PI, lon = (w + e) / 2 + Math.cos(ang) * bw * dist, lat = (s + n_) / 2 + Math.sin(ang) * bh * dist;
+      const pl = plane(pointsIn(b, lon, lat, Math.max(120, cellM * 0.75), key, outside)); if (pl) around.push(pl);
     }
-    const gs = out.map(a => a.g).sort((p, q) => p - q); const gref = gs[Math.floor(gs.length * 0.9)] || 1;
-    for (const a of out) a.len = STEP * (0.35 + 0.5 * Math.min(1, a.g / gref));
-    arrows = out; if (!raf) raf = requestAnimationFrame(draw);
+    const ref = around.length ? median(around.map(p => p.val)) : 0;
+    const noise = around.length >= 5 ? around.map(p => p.g).sort((a2, b2) => a2 - b2)[Math.floor(around.length * 0.8)] : null;
+    const out = [];
+    for (let i = 0; i < cells; i++) for (let j = 0; j < cells; j++) {
+      const lon = w + (i + 0.5) * cw, lat = s + (j + 0.5) * ch;
+      if (cells > 1 && !area.test([lon, lat])) continue;
+      const pl = plane(pointsIn(b, lon, lat, Math.max(120, cellM * 0.75), key, area.test)); if (!pl || !(pl.g > 0)) continue;
+      const head = [lon - pl.gx / pl.g * 10 / (111320 * Math.cos(lat * Math.PI / 180)), lat - pl.gy / pl.g * 10 / 110540];
+      const v = pl.val - ref;
+      out.push({ at: [lon, lat], head, g: pl.g, cell: [cw, ch], weak: noise != null && pl.g <= noise, col: colourAt(st, Math.max(st[0][0], Math.min(st.at(-1)[0], v))), ph: Math.random() });
+    }
+    const gmax = Math.max(...out.map(a2 => a2.g), 1e-9);
+    for (const a2 of out) a2.rel = 0.45 + 0.45 * Math.min(1, a2.g / gmax);
+    arrows = out; const strong = out.filter(a2 => !a2.weak).length;
+    S.fieldInfo = { cells, shown: out.length, strong, noise, ref };
+    const note = document.querySelector('.arrow-note');
+    if (note) note.innerHTML = `Inside the selected area, arrows point to where the ground moved further from the satellite (often: sank more), compared with the terrain around it. Colour = the legend.<br><b>${strong} of ${out.length}</b> stand out from the terrain's own random variation${noise == null ? ' (too few points around to tell)' : ''}; faded arrows do not.`;
+    if (!raf) raf = requestAnimationFrame(draw);
   }
   function draw(now) {
     raf = 0; if (!S.arrows || !canvas) return;
@@ -1705,23 +1774,28 @@ const field = (() => {
     ctx.lineCap = 'round';
     for (const a of arrows) {
       const p = mapA.project(a.at), q = mapA.project(a.head); let ux = q.x - p.x, uy = q.y - p.y; const u = Math.hypot(ux, uy) || 1; ux /= u; uy /= u;
+      const cp = mapA.project([a.at[0] + a.cell[0], a.at[1] + a.cell[1]]); a.len = Math.max(18, Math.min(Math.abs(cp.x - p.x), Math.abs(cp.y - p.y)) * a.rel);
       const sx = p.x - ux * a.len / 2, sy = p.y - uy * a.len / 2, ex = p.x + ux * a.len / 2, ey = p.y + uy * a.len / 2;
-      const hx = -uy, hy = ux, hl = Math.min(9, a.len * 0.38);
+      const hx = -uy, hy = ux, hl = Math.min(14, Math.max(7, a.len * 0.22));
       const path = () => { ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.moveTo(ex - ux * hl + hx * hl * 0.55, ey - uy * hl + hy * hl * 0.55); ctx.lineTo(ex, ey); ctx.lineTo(ex - ux * hl - hx * hl * 0.55, ey - uy * hl - hy * hl * 0.55); };
+      ctx.globalAlpha = a.weak ? 0.35 : 1;
       ctx.strokeStyle = 'rgba(12,10,9,.55)'; ctx.lineWidth = 4.5; path(); ctx.stroke();
-      ctx.strokeStyle = a.col; ctx.lineWidth = 2.4; path(); ctx.stroke();
+      const lw = Math.max(2.4, Math.min(6, a.len / 18));
+      ctx.lineWidth = lw + 2.5; ctx.strokeStyle = 'rgba(12,10,9,.55)'; path(); ctx.stroke();
+      ctx.strokeStyle = a.col; ctx.lineWidth = lw; path(); ctx.stroke();
+      if (a.weak) { ctx.globalAlpha = 1; continue; }
       const k = ((now / 1400) + a.ph) % 1, px = sx + (ex - sx) * k, py = sy + (ey - sy) * k;   // the travelling pulse
       ctx.fillStyle = `rgba(255,255,255,${(0.85 * Math.sin(Math.PI * k)).toFixed(2)})`; ctx.beginPath(); ctx.arc(px, py, 2.2, 0, 7); ctx.fill();
     }
     raf = requestAnimationFrame(draw);
   }
-  return { refresh: () => refresh(), redraw: () => { if (S.arrows && !raf) raf = requestAnimationFrame(draw); } };
+  return { refresh: () => refresh(), setArea: (x) => { area = x; refresh(); }, redraw: () => { if (S.arrows && !raf) raf = requestAnimationFrame(draw); } };
 })();
 function addArrowToggle(m) {
   const box = document.createElement('div'); box.className = 'maplibregl-ctrl arrow-ctrl';
   box.innerHTML = `<button type="button" id="arrow-btn" aria-pressed="false" title="Show arrows pointing to where the ground sank more">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 L13 7 M13 7 H7 M13 7 V13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M11 21 L21 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2 3" stroke-linecap="round"/></svg>
-      <span>Arrows</span></button><div class="arrow-note" hidden>Arrows point to where the ground moved further from the satellite (often: sank more). Colour = the legend.</div>`;
+      <span>Arrows</span></button><div class="arrow-note" hidden>Inside the selected area, arrows point to where the ground moved further from the satellite (often: sank more), relative to the terrain around it. Colour = the legend. Select an area to see them.</div>`;
   box.classList.remove('maplibregl-ctrl'); m.getContainer().append(box);   // lower-left corner of the map
   box.querySelector('button').addEventListener('click', (e) => {
     e.stopPropagation(); S.arrows = !S.arrows; e.currentTarget.setAttribute('aria-pressed', String(S.arrows));
@@ -1733,9 +1807,12 @@ async function renderMenu() {
   const want = S.menu;
   const d = await menuData();
   if (S.menu !== want) return;
-  drawSelection(d.shape); showPin(S.menu.kind === 'pin' && !S.menu.hall ? S.menu.at : null);
+  drawSelection(d.shape); showPin(S.menu.kind === 'pin' ? S.menu.at : null);
+  field.setArea(d.test && d.shape ? { test: d.test, shape: d.shape } : null);
   let html = `<div class="dm-head"><h2>${S.menu.kind === 'pin' ? 'Can you build here?' : 'How the ground moved here'}</h2><div class="kicker">${esc(d.label)}${d.n ? ` · ${d.n} measured points` : ''}</div></div>`;
+  const d2 = S.sat === 'compare' && S.menu.kind !== 'pin' ? await menuData('s1') : null;
   if (S.menu.kind === 'pin') html += await pinCards(d);
+  else if (d2 && d.pts.length && d2.pts.length) html += compareTrend(d, d2);
   else if (!d.pts.length) html += `<div class="block dm-card"><p class="reason">No measurement here on this satellite.</p></div>`;
   else {
     const gaps = gapsOf(d.sat, d.trk);
@@ -1764,7 +1841,7 @@ async function renderMenu() {
   const cmPx = 96 / 2.54, perCm = mpp * cmPx;
   const scale = perCm >= 1000 ? `${(perCm / 1000).toFixed(perCm >= 10000 ? 0 : 1)} km` : `${Math.round(perCm / 10) * 10} m`;
   const unit = S.view === 'rate' ? 'mm/yr' : 'mm';
-  $('#dm-legend').innerHTML = `<div class="dm-leg"><div><div class="dm-ramp"></div><div class="dm-ticks"><span>${f1(lo)} ${unit}</span><span>${rng ? 'lowest to highest in this area' : '0'}</span><span>${f1(hi)} ${unit}</span></div></div>
+  $('#dm-legend').innerHTML = `<div class="dm-leg"><div><div class="dm-ramp"></div><div class="dm-ticks"><span>${f1(lo)} ${unit}</span><span>${rng ? 'lowest to highest in this area' : '0'}</span><span>${f1(hi)} ${unit}</span></div><p class="dm-plain"><b style="color:#B2182B">Red</b>: moved away from the satellite, usually sinking. <b style="color:#2166AC">Blue</b>: moved toward it. 10 mm ≈ a pencil's thickness.</p></div>
     <div class="dm-scale"><i style="width:${(cmPx * 2).toFixed(0)}px"></i><span>1 cm on screen = ${scale} on the map</span></div></div>`;
   // hovering the ramp shows the value under the cursor and its colour
   const ramp = $('#dm-legend .dm-ramp'); const stops = rng ? rangeStops(lo, hi) : rangeStops(-vm, vm);

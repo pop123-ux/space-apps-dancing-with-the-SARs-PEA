@@ -129,3 +129,4 @@ Whoever creates these adds the owner line from this table.
 | `docs/deploy.md` | 06 · App developer (Darius) | How to host the page on Vercel |
 | `sentinel1/` | 03 · InSAR analyst (Alexandru, Eric) | Sentinel-1 data manifest, fitted results, and team handoff |
 | `docs/forecast.md` | 03 · InSAR analyst (Alexandru, Eric) | Forecast results and environmental screening handoff |
+| `sentinel1/scripts/order_all.py` | 03 · InSAR analyst (Alexandru and Eric) |
