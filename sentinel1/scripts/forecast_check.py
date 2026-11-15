@@ -28,6 +28,7 @@ def main():
     ap.add_argument('forecast', type=Path)
     ap.add_argument('--last-date', type=date.fromisoformat, required=True)
     ap.add_argument('-o', '--output', type=Path, required=True)
+    ap.add_argument('--attach', type=Path, help='a newer forecast.json to receive this check as previous_check')
     a = ap.parse_args()
     f = json.loads(a.forecast.read_text())
     issued = date.fromisoformat(f['last_observation'])
@@ -67,6 +68,10 @@ def main():
                     f'{later[-1].isoformat()} re-inversion of the 029A summer pair design (baseline run). One forecast '
                     f'checked on {len(later)} later dates; the dates share one reference, so they are not independent.')
     a.output.write_text(json.dumps(out, indent=1) + '\n')
+    if a.attach:
+        g = json.loads(a.attach.read_text())
+        g['previous_check'] = out
+        a.attach.write_text(json.dumps(g, indent=2, allow_nan=False) + '\n')
     print(json.dumps({k: out[k] for k in ('checked_through', 'pixels_connected', 'mae_mm', 'chronos2_inside_80pct')}))
 
 
