@@ -14,6 +14,23 @@ const SATS = {
   s1: { mark: '▲', cls: 'mk-s1', color: '#7C3AED', shape: 'tri', name: 'Sentinel-1' },
 };
 const ARROW = { Ascending: '↗', Descending: '↘' };
+// Plain names for the tracks. Pass times are the acquisition start times in ASF's catalogue over Ocnele Mari (UTC,
+// checked 15 Nov 2026); Romania is UTC+2 in winter, UTC+3 in summer. Look sides from common.py: NISAR looks left,
+// Sentinel-1 right, so flying north NISAR sees the ground from the east and Sentinel-1 from the west, and the reverse
+// flying south. Two tracks that see from the same side are the fair pair to compare.
+const PASS_UTC = { nisar: { Ascending: '03:20', Descending: '17:28' }, s1: { Ascending: '16:16', Descending: '04:29' } };
+const LOOK = { nisar: 'left', s1: 'right' };
+function passInfo(s, t) {
+  const dir = dirOf(s, t); const utc = PASS_UTC[s]?.[dir]; if (!utc) return null;
+  const h = +utc.slice(0, 2) + 2;   // local winter time
+  const when = h < 10 ? 'morning' : h < 17 ? 'midday' : 'evening';
+  const north = dir === 'Ascending'; const fromEast = (LOOK[s] === 'left') === north;
+  return { when, from: fromEast ? 'east' : 'west', north, utc, dir };
+}
+const passShort = (s, t) => { const p = passInfo(s, t); return p ? `${p.when} pass, from the ${p.from}` : t; };
+const passTitle = (s, t) => { const p = passInfo(s, t); return p ? `Track ${t} (${p.dir.toLowerCase()}): flies ${p.north ? 'north' : 'south'} at about ${p.utc} UTC and sees the slopes from the ${p.from}. Each pass sees a different side of the hills, so the two can show different values.` : `Track ${t}`; };
+const trackText = (s, t) => `${sensors()[s]?.label || s} · ${passShort(s, t)}`;
+const trackHtml = (s, t) => `${esc(sensors()[s]?.label || s)} · ${esc(passShort(s, t))} <span class="trk-code" title="${esc(passTitle(s, t))}">${esc(t)}</span>`;
 const VIEW_LABEL = { change: 'Change', rate: 'Rate', zones: 'Zones', agreement: 'Compare', coverage: 'Coverage' };
 // Top-level navigation (15 Nov 2026): Motion (Change, Rate), Coverage, Compare. Internal view keys stay as before, so
 // old links with view=zones, view=agreement and view=coverage still open.
@@ -233,6 +250,12 @@ function addOverlay(m) {
   m.addSource('ov', { type: 'image', url: transparentPixel(), coordinates: bboxCoords() });
   const firstLabel = m.getStyle().layers.find(l => l.type === 'symbol')?.id;   // keep place names above the colours
   m.addLayer({ id: 'ov', type: 'raster', source: 'ov', paint: { 'raster-opacity': S.opacity, 'raster-fade-duration': 0, 'raster-resampling': 'nearest' } }, firstLabel);
+  if (!m.getSource('osmb')) {
+    m.addSource('osmb', { type: 'vector', url: 'https://tiles.openfreemap.org/planet', attribution: '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> buildings via OpenFreeMap' });
+    m.addLayer({ id: 'osmb', type: 'line', source: 'osmb', 'source-layer': 'building', minzoom: 14,
+      layout: { visibility: S.buildings === false ? 'none' : 'visible' },
+      paint: { 'line-color': '#FDE68A', 'line-width': ['interpolate', ['linear'], ['zoom'], 14, 0.6, 17, 1.6], 'line-opacity': ['interpolate', ['linear'], ['zoom'], 14, 0, 14.6, 0.9] } }, firstLabel);
+  }
   m.addSource('pts', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
   m.addLayer({ id: 'pts', type: 'circle', source: 'pts', layout: { visibility: 'none' }, paint: {
     // a little larger than EGMS's 2.5 px dots, growing with zoom, with a thin outline so pale values show on a light map
@@ -549,7 +572,7 @@ function renderContext() {
   if (S.view === 'agreement') parts.push(`<b>Compare</b> · each satellite in its own line of sight${S.man.common_window ? ` · common window ${esc(S.man.common_window[0])} to ${esc(S.man.common_window[1])}` : ''}`);
   else if (s && measured(s)) {
     const trk = S.track[s]; const sn = sensors()[s];
-    const head = `<b><span class="${SATS[s].cls}" aria-hidden="true">${SATS[s].mark}</span> ${esc(sn.label)} ${esc(trk)} ${ARROW[dirOf(s, trk)] || ''}</b>`;
+    const head = `<b><span class="${SATS[s].cls}" aria-hidden="true">${SATS[s].mark}</span> ${trackHtml(s, trk)}</b>`;
     const ds = datesOf(s, trk);
     let metric;
     if (S.view === 'rate') metric = `Annualized line-of-sight rate (mm/yr) · fit window ${esc(ds[0] || '')} to ${esc(ds[ds.length - 1] || '')}`;
@@ -585,9 +608,9 @@ function renderTracks() {
       const dir = dirOf(s, t);
       const b = document.createElement('button'); b.type = 'button';
       const flag = frames(s)[t]?.flag;
-      b.textContent = `${t} ${ARROW[dir] || ''}${flag ? ' ⚠' : ''}`;
+      b.textContent = `${passInfo(s, t) ? passInfo(s, t).when[0].toUpperCase() + passInfo(s, t).when.slice(1) + ' · from ' + passInfo(s, t).from : t}${flag ? ' ⚠' : ''}`;
       if (flag) b.classList.add('flagged');
-      b.title = `Track ${t}, ${String(dir || '').toLowerCase()}`;
+      b.title = passTitle(s, t);
       b.setAttribute('aria-label', b.title);
       b.setAttribute('aria-pressed', S.track[s] === t ? 'true' : 'false');
       b.addEventListener('click', () => { S.track[s] = t; if (s === 's1' && !S.windowPicked) { S.window = longestWindow(t); S.date = null; } changed(); });
@@ -681,7 +704,7 @@ function renderStatus() {
     else if (S.exp) what = 'up and east (experimental), whole window';
     else if (S.view === 'rate') what = `rate: fitted annualized slope${win() ? `, ${win().label}` : ''}`;
     else { const L = layerFor(s); what = L?.date ? `${human(L.date)} · change since ${human(L.first)}` : `no acquisition on ${human(S.date)}`; }
-    parts.push(`<span class="${SATS[s].cls}" aria-hidden="true">${SATS[s].mark}</span> <b>${esc(sn.label)} ${esc(trk)} ${ARROW[dir] || ''}</b> · ${esc(what)} · ${esc(sn.status)}`);
+    parts.push(`<span class="${SATS[s].cls}" aria-hidden="true">${SATS[s].mark}</span> <b>${trackHtml(s, trk)}</b> · ${esc(what)} · ${esc(sn.status)}`);
   }
   $('#status').innerHTML = parts.join(' &nbsp;·&nbsp; ');
 }
@@ -906,7 +929,7 @@ function direction(point, sat, trk) {
 function factRow(point, sat, trk) {
   const e = entry(point, sat, trk);
   const dir = dirOf(sat, trk);
-  const head = `<span class="${SATS[sat].cls}" aria-hidden="true">${SATS[sat].mark}</span> ${esc(sensors()[sat].label)} ${esc(trk)} ${ARROW[dir] || ''}`;
+  const head = `<span class="${SATS[sat].cls}" aria-hidden="true">${SATS[sat].mark}</span> ${trackHtml(sat, trk)}`;
   if (!e) return `<div class="fact"><span>${head}</span><span class="sub">${esc(emptyZoneLabel(sat))}</span></div>`;
   const change = e.fitted_change_mm !== undefined && e.fitted_change_mm !== null ? `<b>${fmt(e.fitted_change_mm, 1)} mm</b> fitted change` : `<b>${fmt(e.rate)} mm/yr</b>`;
   const limited = e.n_pixels !== undefined && e.n_pixels !== null && e.n_pixels < LIMITED_PX;
@@ -938,7 +961,7 @@ function notesBox(z, sats, full) {
   if (zn) out.push(`<div class="zone-note"><b>${esc(zn.label)}</b>${full ? `<span>${esc(zn.detail)}</span><small>${esc(zn.source)}</small>` : ''}</div>`);
   if (full) for (const s of sats) for (const t of tracksOf(s)) {
     const tn = trackNote(z, s, t);
-    if (tn) out.push(`<div class="zone-note quiet"><b>${esc(tn.label)} · ${esc(sensors()[s].label)} ${esc(t)}</b><span>${esc(tn.detail)}</span><small>${esc(tn.source)}</small></div>`);
+    if (tn) out.push(`<div class="zone-note quiet"><b>${esc(tn.label)} · ${trackHtml(s, t)}</b><span>${esc(tn.detail)}</span><small>${esc(tn.source)}</small></div>`);
   }
   return out.join('');
 }
@@ -1117,16 +1140,16 @@ function coverageSheet() {
   const rows = [];
   for (const s of sensorKeys()) for (const t of tracksOf(s)) {
     const pairs = covOf(s)[t]?.pairs;
-    const nPairs = Array.isArray(pairs) ? pairs.length : pairs;
+    const nPairs = s === 's1' && S.window !== (S.sens?.default_window || 'jul_oct') ? null : Array.isArray(pairs) ? pairs.length : pairs;   // coverage.json counts the default window's pairs
     const state = measured(s) ? '' : '<small class="pending">displacement fit pending</small>';
-    rows.push(`<div class="cov-row"><div class="cov-label"><span class="${SATS[s].cls}" aria-hidden="true">${SATS[s].mark}</span> ${esc(sensors()[s].label)} ${esc(t)} ${ARROW[dirOf(s, t)] || ''}<small>${allDates(s, t).length} dates${nPairs && allDates(s, t).length === datesOf(s, t).length ? ` · ${nPairs} pairs` : ''}</small>${state}</div>
+    rows.push(`<div class="cov-row"><div class="cov-label"><span class="${SATS[s].cls}" aria-hidden="true">${SATS[s].mark}</span> ${trackHtml(s, t)}<small>${allDates(s, t).length} dates${nPairs && allDates(s, t).length === datesOf(s, t).length ? ` · ${nPairs} pairs` : ''}</small>${state}</div>
       <div class="tl cov-tl">${band}<div class="axis"></div>${gapsFor(s, t, R)}${dotsFor(s, t, R, '', null, !measured(s), allDates(s, t))}</div></div>`);
   }
   // usable zone pixels per measured track: a separate indicator from the acquisition ticks
   const px = [];
   for (const s of sensorKeys()) for (const t of tracksOf(s)) {
     const zp = covOf(s)[t]?.zone_pixels; if (!zp) continue;
-    px.push(`<tr><td><span class="${SATS[s].cls}" aria-hidden="true">${SATS[s].mark}</span> ${esc(sensors()[s].label)} ${esc(t)}</td>${zones().map(z => `<td>${zp[z.id] ?? '<span class="sub">none</span>'}</td>`).join('')}</tr>`);
+    px.push(`<tr><td><span class="${SATS[s].cls}" aria-hidden="true">${SATS[s].mark}</span> ${trackHtml(s, t)}</td>${zones().map(z => `<td>${zp[z.id] ?? '<span class="sub">none</span>'}</td>`).join('')}</tr>`);
   }
   const s1 = sensors().s1 && measured('s1');
   return `<h2>When each satellite looked</h2><p class="lead">One mark per acquisition; hollow marks are catalog dates with no measurement yet. Hatched means no data. The shaded band${w ? `, ${human(w[0], false)} to ${human(w[1])},` : ''} is the common window both satellites cover.</p>
@@ -1248,7 +1271,7 @@ function zoneCoverage(id) {
     const tracks = [...new Set([...tracksOf(s), ...Object.keys(covOf(s))])];
     for (const t of tracks) {
       const e = entry(z, s, t);
-      const head = `<span class="${SATS[s].cls}" aria-hidden="true">${SATS[s].mark}</span> ${esc(sensors()[s].label)} ${esc(t)} ${ARROW[dirOf(s, t)] || ''}`;
+      const head = `<span class="${SATS[s].cls}" aria-hidden="true">${SATS[s].mark}</span> ${trackHtml(s, t)}`;
       if (e) { rows.push(`<tr><td>${head}</td><td><b>${e.n_pixels}</b> px${e.n_pixels < LIMITED_PX ? ' <span class="badge warn">limited</span>' : ''}</td><td>${e.mm.filter(v => v !== null).length} acquisitions, ${esc(e.dates[0])} to ${esc(e.dates[e.dates.length - 1])}</td></tr>`); continue; }
       let why = s === 'nisar' && !tracksOf('nisar').includes(t) ? (sensors().nisar.pending || 'not on the page') : emptyZoneLabel(s);
       const other = tracksOf(s).find(o => o !== t && entry(z, s, o));
@@ -1537,14 +1560,14 @@ async function menuData(satArg) {
   const sat = satArg || (S.sat === 'compare' ? 'nisar' : S.sat); const trk = S.track[sat];
   const out = { sat, trk, pts: [], label: '', shape: null, test: null };
   if (S.menu.kind === 'pin') {
-    out.label = `The spot you pinned · ${sensors()[sat].label} ${trk}`;
+    out.label = `The spot you pinned · ${trackText(sat, trk)}`;
     const at = S.menu.at; out.test = (c) => metres(c, at) <= PIN_RADIUS_M;
     out.shape = zoneCircle({ lon: at[0], lat: at[1], r_m: PIN_RADIUS_M });
     return out;
   }
   if (S.menu.kind === 'zone') {
     const z = S.series.find(p => p.id === S.menu.id); const e = z && entry(z, sat, trk);
-    out.label = `${zoneName(z)} · ${sensors()[sat].label} ${trk}`;
+    out.label = `${zoneName(z)} · ${trackText(sat, trk)}`;
     out.pts = e ? e.dates.map((d, i) => [d, e.mm[i]]).filter(([, v]) => v !== null && Number.isFinite(v)) : [];
     out.n = e?.n_pixels; out.shape = z?.r_m ? zoneCircle(z) : null;
     const r = (z?.r_m || 250) / 111320;
@@ -1560,7 +1583,7 @@ async function menuData(satArg) {
     out.n = inside.length;
     out.shape = cellBox(inside.map(f => f.geometry.coordinates), gj.meta.spacing || 80) || { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [[[box[0], box[1]], [box[2], box[1]], [box[2], box[3]], [box[0], box[3]], [box[0], box[1]]]] } };
   }
-  out.label = `Area around the press, about ${AREA_M / 1000} × ${AREA_M / 1000} km · ${sensors()[sat].label} ${trk}`;
+  out.label = `Area around the press, about ${AREA_M / 1000} × ${AREA_M / 1000} km · ${trackText(sat, trk)}`;
   return out;
 }
 // a small chart in the app's own style (the zone panels use the same proportions, fonts and greys)
@@ -1601,7 +1624,7 @@ function compareTrend(a, b) {   // the honest-comparison rules: same months, eac
   const clip = (pts) => { const c = pts.filter(([d]) => d >= lo && d <= hi); return c.length ? c.map(([d, v]) => [d, v - c[0][1]]) : []; };
   const A = lo < hi ? clip(a.pts) : [], B = lo < hi ? clip(b.pts) : [];
   if (!A.length || !B.length) return `<div class="block dm-card"><h3>The trend</h3><p class="reason">NISAR and Sentinel-1 have no months in common here.</p></div>`;
-  const lab = (x) => `${esc(sensors()[x.sat].label)} ${esc(x.trk)}`;
+  const lab = (x) => trackHtml(x.sat, x.trk);
   const end = (P) => P.at(-1)[1];
   return `<div class="block dm-card"><h3>The trend: both radars <span class="badge">${esc(human(lo))} to ${esc(human(hi))}</span></h3>
     <div class="sub small"><span style="color:${SATS.nisar.color}">●</span> ${lab(a)} &nbsp; <span style="color:${SATS.s1.color}">●</span> ${lab(b)} · each in its own line of sight, both from 0 on ${esc(human(lo))}</div>
@@ -1659,17 +1682,16 @@ async function arrowsCard(test) {
       <text x="44" y="${cy - 6}">west</text><text x="196" y="${cy - 6}" text-anchor="end">east</text><text x="${cx + 5}" y="22">up</text><text x="${cx + 5}" y="124">down</text>
       ${Math.abs(len(east)) > 2 ? `<line x1="${cx}" x2="${cx + len(east)}" y1="${cy}" y2="${cy}" stroke="#1C1917" stroke-width="2.5" marker-end="url(#dm-ah)"/>` : ''}
       ${Math.abs(len(up)) > 2 ? `<line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy - len(up)}" stroke="#1C1917" stroke-width="2.5" marker-end="url(#dm-ah)"/>` : ''}
-      <circle cx="${cx}" cy="${cy}" r="${(Math.min(su, S2) / S2 * L).toFixed(1)}" fill="none" stroke="#B45309" stroke-dasharray="3 3"><title>uncertainty</title></circle>
       <text x="230" y="44" class="v">Up-down: ${sgn(up)} mm/yr</text><text x="230" y="62">± ${su.toFixed(0)} mm/yr</text>
       <text x="230" y="92" class="v">East-west: ${sgn(east)} mm/yr</text><text x="230" y="110">± ${se.toFixed(0)} mm/yr</text>
     </svg>
     ${S.date ? `<p class="dm-big">By ${esc(human(S.date))}: <b>${sgn(up * elapsedYears())} mm</b> up-down, <b>${sgn(east * elapsedYears())} mm</b> east-west</p>` : ''}
-    <p class="sub small">Dashed circle: the uncertainty.</p></div>`;
+</div>`;
 }
-function elapsedYears() {   // from the first acquisition of the shown track to the date on the map
-  const sat = S.sat === 'compare' ? 'nisar' : S.sat; const ds = frames(sat)?.[S.track[sat]]?.dates || [];
-  if (!ds.length || !S.date) return 1;
-  return Math.max(0, (Date.parse(S.date) - Date.parse(ds[0])) / 3.15576e10);
+function elapsedYears() {   // the up/east rates are NISAR's, over its own window (June to October 2026): count only that time
+  const w = sensors().nisar?.up_east?.window; if (!w || !S.date) return 0;
+  const end = S.date < w[0] ? w[0] : S.date > w[1] ? w[1] : S.date;
+  return Math.max(0, (Date.parse(end) - Date.parse(w[0])) / 3.15576e10);
 }
 // lowest and highest value of the measured points inside the selection, for the layer on the map
 async function areaRange(d, L) {
@@ -1710,7 +1732,7 @@ const field = (() => {
   const shownKey = (sat) => {
     const L = layerFor(sat); const f = frames(sat)?.[S.track[sat]];
     if (!L) return null;
-    return L.kind === 'rate' ? 'r' : L.kind === 'change' && L.date && f ? `c${f.dates.indexOf(L.date)}` : null;
+    return S.view === 'coverage' || L.kind === 'rate' ? 'r' : L.kind === 'change' && L.date && f ? `c${f.dates.indexOf(L.date)}` : null;
   };
   const stops = (sat) => S.menuRange ? rangeStops(...S.menuRange) : rangeStops(-Math.abs(layerFor(sat)?.meta?.vmax ?? 20), Math.abs(layerFor(sat)?.meta?.vmax ?? 20));
   const buckets = {};
@@ -1750,7 +1772,7 @@ const field = (() => {
     if (!S.arrows || !mapA || !area) { arrows = []; if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height); cancelAnimationFrame(raf); raf = 0; return; }
     ensureCanvas();
     const sat = S.sat === 'compare' ? 'nisar' : S.sat; const file = pointFile(sat); const key = shownKey(sat);
-    if (!file || !key || S.view === 'coverage') { arrows = []; return; }
+    if (!file || !key) { arrows = []; return; }
     const job = ++busy; const b = await index(file); if (job !== busy) return;
     const st = stops(sat);
     // the selection's bounding box, in degrees and on screen
@@ -1818,11 +1840,18 @@ function addArrowToggle(m) {
   const box = document.createElement('div'); box.className = 'maplibregl-ctrl arrow-ctrl';
   box.innerHTML = `<button type="button" id="arrow-btn" aria-pressed="false" title="Show arrows pointing to where the ground sank more">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 L13 7 M13 7 H7 M13 7 V13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M11 21 L21 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2 3" stroke-linecap="round"/></svg>
-      <span>Arrows</span></button><div class="arrow-note" hidden>Inside the selected area, arrows point to where the ground moved further from the satellite (often: sank more), relative to the terrain around it. Colour = the legend. Select an area to see them.</div>`;
+      <span>Arrows</span></button>
+      <button type="button" id="bldg-btn" aria-pressed="true" title="Building outlines from OpenStreetMap, shown when zoomed in (experimental)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V9l8-5 8 5v11z M9 20v-6h6v6" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>Buildings</span><small>experimental</small></button><div class="arrow-note" hidden>Inside the selected area, arrows point to where the ground moved further from the satellite (often: sank more), relative to the terrain around it. Colour = the legend. Select an area to see them.</div>`;
   box.classList.remove('maplibregl-ctrl'); m.getContainer().append(box);   // lower-left corner of the map
-  box.querySelector('button').addEventListener('click', (e) => {
+  box.querySelector('#bldg-btn').addEventListener('click', (e) => {
+    e.stopPropagation(); S.buildings = S.buildings === false; e.currentTarget.setAttribute('aria-pressed', String(S.buildings));
+    for (const mm of [mapA, mapB]) if (mm?.getLayer('osmb')) mm.setLayoutProperty('osmb', 'visibility', S.buildings ? 'visible' : 'none');
+    if (S.buildings && mapA.getZoom() < 14.6) mapA.easeTo({ zoom: 15.5 });
+  });
+  box.querySelector('#arrow-btn').addEventListener('click', (e) => {
     e.stopPropagation(); S.arrows = !S.arrows; e.currentTarget.setAttribute('aria-pressed', String(S.arrows));
-    box.querySelector('.arrow-note').hidden = !S.arrows; field.refresh();
+    box.querySelector('.arrow-note').hidden = !S.arrows;
+    if (S.arrows && !S.menu) { const c = mapA.getCenter(); openMenu({ kind: 'area', at: [c.lng, c.lat] }); } else field.refresh();
   });
 }
 async function renderMenu() {
