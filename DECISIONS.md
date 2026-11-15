@@ -248,3 +248,11 @@ A decision recorded here is not a question. Nobody blocks on one. If a line look
     - precision of the trend (how much of the 15 mm limit the 2029 uncertainty leaves);
     - the second satellite: same direction, or both without clear movement, gives 25; no data gives 12.5; the opposite direction gives 0.
   - Scores of 70 or more are high, 40 to 69 medium, below 40 low. The thresholds are our choice.
+- 2026-11-15 (06, via Alexandru):
+  - **Removed the EN/RO language switch.** The page is English only; a saved Romanian choice from earlier visits is overridden. `app/i18n.js` stays, unused for switching.
+  - **The verdict's tick and cross draw themselves** (stroke animation, then a small pop) once per new verdict, not on every Play frame.
+  - **New "What went into this answer"** under each pin and house verdict. It shows the real weights in the code, not estimates:
+    - the shown satellite's trend decides the answer (100 %), unless the spot is inside a salt-field outline, which then decides alone;
+    - the confidence score is 75 points from the shown satellite and 25 from the other satellite;
+    - the GNSS stations HORE, VLC1 and VLC2 take 0 % of a spot's answer, because they check the radar where they stand. The box lists their distance and ground motion, and the NISAR-versus-VLC difference read from the validator's VLC check.
+  - **Stricter "the satellites agree":** both show no clear movement, or both move clearly the same way. One still and one clearly moving now counts as disagreement.
