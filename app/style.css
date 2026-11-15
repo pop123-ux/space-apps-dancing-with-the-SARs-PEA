@@ -719,3 +719,4 @@ details.src-more .src-what { margin-top: 5px; color: var(--ink); font-size: 13px
 .marker.station small { margin-left: 6px; font-weight: 500; color: var(--muted); font-size: 11.5px; }
 .marker.station i svg { width: 12px; height: 12px; display: block; }
 .dm-card.plain h3 .pw-dates { margin-left: auto; font-weight: 500; color: #5B21B6; background: #EDE9FE; }
+#legend { display: none !important; }   /* the floating map legend is removed (Alexandru, 15 Nov); the menu has its own legend */
