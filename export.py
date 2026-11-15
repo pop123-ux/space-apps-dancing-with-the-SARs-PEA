@@ -652,7 +652,7 @@ def run(site_key: str) -> None:
 
 
 def relabel(site_key: str) -> None:
-    """Copy the zone names from common.py into an existing series.json without re-exporting any data."""
+    """Copy the zone names (series.json) and the story (manifest.json) from common.py without re-exporting any data."""
     site = C.SITES[site_key]
     f = C.PRODUCTS / site_key / "series.json"
     names = {p["id"]: p for p in zone_points(site) if p["kind"] == "zone"}
@@ -661,6 +661,9 @@ def relabel(site_key: str) -> None:
         if p.get("id") in names:
             p["label"], p["place"] = names[p["id"]]["label"], names[p["id"]]["place"]
     C.save_json(f, series)
+    mf = C.PRODUCTS / site_key / "manifest.json"   # the one-sentence story, from common.py
+    if mf.exists():
+        man = C.load_json(mf); man["story"] = site["story"]; C.save_json(mf, man)
     print(f"{f}: zone labels {', '.join(n['label'] for n in names.values())}")
 
 

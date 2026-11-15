@@ -23,7 +23,7 @@ Every file in this repository has an owner role, 01 to 06, or is shared. The own
 | `prompts/setup.md` | 01 · Lead and story (Mario) | The laptop setup prompt every member runs once |
 | `prompts/early-tests.md` | 01 · Lead and story (Mario); each test names its owner | Tests T0 to T10; owners write results in STATUS.md |
 | `prompts/build.md` | 01 · Lead and story (Mario) | The prompt each role's Claude Code session runs |
-| `ocnele-mari-geography.md` | 01 · Lead and story (Mario) | Site geography research (14 Nov 2026), for slide 2 and the story stops |
+| `docs/geography.md` | 01 · Lead and story (Mario) | Site geography research (14 Nov 2026), for slide 2 and the story stops |
 | `LICENSE` | 01 · Lead and story (Mario) | MIT; check against the 2026 guide (O-17). No owner line inside the licence text |
 
 ## 02 · NISAR data (Alexandru, Eric)

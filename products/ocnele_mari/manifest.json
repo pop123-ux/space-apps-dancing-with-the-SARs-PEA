@@ -1,7 +1,7 @@
 {
  "site": "ocnele_mari",
  "name": "Ocnele Mari, Vâlcea",
- "story": "TODO(01): one sentence, written by the Lead",
+ "story": "Two radar satellites, NISAR and Sentinel-1, watch the ground above Ocnele Mari's salt-brine fields, and this page shows plainly where it moves, how sure we are, and what the radar cannot yet see.",
  "synthetic": false,
  "note": "Sentinel-1 measurements (Jul to Oct 2026) and NISAR measurements (094D, 129A).",
  "built": "2026-11-15T08:40:15+00:00",

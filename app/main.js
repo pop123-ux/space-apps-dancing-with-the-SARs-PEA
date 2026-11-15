@@ -2296,7 +2296,7 @@ async function main() {
   mapA.addControl(new maplibregl.NavigationControl({ showCompass: true, visualizePitch: false }), 'top-right');
   {   // the pin: press it, then press a spot on the map for that spot's history, a build check and where it heads
     const b = document.createElement('button'); b.type = 'button'; b.id = 'pin-btn'; b.className = 'pin-btn';
-    b.title = 'Pin a spot: its history, whether to build there, and where it heads'; b.setAttribute('aria-label', b.title);
+    b.title = 'Pin a spot: its history, and how it moves against the ground around it'; b.setAttribute('aria-label', b.title);
     b.setAttribute('aria-pressed', 'false');
     b.innerHTML = `<svg viewBox="0 0 40 48" aria-hidden="true"><path d="M20 46 C20 46 4 28 4 18 A16 16 0 0 1 36 18 C36 28 20 46 20 46 Z" fill="#DC2626" stroke="#1C1917" stroke-width="2.4"/><circle cx="20" cy="18" r="10.5" fill="#FFF" stroke="#1C1917" stroke-width="1.6"/><path d="M13.5 19 L20 13 L26.5 19" fill="#7C2D12" stroke="#1C1917" stroke-width="1.2" stroke-linejoin="round"/><rect x="15" y="18.5" width="10" height="7" fill="#C2410C" stroke="#1C1917" stroke-width="1.1"/><rect x="18.6" y="21" width="2.8" height="4.5" fill="#7C2D12"/></svg>`;
     b.addEventListener('click', (e) => { e.stopPropagation(); setPinMode(!S.pinMode); });
@@ -2313,7 +2313,7 @@ async function main() {
     hb.parentNode.insertBefore(ab, hb.nextSibling);
     let used = false; try { used = localStorage.getItem('dos-pin-used') === '1'; } catch (e) { /* storage blocked */ }
     if (!used) {   // a hint for first-time visitors, gone once the pin has been used
-      const h = document.createElement('div'); h.id = 'pin-hint'; h.textContent = 'Can I build here? Pick up the pin';
+      const h = document.createElement('div'); h.id = 'pin-hint'; h.textContent = 'How does the ground move here? Pick up the pin';
       h.addEventListener('click', (e) => { e.stopPropagation(); setPinMode(true); });
       mapA.getContainer().append(h);
     }
