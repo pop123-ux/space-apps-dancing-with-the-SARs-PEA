@@ -1,0 +1,70 @@
+{
+ "S1 029A": {
+  "dates": 94,
+  "stable_spots_tested": 300,
+  "not_recommended_on_stable_ground": 0.143,
+  "by_uneven_settling": 9,
+  "by_own_trend": 34,
+  "no_warning": 257,
+  "green_while_trend_within_2sigma": 0.453,
+  "neighbour_spread_over_stated_sigma_median": 2.1,
+  "zone_centres_without_the_zone_rule": {
+   "z1": null,
+   "z2": null,
+   "z3": null,
+   "z4": {
+    "rule": "ok",
+    "slope": -6.7,
+    "sigma": 1.1
+   }
+  }
+ },
+ "S1 007D": {
+  "dates": 96,
+  "stable_spots_tested": 300,
+  "not_recommended_on_stable_ground": 0.07,
+  "by_uneven_settling": 16,
+  "by_own_trend": 5,
+  "no_warning": 279,
+  "green_while_trend_within_2sigma": 0.06,
+  "neighbour_spread_over_stated_sigma_median": 2.7,
+  "zone_centres_without_the_zone_rule": {
+   "z1": null,
+   "z2": null,
+   "z3": null,
+   "z4": null
+  }
+ },
+ "NISAR 129A": {
+  "dates": 15,
+  "stable_spots_tested": 300,
+  "not_recommended_on_stable_ground": 0.307,
+  "by_uneven_settling": 38,
+  "by_own_trend": 54,
+  "no_warning": 208,
+  "green_while_trend_within_2sigma": 0.343,
+  "neighbour_spread_over_stated_sigma_median": 2.0,
+  "zone_centres_without_the_zone_rule": {
+   "z1": {
+    "rule": "ok",
+    "slope": -6.5,
+    "sigma": 4.9
+   },
+   "z2": {
+    "rule": "ok",
+    "slope": 5.9,
+    "sigma": 4.4
+   },
+   "z3": {
+    "rule": "ok",
+    "slope": 11.9,
+    "sigma": 3.7
+   },
+   "z4": {
+    "rule": "ok",
+    "slope": 2.4,
+    "sigma": 4.5
+   }
+  }
+ }
+}

@@ -219,6 +219,31 @@ Check 8 scales NISAR by the ratio of the up components and assumes no east-west 
 | Before hour 12 (T10) | z3 is the fastest-sinking zone in EGMS 2020 to 2025 (−18.9 mm/yr) but Sentinel-1 shows no usable 2026 signal there (029A no series; 007D about 0 mm) | 03 with 05 | **Explain** (05 investigated, see "z3 investigation"): zone position is fine; 029A has no coherent pixels there; on 007D the expected 4 mm is within the noise. Ask 03 for the Jan to Oct extension on z3, and to look at 029A's negative bias around z3 |
 | Before hour 12 | `sentinel1/scripts/restore_grids.py` refuses to run on Windows: git turns `summary.json` into CRLF line endings, so its SHA-256 no longer matches `MANIFEST.json` (the file in git is unchanged) | 03 | Fix: hash the file with `\r\n` turned back into `\n`, or add `sentinel1/analysis/summary.json -text` to a `.gitattributes` |
 
+### Pin red team ("Can you build here?", 15 Nov 2026)
+
+`notebooks/05/pin_redteam.py` ports the pin's rules from `app/main.js` (`pinPoint`, `lineForecast`, `surroundings`, `buildCheck`) and runs them on 300 random spots per track. The spots are on ground within 5 km of the town and more than 500 m outside every zone, where EGMS puts 79 % of cells within ±1.5 mm/yr. The point files are the published `products/ocnele_mari/s1/all/` and `nisar/points_129A.json`. Numbers are in `notebooks/05/pin_redteam.json`.
+
+| Track (dates) | "Not recommended" on stable ground | From uneven settling / own trend | "No warning sign" with the trend inside 2σ of zero | Neighbour spread ÷ stated σ |
+|---|---|---|---|---|
+| S1 029A (94) | **14 %** | 9 / 34 of 300 | **45 %** | 2.1 |
+| S1 007D (96) | 7 % | 16 / 5 | 6 % | 2.7 |
+| NISAR 129A (15) | **31 %** | 38 / 54 | **34 %** | 2.0 |
+
+Findings:
+1. **The trend's σ is about 2 to 2.7 times too small.** `lineForecast` treats dates as independent, but atmosphere and seasons are correlated over weeks. Spots 300 m apart on stable ground disagree by 2 to 2.7 times the σ the pin states, so "more than twice its uncertainty" really means about 1σ. This is the same mistake `validate.py` fixed for the stations.
+2. **False alarms are high: 1 in 7 stable spots on 029A, 1 in 3 on NISAR.** A resident who pins their own house on ordinary ground will often get a red "Not recommended" from noise.
+3. **Green on noise: "✔ No warning sign" also covers "we can't tell".** On 029A, 45 % of green verdicts have a trend that isn't distinguishable from zero, and many of those rest on a noisy series. Absence of evidence gets shown as a tick. The 05 sign-off already says no green tick on any single spot.
+4. **The radar doesn't catch the zones; only the zone circle does.** With the zone rule switched off, every zone centre that has points (z4 on 029A, all four on NISAR) comes out "No warning sign". Sentinel-1 has no point within 120 m of most zone centres. So every "Not recommended" inside a zone comes from the circle, not from measured motion. That is fine, but the page shouldn't imply the satellite saw it.
+5. **NISAR 129A has 15 dates** with a 5-month gap. A straight line carried to 2029 from that is not a forecast for one spot.
+
+Recommended changes for 06 (Darius), smallest first:
+- **Three verdicts, not two:** "✘ Not recommended" (zone circle, or a trend beyond 2σ after the fix below), "? Can't tell from satellite data" (trend inside 2σ, or under 30 dates), and "No sign of movement" without a green tick, only on S1 with 2σ cleared on both tracks.
+- **Inflate σ by 2.5** (one line: `sigSlope: 2.5 * s / Math.sqrt(sxx)`), or better, use the ring's spread as the noise floor: `max(sigSlope, around.spread)`.
+- **Pin verdict only on Sentinel-1.** On NISAR show the history, but print "Too few dates for a verdict".
+- Keep the zone rule and say where it comes from: "inside a known salt-brine field", not "the satellite sees sinking".
+
+Rerun after any change: `python notebooks/05/pin_redteam.py`. Target: under 5 % "Not recommended" on stable ground, and no green verdict with a trend inside 2σ.
+
 ## Frozen-build re-run (hours 40–48)
 
 | Check | Result on the frozen build | Same as before the freeze? |
