@@ -68,6 +68,12 @@ let mapA = null, mapB = null;
 const sensors = () => S.man.sensors || {};
 const sensorKeys = () => Object.keys(SATS).filter(k => sensors()[k]);
 const win = () => S.sens?.windows?.[S.window] || null;
+// the window with the most dates for this track among those that keep at least 5 % of the town (January to November for 029A)
+function longestWindow(trk) {
+  const ws = Object.entries(S.sens?.windows || {}).filter(([, w]) => (w.town_cover?.[trk] ?? 0) >= 5);
+  ws.sort((a, b) => (b[1].frames?.[trk]?.dates?.length || 0) - (a[1].frames?.[trk]?.dates?.length || 0));
+  return ws[0]?.[0] || S.sens?.default_window || null;
+}
 function frames(sat) {   // a windowed products set (sensitivity.json) overrides the manifest's default window
   if (sat === 's1' && win()?.frames) return win().frames;
   return sensors()[sat]?.frames || {};
@@ -136,7 +142,7 @@ function writeHash() {
 }
 function applyHash(h) {
   const keys = sensorKeys();
-  if (h.window && S.sens?.windows?.[h.window]) S.window = h.window;
+  if (h.window && S.sens?.windows?.[h.window]) { S.window = h.window; S.windowPicked = true; }
   if (h.scenario && scenarios()?.[h.scenario]) S.scenario = h.scenario;
   if (h.sat && (keys.includes(h.sat) || (h.sat === 'compare' && compareReady()))) S.sat = h.sat;
   if (h.track) for (const t of h.track.split(',')) for (const s of keys) if (tracksOf(s).includes(t)) S.track[s] = t;
@@ -179,6 +185,7 @@ async function load() {
   S.updates = await opt('updates.json');
   S.fz = await opt('forecast_zones.json');   // forecast_zones.py: Chronos-2 for every zone and track   // update.py --check: acquisitions newer than the fits
   S.window = sens ? (sens.default_window || Object.keys(sens.windows || {})[0]) : null;
+  if (sens) S.window = longestWindow(tracksOf('s1')[0]);
   const d = man.default || {};
   S.sat = sensors()[d.sat] ? d.sat : sensorKeys()[0];
   for (const s of sensorKeys()) S.track[s] = tracksOf(s)[0];
@@ -571,7 +578,7 @@ function renderTracks() {
       b.title = `Track ${t}, ${String(dir || '').toLowerCase()}`;
       b.setAttribute('aria-label', b.title);
       b.setAttribute('aria-pressed', S.track[s] === t ? 'true' : 'false');
-      b.addEventListener('click', () => { S.track[s] = t; changed(); });
+      b.addEventListener('click', () => { S.track[s] = t; if (s === 's1' && !S.windowPicked) { S.window = longestWindow(t); S.date = null; } changed(); });
       g.appendChild(b);
     }
     // tracks in the catalogue but held off the map (e.g. a failed check): shown disabled, with the reason
@@ -698,7 +705,8 @@ function wireTimeline() {
 }
 function startPlay() {
   const ds = sliderDates(); if (ds.length < 2) return;
-  if (S.date === ds[ds.length - 1] || !ds.includes(S.date)) setDate(ds[0]);
+  S.playing = true;
+  if (S.date === ds[ds.length - 1] || !ds.includes(S.date)) setDate(ds[0]); else if (S.menu) renderMenu();
   $('#play-icon').setAttribute('d', PAUSE_PATH); $('#play').setAttribute('aria-label', 'Pause');
   S.playing = setInterval(() => {
     const now = sliderDates(); const i = now.indexOf(S.date);
@@ -707,8 +715,8 @@ function startPlay() {
   }, PLAY_MS);
 }
 function stopPlay() {
-  if (S.playing) clearInterval(S.playing);
-  S.playing = null;
+  const was = S.playing; if (S.playing) clearInterval(S.playing);
+  S.playing = null; if (was && S.menu) renderMenu();
   $('#play-icon').setAttribute('d', PLAY_PATH); $('#play').setAttribute('aria-label', 'Play through the acquisitions');
 }
 
@@ -757,7 +765,7 @@ function renderFlags() {
   }
   if (!n.innerHTML) return;
   n.hidden = false;
-  n.querySelector('[data-window]')?.addEventListener('click', (e) => { stopPlay(); S.window = e.currentTarget.dataset.window; S.note = null; S.date = null; changed(); });
+  n.querySelector('[data-window]')?.addEventListener('click', (e) => { stopPlay(); S.windowPicked = true; S.window = e.currentTarget.dataset.window; S.note = null; S.date = null; changed(); });
   n.querySelector('[data-date]')?.addEventListener('click', (e) => setDate(e.currentTarget.dataset.date));
   n.querySelector('[data-go]')?.addEventListener('click', () => goSentinel());
 }
@@ -940,7 +948,7 @@ function choicesPanel() {
 function wireChoices(root) {
   root.querySelector('details.choices')?.addEventListener('toggle', (e) => { S.choicesOpen = e.currentTarget.open; });
   root.querySelector('[data-forecast]')?.addEventListener('click', goForecast);
-  root.querySelectorAll('[data-window]').forEach(b => b.onclick = () => { S.window = b.dataset.window; S.date = null; changed(); });
+  root.querySelectorAll('[data-window]').forEach(b => b.onclick = () => { S.windowPicked = true; S.window = b.dataset.window; S.date = null; changed(); });
   root.querySelectorAll('input[name="scenario"]').forEach(r => r.onchange = () => { S.scenario = r.value; changed(false); });
 }
 
@@ -1461,9 +1469,15 @@ async function arrowsCard(test) {
       <text x="230" y="44" class="v">Up-down: ${sgn(up)} mm/yr</text><text x="230" y="62">± ${su.toFixed(0)} mm/yr</text>
       <text x="230" y="92" class="v">East-west: ${sgn(east)} mm/yr</text><text x="230" y="110">± ${se.toFixed(0)} mm/yr</text>
     </svg>
+    ${S.date ? `<p class="dm-big">By ${esc(human(S.date))}: <b>${sgn(up * elapsedYears())} mm</b> up-down, <b>${sgn(east * elapsedYears())} mm</b> east-west</p>` : ''}
     <p class="sub small">Dashed circle: the uncertainty.</p></div>`;
 }
 // arrows inside the selected area: each measured point's east-west motion (length) coloured by up-down (red down, blue up)
+function elapsedYears() {   // from the first acquisition of the shown track to the date on the map
+  const sat = S.sat === 'compare' ? 'nisar' : S.sat; const ds = frames(sat)?.[S.track[sat]]?.dates || [];
+  if (!ds.length || !S.date) return 1;
+  return Math.max(0, (Date.parse(S.date) - Date.parse(ds[0])) / 3.15576e10);
+}
 async function drawVectors(test) {
   if (!mapA) return;
   if (!mapA.getSource('mvec')) {
@@ -1476,8 +1490,9 @@ async function drawVectors(test) {
   if (ue) for (let i = 0; i < ue.lon.length; i++) {
     const c = [ue.lon[i], ue.lat[i]]; if (!test(c)) continue;
     const east = ue.east[i] * ue.scale, up = ue.up[i] * ue.scale;
-    const m = Math.max(-1, Math.min(1, east / 30)) * 60;           // 30 mm/yr or more → 60 m long
-    if (Math.abs(m) < 4) continue;
+    const shift = east * elapsedYears();                           // mm moved east-west by the date on the map
+    const m = Math.max(-1, Math.min(1, shift / 20)) * 80;           // 20 mm or more → 80 m long
+    if (Math.abs(m) < 3) continue;
     const dl = m / (111320 * Math.cos(c[1] * Math.PI / 180)), hd = dl * 0.35, hh = Math.abs(m) * 0.35 / 110540;
     const tip = [c[0] + dl, c[1]];
     feats.push({ type: 'Feature', properties: { up }, geometry: { type: 'MultiLineString', coordinates: [[c, tip], [tip, [tip[0] - hd, tip[1] + hh]], [tip, [tip[0] - hd, tip[1] - hh]]] } });
