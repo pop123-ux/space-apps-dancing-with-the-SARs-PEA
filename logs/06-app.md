@@ -14,7 +14,7 @@ Branch `r06/noise-floor`, with 04's `r04/noise-floor` merged in for `products/oc
 - **Zones:** each zone shows NISAR's rate against the ground 1 to 3 km around, plus or minus the zone noise (21 mm/yr on 129A, 25 on 094D), with "Inside the noise" where it is not significant (every zone today). Compare uses the 6.5 to 8 km numbers.
 - **Up and east:** the panel is gone; a pressed zone shows 04's single line, up from 129A only, assuming no horizontal motion.
 - **NISAR forecast:** removed from the zone panel and the plain-words card; Sentinel-1's stays.
-- **"What NISAR can't see yet":** 04's chart and caption at the end of the Coverage panel.
+- **"What NISAR can't see yet":** 04's chart and caption at the end of the Coverage panel. After 04's 13:15 correction the caption calls the date a rough estimate and no longer says longer pairs would bring it earlier.
 - **Header:** the passing "salt zones sink" check is no longer the main badge while no zone clears the noise.
 
 Checked in the browser at 1400 × 900 (pin, Zone 4, Coverage), no console errors; `pytest -q` 8 passed. Not pushed.

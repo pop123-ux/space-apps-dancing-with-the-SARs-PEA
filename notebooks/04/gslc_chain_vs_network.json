@@ -1,0 +1,119 @@
+{
+ "source": "NISAR_L2_GSLC_PROVISIONAL_V1, HH, 094D, 12 x 12 km box, 80 m (as notebooks/02/gslc_pairs_094d.py)",
+ "dates": [
+  "20260620",
+  "20260702",
+  "20260714",
+  "20260726",
+  "20260819",
+  "20260831",
+  "20260912",
+  "20260924",
+  "20261006",
+  "20261018"
+ ],
+ "mb_read": 286,
+ "zone_r_m": 300.0,
+ "ring_m": [
+  500.0,
+  1500.0
+ ],
+ "draws": 1000,
+ "seed": 2026,
+ "stable_pixels": 13959,
+ "runs": {
+  "chain": {
+   "pairs": 9,
+   "pair_days": [
+    12,
+    24
+   ],
+   "own_pixels": {
+    "fake_zones": 599,
+    "zone_rate_sigma_mm_yr": 12.49,
+    "spread_by_date_mm": [
+     0.0,
+     2.75,
+     3.3,
+     2.5,
+     3.66,
+     3.48,
+     4.26,
+     3.22,
+     3.69,
+     4.46
+    ],
+    "per_pair_sigma_from_spread_growth_mm": 1.55,
+    "rate_sigma_if_chain_random_walk_mm_yr": 14.43,
+    "rate_sigma_if_independent_dates_mm_yr": 5.68
+   },
+   "common_pixels": {
+    "fake_zones": 599,
+    "zone_rate_sigma_mm_yr": 12.49,
+    "spread_by_date_mm": [
+     0.0,
+     2.75,
+     3.3,
+     2.51,
+     3.62,
+     3.5,
+     4.26,
+     3.22,
+     3.73,
+     4.46
+    ],
+    "per_pair_sigma_from_spread_growth_mm": 1.56,
+    "rate_sigma_if_chain_random_walk_mm_yr": 14.53,
+    "rate_sigma_if_independent_dates_mm_yr": 5.68
+   }
+  },
+  "network": {
+   "pairs": 21,
+   "pair_days": [
+    12,
+    24,
+    36
+   ],
+   "own_pixels": {
+    "fake_zones": 1000,
+    "zone_rate_sigma_mm_yr": 16.08,
+    "spread_by_date_mm": [
+     0.0,
+     3.12,
+     3.69,
+     2.89,
+     3.94,
+     4.14,
+     4.7,
+     4.21,
+     4.56,
+     5.93
+    ],
+    "per_pair_sigma_from_spread_growth_mm": 1.92,
+    "rate_sigma_if_chain_random_walk_mm_yr": 17.82,
+    "rate_sigma_if_independent_dates_mm_yr": 6.44
+   },
+   "common_pixels": {
+    "fake_zones": 599,
+    "zone_rate_sigma_mm_yr": 11.67,
+    "spread_by_date_mm": [
+     0.0,
+     2.82,
+     3.23,
+     2.79,
+     3.52,
+     3.47,
+     3.85,
+     3.3,
+     3.74,
+     4.46
+    ],
+    "per_pair_sigma_from_spread_growth_mm": 1.57,
+    "rate_sigma_if_chain_random_walk_mm_yr": 14.59,
+    "rate_sigma_if_independent_dates_mm_yr": 5.81
+   }
+  }
+ },
+ "common_pixels": 2131,
+ "ratio_chain_over_network_common_pixels": 1.07
+}

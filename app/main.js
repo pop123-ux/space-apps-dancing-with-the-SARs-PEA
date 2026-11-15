@@ -1226,16 +1226,17 @@ function coverageSheet() {
       <p class="sub small">Pixels with a connected series over the whole window. A zone with none has no measurement on that track.</p>` : ''}
     ${nisarHorizon()}`;
 }
-// "What NISAR can't see yet" (04, noise_floor.json and noise_floor.png): today's zone noise on 129A and when a sink of
-// the tested sizes would clear twice that noise, if passes continue every 12 days with the current pair network
+// "What NISAR can't see yet" (04, noise_floor.json and noise_floor.png): today's zone noise on 129A and roughly when a
+// sink of the tested sizes would clear twice that noise if passes continue every 12 days, processed as now. 04 withdrew
+// "longer pairs would bring it earlier" at 13:15 (a redundant network was no quieter on 094D), so the page does not say it.
 function nisarHorizon() {
   const det = S.noise?.tracks?.['129A']?.detection; if (!det || !Number.isFinite(det.sigma_now_mm_yr)) return '';
   const hits = Object.entries(det.chain?.first_2sigma || {}).map(([k, v]) => [Number((/(\d+)/.exec(k) || [])[1]), v.first_date])
     .filter(([n, d]) => Number.isFinite(n) && d).sort((a, b) => b[0] - a[0]);
-  const when = hits.length ? ` With the current pair network, a ${hits[0][0]} mm/yr sink becomes visible around ${human(hits[0][1])}.` : '';
+  const when = hits.length ? ` Processed as now, a ${hits[0][0]} mm/yr sink would become visible around ${human(hits[0][1])}, a rough estimate.` : '';
   return `<h3 class="sub-h">What NISAR can't see yet</h3>
-    <img class="noise-png" src="${esc(S.dir)}noise_floor.png" alt="How NISAR's zone noise on 129A falls as passes continue every 12 days, and when sinks of 10, 19 and 25 mm/yr would clear it" loading="lazy">
-    <p>Today a zone carries about ±${det.sigma_now_mm_yr.toFixed(0)} mm/yr of noise.${when} Longer pairs would bring it earlier.</p>`;
+    <img class="noise-png" src="${esc(S.dir)}noise_floor.png" alt="A rough estimate of how NISAR's zone noise on 129A falls as passes continue every 12 days, and when sinks of 10, 19 and 25 mm/yr would clear it" loading="lazy">
+    <p>Today a zone carries about ±${det.sigma_now_mm_yr.toFixed(0)} mm/yr of noise.${when}</p>`;
 }
 // one station panel per monument: every GNSS solution there, each against every radar track that covers it
 function stationSheet(id) {

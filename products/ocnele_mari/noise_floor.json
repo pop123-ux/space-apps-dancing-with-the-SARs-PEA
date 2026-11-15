@@ -1,7 +1,7 @@
 {
  "site": "ocnele_mari",
  "made_by": "noise_floor.py (04)",
- "made": "2026-11-15T12:23:30+02:00",
+ "made": "2026-11-15T13:15:34+02:00",
  "synthetic": false,
  "status": "analysis, not reviewed by 05",
  "method": "fake zones on tie pixels (seed 2026), robust σ = 1.4826·MAD; see the docstring of noise_floor.py",
@@ -235,7 +235,7 @@
      "2031-01-01"
     ],
     "chain": {
-     "meaning": "as processed now: one 12-day pair links each date to the last, so pair errors add up (random walk); per-pair σ set to reproduce today's zone σ",
+     "meaning": "rough estimate: noise modelled as a random walk along the 12-day pairs (fits the spread growth on NASA's interferograms), per-pair σ set to reproduce today's zone σ. The cause is not the pair chain itself: see notebooks/04/gslc_chain_vs_network.json",
      "sigma_mm_yr": [
       25.24,
       24.4,
@@ -386,7 +386,7 @@
      }
     },
     "best_case": {
-     "meaning": "if redundant longer pairs stopped the errors adding up: independent noise per date equal to the measured per-pair σ (an upper bound on what more pairs could gain)",
+     "meaning": "optimistic bound, not a result: independent noise per date equal to the measured per-pair σ. Redundant longer pairs did not reach it on 094D (notebooks/04/gslc_chain_vs_network.json)",
      "sigma_mm_yr": [
       8.86,
       7.8,
@@ -761,7 +761,7 @@
      "2031-01-04"
     ],
     "chain": {
-     "meaning": "as processed now: one 12-day pair links each date to the last, so pair errors add up (random walk); per-pair σ set to reproduce today's zone σ",
+     "meaning": "rough estimate: noise modelled as a random walk along the 12-day pairs (fits the spread growth on NASA's interferograms), per-pair σ set to reproduce today's zone σ. The cause is not the pair chain itself: see notebooks/04/gslc_chain_vs_network.json",
      "sigma_mm_yr": [
       21.26,
       21.15,
@@ -912,7 +912,7 @@
      }
     },
     "best_case": {
-     "meaning": "if redundant longer pairs stopped the errors adding up: independent noise per date equal to the measured per-pair σ (an upper bound on what more pairs could gain)",
+     "meaning": "optimistic bound, not a result: independent noise per date equal to the measured per-pair σ. Redundant longer pairs did not reach it on 094D (notebooks/04/gslc_chain_vs_network.json)",
      "sigma_mm_yr": [
       8.11,
       7.28,
