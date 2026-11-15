@@ -19,15 +19,19 @@ What it does:
    the motion a pin needs before the page may say anything.
 3. Up/east check. Zone-level 2 × 2 solve with both tracks (north dropped), and 129A alone assuming no horizontal
    motion. Diagnostic only: the tracks cover different months, and 094D fails the sign check.
-4. Detection horizon. Each date is linked to the previous one by a single 12-day pair (13 pairs for 15 dates on 129A,
-   9 for 10 on 094D), so pair errors add up: the zone-to-zone spread of cumulative displacement grows like √(pairs).
-   The per-pair noise is set so that a least-squares rate (one offset per acquisition group) on that random walk
-   reproduces the measured zone σ, and is cross-checked against the spread growth itself. The rate σ is projected for
-   passes every 12 days after the last date ("chain"), next to a best case where redundant longer pairs stop the
-   errors adding up ("best_case"). It reports the first date a steady vertical sink of 10, 19 or 25 mm/yr reaches 2σ.
+4. Detection horizon, a rough estimate. On NASA's interferograms the zone-to-zone spread of cumulative displacement
+   grows with the number of pairs, roughly like √(pairs), so the noise is modelled as a random walk ("chain"): the
+   per-pair noise is set so that a least-squares rate (one offset per acquisition group) reproduces the measured zone
+   σ, and is cross-checked against the spread growth. The rate σ is projected for passes every 12 days after the last
+   date, next to an optimistic bound with independent noise per date ("best_case"). It reports the first date a
+   steady vertical sink of 10, 19 or 25 mm/yr reaches 2σ.
 
-What it cannot tell you: the projection assumes passes every 12 days with no new gap, the same coherence and pair
-network, a steady rate and no seasonal term. A seasonal signal or another gap makes the dates later.
+What it cannot tell you: the projection assumes passes every 12 days with no new gap, the same coherence and
+processing, a steady rate and no seasonal term. A seasonal signal or another gap makes the dates later. The cause of
+the noise is not the chain of pairs: on 094D raw single-look data (notebooks/04/gslc_chain_vs_network.py, 15 Nov), a
+redundant network of 12-, 24- and 36-day pairs was no quieter than a chain (11.7 against 12.5 mm/yr on the same
+pixels), while the same data processed from the single-look files was quieter than NASA's interferograms (12.5 against
+19.5 mm/yr, same box and ring). More pairs alone will not bring the dates earlier.
 """
 from __future__ import annotations
 
@@ -233,12 +237,14 @@ def track_floor(site: str, track: str, draws: int, until: str, rng) -> dict:
                        sigma_per_pair_from_rate_mm=round(step_from_rate, 2),
                        sigma_per_pair_from_spread_growth_mm=round(step_from_spread, 2),
                        los_u_site=round(u_site, 3), revisit_days=REVISIT_DAYS, dates=proj_dates,
-                       chain=dict(meaning="as processed now: one 12-day pair links each date to the last, so pair "
-                                          "errors add up (random walk); per-pair σ set to reproduce today's zone σ",
+                       chain=dict(meaning="rough estimate: noise modelled as a random walk along the 12-day pairs "
+                                          "(fits the spread growth on NASA's interferograms), per-pair σ set to "
+                                          "reproduce today's zone σ. The cause is not the pair chain itself: see "
+                                          "notebooks/04/gslc_chain_vs_network.json",
                                   sigma_mm_yr=[round(x, 2) for x in chain_sig], first_2sigma=first_dates(chain_sig)),
-                       best_case=dict(meaning="if redundant longer pairs stopped the errors adding up: independent "
-                                              "noise per date equal to the measured per-pair σ (an upper bound on "
-                                              "what more pairs could gain)",
+                       best_case=dict(meaning="optimistic bound, not a result: independent noise per date equal to "
+                                              "the measured per-pair σ. Redundant longer pairs did not reach it on "
+                                              "094D (notebooks/04/gslc_chain_vs_network.json)",
                                       sigma_mm_yr=[round(x, 2) for x in best_sig],
                                       first_2sigma=first_dates(best_sig))),
     )
@@ -291,15 +297,15 @@ def plot(res: dict, path) -> None:
         ax.text(x0 + dt.timedelta(days=200), f["sigma_needed_mm_yr"] - 0.25,
                 f"a {s} mm/yr sink clears 2σ on 129A: {when}", va="top", ha="left", fontsize=8, color="#52514e")
     ax.set_ylabel("Noise on a zone's rate, 1σ (mm/yr)")
-    ax.set_title("When can NISAR see the salt zones? Zone noise if passes continue every 12 days", fontsize=10)
+    ax.set_title("When could NISAR see the salt zones? A rough estimate if passes continue every 12 days", fontsize=10)
     ax.set_ylim(0, max(r["detection"]["sigma_now_mm_yr"] for r in res.values()) * 1.2)
     ax.grid(axis="y", color="#e1e0d9", lw=0.8)
     for sp in ("top", "right"):
         ax.spines[sp].set_visible(False)
     ax.legend(frameon=False, fontsize=8, loc="upper right")
     fig.text(0.01, 0.01, "Dot: today's measured zone noise (zone minus 1 to 3 km ring, 1,000 fake zones on stable "
-             "ground; noise_floor.py, 04).\nOne 12-day pair links each date to the last, so pair errors add up. "
-             "Assumes no new gap, the same pair network, no seasonal term, a steady rate.", fontsize=7,
+             "ground; noise_floor.py, 04).\nRough estimate: noise modelled as adding up pair by pair, as on NASA's "
+             "interferograms. Assumes no new gap, the same processing, no seasonal term, a steady rate.", fontsize=7,
              color="#898781")
     fig.tight_layout(rect=(0, 0.06, 1, 1))
     fig.savefig(path)
