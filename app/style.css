@@ -665,3 +665,21 @@ details.why p { margin: 6px 0 0; }
 @keyframes hint-spin { to { transform: rotate(360deg); } }
 .dm-card.plain h3 { justify-content: flex-start; gap: 8px; }
 .fact b { font-family: var(--sans); font-weight: 700; }
+
+/* house picker */
+.maplibregl-ctrl-group #house-btn svg { width: 22px; height: 22px; }
+.maplibregl-ctrl-group #house-btn[aria-pressed="true"] { background: #FEE2E2; box-shadow: inset 0 0 0 2px #DC2626; }
+/* confidence button in the verdict's top-right corner, opening its score */
+.v-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+details.conf-btn { position: relative; flex: none; }
+details.conf-btn > summary { list-style: none; cursor: pointer; border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 5px 12px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+details.conf-btn > summary::-webkit-details-marker { display: none; }
+details.conf-btn.conf-2 > summary { color: #15803D; border-color: #86EFAC; }
+details.conf-btn.conf-1 > summary { color: #B45309; border-color: #FCD34D; }
+details.conf-btn.conf-0 > summary { color: #B91C1C; border-color: #FCA5A5; }
+.conf-pop { position: absolute; right: 0; top: 38px; z-index: 5; width: 290px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); padding: 12px 14px; display: grid; gap: 8px; }
+.conf-score b { font-size: 30px; } .conf-score span { color: var(--muted); margin-left: 4px; }
+.conf-bar { height: 8px; border-radius: 99px; background: var(--soft); overflow: hidden; }
+.conf-bar i { display: block; height: 100%; background: linear-gradient(90deg, #B91C1C, #B45309 45%, #15803D); }
+.conf-part { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; }
+.conf-part small { display: block; color: var(--muted); font-size: 11.5px; }
