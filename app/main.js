@@ -1581,13 +1581,14 @@ function sourcesBox(d, p, fc, fo, other, agree, parts, chk) {
   const confShown = Math.round(parts.slice(0, 3).reduce((s, x) => s + x[1], 0)), confOther = Math.round(parts[3][1]);
   const st = (S.stations?.features || []).filter(f => !f.properties.combined).map(f => ({ name: f.properties.station, km: metres(f.geometry.coordinates, S.menu.at) / 1000, up: f.properties.gnss_up }));
   const row = (color, name, share, what) => `<div class="src-row"><div class="src-name"><i style="background:${color}"></i>${esc(name)}</div>
-    <div class="src-bar"><b style="width:${share}%;background:${color}"></b></div><div class="src-pct">${share}%</div><div class="src-what">${what}</div></div>`;
+    <div class="src-bar"><b style="width:${share}%;background:${color}"></b></div><div class="src-pct">${share}%</div>
+    <details class="src-more"><summary>Extend</summary><div class="src-what">${what}</div></details></div>`;
   return `<details class="srcs"><summary>What went into this answer ›</summary>
     <p class="sub small">Share of the yes-or-no answer, and what each source did here.</p>
-    ${zone ? row('#57534E', 'Salt-field outlines', 100, 'The spot is inside one: that alone decides.') : ''}
-    ${row(SATS[d.sat].color, shown, zone ? 0 : 100, `${zone ? 'Shown, not needed for the answer. ' : 'Decides the answer: '}its trend here, ${fc ? `${sgn(fc.slope)} mm/yr` : 'n/a'}, from ${p.n} radar points and ${p.pts.length} dates. Gives ${confShown} of its 75 confidence points.`)}
-    ${row(SATS[other]?.color || '#A8A29E', oth, 0, fo ? `Cross-check only: ${sgn(fo.slope)} mm/yr here, ${agree ? 'agrees' : 'disagrees'}. Gives ${confOther} of 25 confidence points.` : 'No measurement at this spot.')}
-    ${row('#0F766E', `GNSS stations (${st.map(s => s.name).join(', ')})`, 0, `Not used for this spot. They check the radar where they stand: ${st.map(s => `${s.name} ${s.km.toFixed(1)} km away, ground moving ${sgn(s.up)} mm/yr`).join('; ')}.${vlcLine()}`)}
+    ${zone ? row('#57534E', 'Salt-field outlines', 100, 'This spot is inside a known salt field. That alone gives the answer.') : ''}
+    ${row(SATS[d.sat].color, shown, zone ? 0 : 100, `${zone ? 'Not needed here: the salt field decides. ' : 'This satellite decides the answer. '}${fc ? `It saw the ground move ${sgn(fc.slope)} mm a year here` : 'It has no trend here'}, from ${p.n} radar points and ${p.pts.length} images. It earns ${confShown} of its 75 confidence points.`)}
+    ${row(SATS[other]?.color || '#A8A29E', oth, 0, fo ? `Only a double-check. It saw ${sgn(fo.slope)} mm a year here, which ${agree ? 'agrees, so confidence goes up' : 'disagrees, so confidence goes down'} (${confOther} of 25 points).` : 'It has no measurement at this spot.')}
+    ${row('#0F766E', `GNSS stations (${st.map(s => s.name).join(', ')})`, 0, `Not used for this spot. These are ground stations that check the satellites are measuring correctly. Nearest: ${st.slice().sort((a2, b2) => a2.km - b2.km).map(s => `${s.name}, ${s.km.toFixed(1)} km away`).join('; ')}.${vlcLine()}`)}
   </details>`;
 }
 function vlcLine() {   // from the validator's VLC check (checks.json): NISAR's morning pass against the station
