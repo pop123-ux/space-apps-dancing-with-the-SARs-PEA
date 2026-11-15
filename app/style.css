@@ -495,7 +495,7 @@ ul.adds li, ul.missing li { margin: 4px 0; }
 #dm-legend { position: absolute; bottom: 0; left: 0; right: 0; height: 15%; padding: 10px 18px; border-top: 1px solid var(--line); background: var(--card); }
 .dm-leg { display: flex; gap: 24px; align-items: center; height: 100%; }
 .dm-leg > div:first-child { flex: 1; }
-.dm-ramp { height: 14px; background: var(--rdbu); border: 1px solid rgba(28,25,23,.25); }
+.dm-ramp { height: 14px; background: var(--ramp, var(--rdbu)); border: 1px solid rgba(28,25,23,.25); }
 .dm-ticks { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-top: 4px; }
 .dm-scale { display: grid; gap: 4px; font-size: 12px; color: var(--muted); white-space: nowrap; }
 .dm-scale i { display: block; height: 8px; border: 2px solid var(--ink); border-top: 0; }
@@ -511,3 +511,6 @@ body.dmenu-open .layers-wrap { right: calc(50vw + var(--gap)); }
 }
 .dm-zones { padding: 2px; }
 .dm-zones button { padding: 3px 10px; font-size: 13px; }
+.dm-ramp { position: relative; cursor: crosshair; }
+.dm-tip { position: absolute; bottom: 20px; transform: translateX(-50%); background: #1C1917; color: #FAFAF9; font-size: 12px; padding: 4px 8px; white-space: nowrap; display: flex; gap: 6px; align-items: center; pointer-events: none; }
+.dm-tip b { width: 14px; height: 14px; border: 1px solid #FAFAF9; display: inline-block; }
