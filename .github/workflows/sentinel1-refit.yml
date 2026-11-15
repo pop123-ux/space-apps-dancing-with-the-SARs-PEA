@@ -1,0 +1,76 @@
+# Owner: shared · announce changes; 01 reviews
+# Refit Sentinel-1 from the HyP3 jobs in sentinel1/provenance/hyp3_jobs_jan_nov.csv on a GitHub runner, which can
+# reach ASF (team laptops and agent sandboxes often cannot). Downloads every product (public links, no login), first
+# refits the January to October subset and compares it with the committed fit, then fits January to November with the
+# weather-model run, packs the grids and commits the results back to the branch that started it. Nothing here touches
+# the page: export.py and validate.py run afterwards, by a person, before anything is merged.
+name: sentinel1-refit
+on:
+  workflow_dispatch: {}
+  push:
+    branches: ["r03/sentinel1-**"]
+    paths: ["sentinel1/provenance/hyp3_jobs_jan_nov.csv"]
+permissions:
+  contents: write
+jobs:
+  refit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install numpy scipy pyproj matplotlib rasterio
+      - name: Download and check the products
+        run: |
+          df -h /tmp
+          python sentinel1/scripts/fetch_jobs.py /tmp/raw
+          du -sh /tmp/raw
+      - name: Reproduce the committed January to October fit from the same products
+        run: |
+          mkdir -p /tmp/raw_jan_oct
+          python -c "import csv;[print(r['name']) for r in csv.DictReader(open('sentinel1/provenance/hyp3_jobs_jan_nov.csv')) if r['batch']=='jan_oct']" \
+            | while read n; do ln -s /tmp/raw/$n.zip /tmp/raw_jan_oct/$n.zip; done
+          python sentinel1/scripts/fit.py /tmp/raw_jan_oct /tmp/check_jan_oct
+          (cd sentinel1 && python scripts/restore_grids.py)
+          mkdir -p sentinel1/analysis_jan_nov
+          python sentinel1/scripts/check_reproduction.py sentinel1/analysis_jan_oct /tmp/check_jan_oct -o sentinel1/analysis_jan_nov/reproduce_jan_oct.json
+      - name: Weather-model delays for every date (optional; the fit runs without it if the weather service fails)
+        continue-on-error: true
+        run: |
+          python -c "
+          import csv, json, collections
+          d = collections.defaultdict(set)
+          for r in csv.DictReader(open('sentinel1/provenance/hyp3_jobs_jan_nov.csv')):
+              d[r['track']] |= {r['reference_date'], r['secondary_date']}
+          json.dump({t: {'dates': sorted(v)} for t, v in d.items()}, open('/tmp/dates.json', 'w'))"
+          python sentinel1/scripts/tropo.py /tmp/dates.json -o sentinel1/analysis_jan_nov/tropo.json
+      - name: Fit January to November 2026
+        run: |
+          T=sentinel1/analysis_jan_nov/tropo.json
+          if [ -s "$T" ]; then python sentinel1/scripts/fit.py /tmp/raw sentinel1/analysis_jan_nov --tropo "$T"
+          else rm -f "$T"; python sentinel1/scripts/fit.py /tmp/raw sentinel1/analysis_jan_nov; fi
+          cp /tmp/raw/SHA256SUMS sentinel1/provenance/raw_SHA256SUMS_jan_nov
+          (cd sentinel1 && python scripts/pack_grids.py analysis_jan_nov)
+      - name: Score the 5 October forecast against the new dates, and re-issue it from 10 November
+        continue-on-error: true
+        run: |
+          cd sentinel1/scripts
+          python forecast_check.py /tmp/raw ../../products/ocnele_mari/forecast.json --last-date 2026-11-10 -o ../analysis_jan_nov/forecast_check.json
+          RAIN=../../notebooks/05/z4_screen_inputs.csv; [ -f "$RAIN" ] && R="--rain-csv $RAIN" || R=""
+          python forecast.py /tmp/raw ../analysis_jan_nov/forecast_from_10nov.json --as-of 2026-11-15 --end-date 2027-01-01 --last-date 2026-11-10 $R
+      - name: Chronos-2 on the re-issued forecast (zero-shot, CPU)
+        continue-on-error: true
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install "chronos-forecasting>=2"
+          cd sentinel1/scripts
+          python forecast_chronos.py ../analysis_jan_nov/forecast_from_10nov.json --janoct ../analysis_jan_oct/summary.json --default --weather ../analysis/chronos_weather.json
+      - name: Commit the results to this branch
+        run: |
+          git config user.name "sentinel1-refit bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add sentinel1/analysis_jan_nov sentinel1/assets_jan_nov sentinel1/provenance/raw_SHA256SUMS_jan_nov
+          git commit -m "Sentinel-1 refit, 1 January to 10 November 2026 (run ${{ github.run_id }})"
+          git push

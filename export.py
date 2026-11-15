@@ -61,11 +61,17 @@ SCENARIOS = {           # summary.json fit name → label on the page
     "weather_model": "Weather-model troposphere (ECMWF IFS, acquisition time)",
 }
 WINDOW = "jul_oct"
-# Sentinel-1 windows. jul_oct is the default; jan_oct (049 dates, 1 Jan to 5 Oct 2026) covers NISAR's 18 Jan to 23 Jun
-# gap, so the page offers it there (docs/ui.md, "Sentinel-1 fills NISAR's gap", 15 Nov 2026).
+# Sentinel-1 windows. jul_oct is the default. The long window covers NISAR's 18 Jan to 23 Jun gap, so the page offers it
+# there (docs/ui.md, "Sentinel-1 fills NISAR's gap", 15 Nov 2026). Since 15 Nov it is jan_nov (1 Jan to 10 Nov 2026,
+# 55 dates per track, refit from all 214 HyP3 jobs); jan_oct stays in sentinel1/ as the earlier fit, off the page.
+LONG_WINDOW = "jan_nov"
 S1_WINDOWS = {
     "jul_oct": dict(label="July to October 2026", analysis="analysis", assets="assets", prefix="s1"),
-    "jan_oct": dict(label="January to October 2026", analysis="analysis_jan_oct", assets="assets_jan_oct", prefix="s1/jan_oct"),
+    "jan_oct": dict(label="January to October 2026", analysis="analysis_jan_oct", assets="assets_jan_oct", prefix="s1/jan_oct",
+                    provenance="sentinel1/analysis_jan_oct/README.md (job IDs only; not reproducible from the repository alone)"),
+    "jan_nov": dict(label="January to November 2026", analysis="analysis_jan_nov", assets="assets_jan_nov", prefix="s1/jan_nov",
+                    provenance="sentinel1/analysis_jan_nov/README.md (all 214 HyP3 jobs with links and checksums in "
+                               "sentinel1/provenance/hyp3_jobs_jan_nov.csv and raw_SHA256SUMS_jan_nov)"),
 }
 # What the page says when a zone has no series in a window (docs/ui.md, "Zone review and historical context"):
 # July to October: the zone has no connected pixels on that track; January to October: no zone pixel stays connected
@@ -73,6 +79,7 @@ S1_WINDOWS = {
 EMPTY_ZONE_LABEL = {
     "jul_oct": "No connected series for this zone on this track",
     "jan_oct": "Insufficient continuous coverage",
+    "jan_nov": "Insufficient continuous coverage",
 }
 
 # Interpretation labels from 03's zone review (sentinel1/docs/TEAM_HANDOFF.md, "Group-aware refit and EGMS
@@ -468,6 +475,48 @@ def egms_block(out: pathlib.Path) -> dict:
                 detail="The E54N25 extracts (05) are not verified yet. EGMS history gives context; it cannot verify a 2026 rate.")
 
 
+def long_window(out: pathlib.Path, site: dict, window: str = LONG_WINDOW) -> dict:
+    """The long Sentinel-1 window's frames, maps and points under products/, and its sensitivity.json entry."""
+    sj = load_summary(window)
+    s1j, _ = export_s1(out, sj, window)
+    _, variants_j = export_series(sj, site)
+    return dict(label=S1_WINDOWS[window]["label"], empty_zone_label=EMPTY_ZONE_LABEL[window],
+                dates={t: [f["dates"][0], f["dates"][-1]] for t, f in s1j["frames"].items()},
+                frames=s1j["frames"], layers=s1j["layers"], points=s1j["points"], variants=variants_j,
+                maps_scenario="baseline", town_cover=s1j["town_cover"],
+                quality={t: sj[t]["fits"].get("quality") for t in s1j["frames"]},
+                fills_gap=dict(sensor="nisar", gap=["2026-01-18", "2026-06-23"],
+                               note="Sentinel-1 kept imaging the town while NISAR had no acquisitions. Its "
+                                    "values are its own line of sight and reference, not NISAR's."),
+                provenance=S1_WINDOWS[window]["provenance"])
+
+
+def s1_long_only(site_key: str) -> None:
+    """Replace only the long Sentinel-1 window in an existing products set, leaving NISAR and everything else as is.
+
+    For a machine without the NISAR intermediates (data/work/, local to 02/03): a full run() there would drop NISAR from
+    the page. Rewrites products/<site>/s1/<prefix>/, the window in sensitivity.json and the window list in manifest.json,
+    and removes the folder of a long window it replaces.
+    """
+    import shutil
+    site = C.SITES[site_key]
+    out = C.PRODUCTS / site_key
+    sens = C.load_json(out / "sensitivity.json")
+    man = C.load_json(out / "manifest.json")
+    old = [k for k, w in sens["windows"].items() if w.get("fills_gap") and k != LONG_WINDOW]
+    new = long_window(out, site)
+    windows = {k: w for k, w in sens["windows"].items() if k not in old}
+    windows[LONG_WINDOW] = new
+    sens["windows"] = windows
+    man["windows"] = {k: w["label"] for k, w in windows.items()}
+    for k in old:
+        shutil.rmtree(out / S1_WINDOWS[k]["prefix"], ignore_errors=True)
+    C.save_json(out / "sensitivity.json", sens)
+    C.save_json(out / "manifest.json", man)
+    print(f"{out}: Sentinel-1 {new['label']} exported" + (f", replacing {', '.join(old)}" if old else "")
+          + "; NISAR and the other products unchanged")
+
+
 def run(site_key: str) -> None:
     if C.SITES[site_key].get("synthetic"):
         raise C.todo("06", "export the synthetic demo site once fetch/stack/calibrate --synthetic exist")
@@ -493,18 +542,7 @@ def run(site_key: str) -> None:
                             frames=s1["frames"], layers=s1["layers"], points=s1["points"], variants=variants,
                             maps_scenario="baseline", town_cover=s1["town_cover"],
                             quality={t: summary[t]["fits"]["quality"] for t in s1["frames"]})}
-    sj = load_summary("jan_oct")
-    s1j, _ = export_s1(out, sj, "jan_oct")
-    _, variants_j = export_series(sj, site)
-    windows["jan_oct"] = dict(label=S1_WINDOWS["jan_oct"]["label"], empty_zone_label=EMPTY_ZONE_LABEL["jan_oct"],
-                              dates={t: [f["dates"][0], f["dates"][-1]] for t, f in s1j["frames"].items()},
-                              frames=s1j["frames"], layers=s1j["layers"], points=s1j["points"], variants=variants_j,
-                              maps_scenario="baseline", town_cover=s1j["town_cover"],
-                              quality={t: sj[t]["fits"].get("quality") for t in s1j["frames"]},
-                              fills_gap=dict(sensor="nisar", gap=["2026-01-18", "2026-06-23"],
-                                             note="Sentinel-1 kept imaging the town while NISAR had no acquisitions. Its "
-                                                  "values are its own line of sight and reference, not NISAR's."),
-                              provenance="sentinel1/analysis_jan_oct/README.md (job IDs only; not reproducible from the repository alone)")
+    windows[LONG_WINDOW] = long_window(out, site)
     C.save_json(out / "sensitivity.json", dict(windows=windows, scenarios=SCENARIOS, default_window=WINDOW,
                                                 note="Selectors choose stored results; maps exist for the baseline only. "
                                                      "The single-date omission range is diagnostic, not a confidence interval."))
@@ -584,8 +622,10 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("site", choices=C.SITES)
     ap.add_argument("--labels-only", action="store_true", help="only copy the zone names from common.py into series.json")
+    ap.add_argument("--s1-long-window-only", action="store_true",
+                    help="only (re)export the long Sentinel-1 window; NISAR and the other products stay as they are")
     a = ap.parse_args()
-    relabel(a.site) if a.labels_only else run(a.site)
+    relabel(a.site) if a.labels_only else s1_long_only(a.site) if a.s1_long_window_only else run(a.site)
 
 
 if __name__ == "__main__":
