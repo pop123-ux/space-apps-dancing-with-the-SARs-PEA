@@ -187,3 +187,8 @@ A decision recorded here is not a question. Nobody blocks on one. If a line look
   - Its median value is the local reference, so colours are relative to the surroundings.
   - The 80th percentile of its plane slopes is the random variation the terrain shows anyway. Arrows no steeper than that are drawn faded, without the moving pulse, and the note counts how many stand out.
 - 2026-11-15 (03, via Alexandru): Ordered 160 more Sentinel-1 burst pairs on HyP3 (`sentinel1/scripts/order_all.py`) so the stack covers every acquisition ASF holds on both bursts from May 2025 to 15 Nov 2026: 95 dates on 029A and 97 on 007D, against 55 before. It uses the same job type and parameters, and the same 6- and 12-day pairs linked to the existing stack. The Sentinel-1 archive goes back to 2014; we stopped at May 2025, a full year before our window. A ten-year C-band stack loses the town to winter decorrelation and would need thousands of jobs.
+- 2026-11-15 (06, via Alexandru): The build check now also compares the spot with the ground around it, because a house is hurt by moving differently from its surroundings (uneven settling), not by the whole area moving together.
+  - The surroundings: 8 spots on a 300 m ring, each the median of its radar points within 120 m, each with its own straight-line trend.
+  - Their median is how the area moves; their robust spread (1.4826 × median absolute deviation) is the terrain's own random variation.
+  - "Not recommended" also if the spot's trend differs from the surroundings by more than twice that spread and by at least 5 mm/yr. The 5 mm/yr floor is our choice.
+  - The verdict shows the comparison in a line of its own.
