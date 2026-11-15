@@ -190,7 +190,7 @@ function writeHash() {
   if (S.window && S.windowPicked) p.set('window', S.window);
   if (S.sens) p.set('scenario', S.scenario);
   if (S.selected?.kind === 'zone') p.set('zone', S.selected.id);
-  if (getLang() === 'ro') p.set('lang', 'ro');
+
   history.replaceState(null, '', '#' + p.toString().replace(/%2C/g, ','));
 }
 function applyHash(h) {
@@ -1572,20 +1572,48 @@ function buildCheck(at, fc, around) {
     return { ok: false, kind: 'sink', why: `Its own trend (${sgn(fc.slope)} ± ${fc.sigSlope.toFixed(1)} mm/yr), carried on to ${human(fc.end)}, moves it a further ${sgn(further)} mm away from the satellite: more than the ${Math.abs(SINK_LIMIT)} mm limit.` };
   return { ok: true, kind: 'ok', why: `It is outside the salt-brine zones, and its own trend (${sgn(fc.slope)} ± ${fc.sigSlope.toFixed(1)} mm/yr), carried on to ${human(fc.end)}, ${further >= 0 ? `moves it ${sgn(further)} mm toward the satellite: no sinking ahead` : `moves it a further ${sgn(further)} mm away: less than the ${Math.abs(SINK_LIMIT)} mm limit for sinking`}.` };
 }
+// Shares are the actual weights in the code: the answer comes from the shown satellite's trend (or a salt-field
+// outline), the confidence score is 75 points from the shown satellite and 25 from the other one, and the GNSS
+// stations take no part in a spot's answer: they check the radar where they stand.
+function sourcesBox(d, p, fc, fo, other, agree, parts, chk) {
+  const shown = sensors()[d.sat].label, oth = sensors()[other]?.label || 'other satellite';
+  const zone = chk?.kind === 'zone';
+  const confShown = Math.round(parts.slice(0, 3).reduce((s, x) => s + x[1], 0)), confOther = Math.round(parts[3][1]);
+  const st = (S.stations?.features || []).filter(f => !f.properties.combined).map(f => ({ name: f.properties.station, km: metres(f.geometry.coordinates, S.menu.at) / 1000, up: f.properties.gnss_up }));
+  const row = (color, name, share, what) => `<div class="src-row"><div class="src-name"><i style="background:${color}"></i>${esc(name)}</div>
+    <div class="src-bar"><b style="width:${share}%;background:${color}"></b></div><div class="src-pct">${share}%</div><div class="src-what">${what}</div></div>`;
+  return `<details class="srcs"><summary>What went into this answer ›</summary>
+    <p class="sub small">Share of the yes-or-no answer, and what each source did here.</p>
+    ${zone ? row('#57534E', 'Salt-field outlines', 100, 'The spot is inside one: that alone decides.') : ''}
+    ${row(SATS[d.sat].color, shown, zone ? 0 : 100, `${zone ? 'Shown, not needed for the answer. ' : 'Decides the answer: '}its trend here, ${fc ? `${sgn(fc.slope)} mm/yr` : 'n/a'}, from ${p.n} radar points and ${p.pts.length} dates. Gives ${confShown} of its 75 confidence points.`)}
+    ${row(SATS[other]?.color || '#A8A29E', oth, 0, fo ? `Cross-check only: ${sgn(fo.slope)} mm/yr here, ${agree ? 'agrees' : 'disagrees'}. Gives ${confOther} of 25 confidence points.` : 'No measurement at this spot.')}
+    ${row('#0F766E', `GNSS stations (${st.map(s => s.name).join(', ')})`, 0, `Not used for this spot. They check the radar where they stand: ${st.map(s => `${s.name} ${s.km.toFixed(1)} km away, ground moving ${sgn(s.up)} mm/yr`).join('; ')}.${vlcLine()}`)}
+  </details>`;
+}
+function vlcLine() {   // from the validator's VLC check (checks.json): NISAR's morning pass against the station
+  const c = (S.checks || []).find(x => x.id === 'station-VLC-combined'); const m = c && /NISAR 129A: ([+\-−]?[\d.]+) vs GNSS ([+\-−]?[\d.]+)/.exec(c.detail);
+  if (!m) return '';
+  const a = parseFloat(m[1].replace('−', '-')), g = parseFloat(m[2].replace('−', '-'));
+  return ` At VLC, NISAR's morning pass reads ${sgn(a)} mm/yr against the station's ${sgn(g)}: ${Math.abs(a - g).toFixed(1)} mm/yr apart.`;
+}
+function markSvg(ok, draw) {   // a hand-drawn tick or cross; "draw" animates the strokes
+  const path = ok ? '<path d="M5 17 L12 24 L27 7"/>' : '<path d="M7 7 L25 25"/><path class="s2" d="M25 7 L7 25"/>';
+  return `<svg class="vmark${draw ? ' draw' : ''}" viewBox="0 0 32 32" aria-hidden="true">${path}</svg>`;
+}
 async function pinCards(d) {
   const at = S.menu.at; const p = await pinPoint(at, d.sat);
   if (!p || p.pts.length < 2) {
     const z = zones().find(q => metres(at, [q.lon, q.lat]) <= (q.r_m || 250));
     pinBadge(z ? { ok: false } : null);
-    if (z) return `<div class="block dm-card verdict hero no"><p class="verdict-word">✘ Not recommended</p><p class="verdict-say">This spot is inside a salt-brine field (${esc(zoneName(z))}), where the ground has sunk before.</p></div>`;
+    if (z) return `<div class="block dm-card verdict hero no"><p class="verdict-word">${markSvg(false, true)}Not recommended</p><p class="verdict-say">This spot is inside a salt-brine field (${esc(zoneName(z))}), where the ground has sunk before.</p></div>`;
     return `<div class="block dm-card"><p class="reason">The radar can't see the ground here (forest or steep slope). Try a spot on open ground.</p></div>`;
   }
   const fc = lineForecast(p.pts); const around = fc ? await surroundings(at, d.sat) : null; const chk = buildCheck(at, fc, around);
   // confidence: how many radar points and dates, how noisy, and whether the other radar points the same way
   const other = d.sat === 's1' ? 'nisar' : 's1'; const po = sensors()[other] ? await pinPoint(at, other) : null; const fo = po && lineForecast(po.pts);
-  // the two satellites agree if their trends point the same way, or if both are within their own noise (both say: still)
+  // the two satellites agree if both show no clear movement, or both move clearly in the same direction
   const still = (f) => Math.abs(f.slope) <= 2 * f.sigSlope;
-  const agree = fo && fc ? (still(fo) && still(fc)) || Math.sign(fo.slope) === Math.sign(fc.slope) : null;
+  const agree = fo && fc ? (still(fo) && still(fc)) || (!still(fo) && !still(fc) && Math.sign(fo.slope) === Math.sign(fc.slope)) : null;
   // the score (0 to 100), four parts of up to 25 each:
   //  radar points: how many measured points the spot's series is the median of (8 or more: full)
   //  dates: how long the series is (60 or more: full)
@@ -1616,8 +1644,9 @@ async function pinCards(d) {
     diffOk != null && [diffOk ? 'like around it' : 'unlike around it', 'vs. the ground 300 m away'],
   ].filter(Boolean);
   const conf = `Confidence ${['low', 'medium', 'high'][level]}: ${p.n} radar point${p.n > 1 ? 's' : ''} within ${PIN_RADIUS_M} m, ${p.pts.length} dates${fo ? `; ${sensors()[other].label} here: ${sgn(fo.slope)} mm/yr, ${agree ? 'same direction' : 'opposite direction'}` : ''}.`;
+  const vkey = `${at.join(',')}|${chk?.ok}`; const fresh = S.verdictLast !== vkey; S.verdictLast = vkey;
   let html = chk ? `<div class="block dm-card verdict hero ${chk.ok ? 'ok' : 'no'}">
-    <div class="v-top"><p class="verdict-word">${chk.ok ? '✔ No warning sign' : '✘ Not recommended'}</p>
+    <div class="v-top"><p class="verdict-word">${markSvg(chk.ok, fresh)}${chk.ok ? 'No warning sign' : 'Not recommended'}</p>
       <details class="conf-btn conf-${level}"><summary>Confidence: ${['low', 'medium', 'high'][level]} ›</summary>
         <div class="conf-pop"><div class="conf-score"><b>${score}</b><span>/ 100</span></div>
           <div class="conf-bar"><i style="width:${score}%"></i></div>
@@ -1625,6 +1654,7 @@ async function pinCards(d) {
           <p class="sub small">70 or more: high · 40 to 69: medium · below 40: low.</p></div></details></div>
     <p class="verdict-say">${esc(say)}</p>
     <div class="facts">${facts.map(([v, k]) => `<div class="fact"><b>${esc(v)}</b><span>${esc(k)}</span></div>`).join('')}</div>
+    ${sourcesBox(d, p, fc, fo, other, agree, parts, chk)}
     <details class="why"><summary>Why?</summary><p>${esc(chk.why)}</p><p>${esc(conf)}</p>
       ${around && fc ? `<p>Against the ground ${RING_M} m around (${around.n} spots): ${sgn(fc.slope - around.med)} mm/yr different; they vary by ± ${around.spread.toFixed(1)} mm/yr.</p>` : ''}
       <p>A satellite screen, not a ground survey: ask for a geotechnical study before building.</p></details></div>` : '';
@@ -2289,8 +2319,8 @@ async function main() {
   handle.addEventListener('keydown', (e) => { if (e.key === 'ArrowLeft') setSplit(S.split - 5); else if (e.key === 'ArrowRight') setSplit(S.split + 5); });
 
   wireTimeline(); renderChecksButton(); renderAbout();
-  initLang(readHash().lang);
-  document.querySelectorAll('[data-lang]').forEach(b => b.addEventListener('click', () => { setLang(b.dataset.lang); writeHash(); }));
+  initLang('en'); setLang('en');   // the EN/RO switch is gone: English only
+
   changed();
 }
 main();
