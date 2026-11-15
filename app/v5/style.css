@@ -1,0 +1,53 @@
+/* Owner: 06 · App developer (Darius). Layout v5 (15 Nov 2026): toolbar 6 %, map 70 %, timeline 24 % of the window
+   height; a menu on the right half once the map is used. Cream background, very dark brown for everything else,
+   Bookman Old Style, square corners everywhere. */
+
+:root {
+  --cream: #F4ECDB;
+  --ink: #2A1A0F;
+  --raspberry: rgba(227, 11, 92, 0.7);
+  --font: "Bookman Old Style", "Bookman", "URW Bookman", "URW Bookman L", Georgia, serif;
+}
+
+* { box-sizing: border-box; border-radius: 0 !important; }
+html, body { margin: 0; height: 100%; overflow: hidden; }
+body { background: var(--cream); color: var(--ink); font: 15px/1.35 var(--font); }
+button { font: inherit; color: inherit; cursor: pointer; }
+[hidden] { display: none !important; }
+
+/* 1. toolbar */
+#toolbar { position: fixed; top: 0; left: 0; right: 0; height: 6vh; display: flex; align-items: center;
+  justify-content: space-between; padding: 0 1.2vw; border-bottom: 1px solid var(--ink); background: var(--cream); z-index: 20; }
+#toolbar .name { font-size: clamp(16px, 2.6vh, 26px); }
+.settings { display: flex; gap: 8px; height: 100%; align-items: center; }
+
+/* settings: a rectangular button; hovering shows its options stacked, same look; hover or selected inverts */
+.setting { position: relative; }
+.set-btn, .opts button { display: block; min-width: 9em; padding: 0.45em 1em; background: var(--cream); color: var(--ink);
+  border: 1px solid var(--ink); text-align: left; }
+.opts { display: none; position: absolute; right: 0; z-index: 30; }
+.setting.down .opts { top: 100%; }
+.setting.up .opts { bottom: 100%; left: 0; right: auto; }
+.setting:hover .opts, .setting:focus-within .opts { display: flex; flex-direction: column; }
+.setting.up:hover .opts, .setting.up:focus-within .opts { flex-direction: column-reverse; }
+.opts button { margin-top: -1px; }
+.opts button:hover, .opts button[aria-checked="true"] { background: var(--ink); color: var(--cream); }
+
+/* 2. map */
+#map { position: fixed; top: 6vh; left: 0; right: 0; height: 70vh; background: var(--cream); }
+.maplibregl-ctrl-attrib { font-family: var(--font); }
+
+/* 3. timeline: a toolbar (a quarter) and the graded line */
+#timeline { position: fixed; left: 0; right: 0; bottom: 0; height: 24vh; border-top: 1px solid var(--ink); background: var(--cream); z-index: 20; }
+#tl-bar { height: 25%; display: flex; align-items: center; padding: 0 1.2vw; border-bottom: 1px solid var(--ink); }
+#tl-line { height: 75%; padding: 0 1.2vw; }
+#tl-svg { width: 100%; height: 100%; display: block; outline: none; cursor: pointer; }
+#tl-svg text { fill: var(--ink); font-family: var(--font); }
+#tl-svg line { stroke: var(--ink); }
+
+/* 4. menu: right half, over the map; graph 50 %, legend 10 % of its height */
+#menu { position: fixed; top: 6vh; right: 0; width: 50vw; height: 70vh; background: var(--cream); border-left: 1px solid var(--ink); z-index: 15; }
+#graph { height: 50%; padding: 1.2vh 1.2vw 0; border-bottom: 1px solid var(--ink); }
+#graph svg, #legend svg { width: 100%; height: 100%; display: block; }
+#legend { height: 10%; padding: 0.6vh 1.2vw; border-bottom: 1px solid var(--ink); }
+svg text { fill: var(--ink); font-family: var(--font); }
