@@ -175,17 +175,25 @@ def invert(pairs, dates, mm, groups):
     return cum.reshape(D, ny, nx)
 
 
-def fit_rate(dates, cum, groups):
-    """Line through the dates with one offset per group → vel, vel_sig (lower bound), annual_amp (NaN if short)."""
+def fit_rate(dates, cum, groups, annual: bool | None = None):
+    """Line through the dates with one offset per group → vel, vel_sig (lower bound), annual_amp (mm; NaN if not fitted).
+
+    The annual term (a cosine and sine of the year) is fitted when the span reaches C.ANNUAL_TERM_MIN_YEARS, or when
+    annual=True forces it on a shorter series (tested on synthetic data: notebooks/03/t5_t6_synthetic.json)."""
     import numpy as np
     t = C.years([_iso(d) for d in dates])
     D = len(dates)
     ng = len(set(groups))
+    if annual is None:
+        annual = (t[-1] - t[0]) >= C.ANNUAL_TERM_MIN_YEARS
     A = np.c_[t, np.eye(ng)[groups]]
+    if annual:
+        A = np.c_[A, np.cos(2 * np.pi * t), np.sin(2 * np.pi * t)]
     flat = cum.reshape(D, -1)
     ok = np.isfinite(flat)
     vel = np.full(flat.shape[1], np.nan, "f4")
     sig = np.full(flat.shape[1], np.nan, "f4")
+    amp = np.full(flat.shape[1], np.nan, "f4")
     keys, inv = np.unique(np.packbits(ok, axis=0), axis=1, return_inverse=True)
     inv = inv.ravel()
     for u in range(keys.shape[1]):
@@ -202,10 +210,8 @@ def fit_rate(dates, cum, groups):
         cov00 = np.linalg.inv(Au.T @ Au)[0, 0]
         vel[cols] = c[0]
         sig[cols] = np.sqrt((r ** 2).sum(0) / dof * cov00)
-    span = t[-1] - t[0]
-    amp = np.full(flat.shape[1], np.nan, "f4")              # no annual term below C.ANNUAL_TERM_MIN_YEARS
-    if span >= C.ANNUAL_TERM_MIN_YEARS:
-        raise C.todo("03", "annual term for spans of 1.5 years or more")
+        if annual:
+            amp[cols] = np.hypot(c[-2], c[-1])
     shp = cum.shape[1:]
     return vel.reshape(shp), sig.reshape(shp), amp.reshape(shp)
 
@@ -221,7 +227,8 @@ def closure(pairs, dates, data):
     return len(trip)
 
 
-def run(site: str, track: str, sign: int = PHASE_SIGN, out_name: str = "ts.npz", gunw_corr: bool = False) -> dict:
+def run(site: str, track: str, sign: int = PHASE_SIGN, out_name: str = "ts.npz", gunw_corr: bool = False,
+        annual: bool | None = None) -> dict:
     import numpy as np
     meta, pairs, data, dem = load_pairs(site, track)
     if gunw_corr:                                     # NASA's troposphere + solid-earth-tide screens (fetch.py --corrections)
@@ -232,7 +239,7 @@ def run(site: str, track: str, sign: int = PHASE_SIGN, out_name: str = "ts.npz",
     dates = sorted({d for p in pairs for d in p})
     groups = groups_of(pairs, dates)
     cum = invert(pairs, dates, mm, groups)
-    vel, sig, amp = fit_rate(dates, cum, groups)
+    vel, sig, amp = fit_rate(dates, cum, groups, annual)
     ntrip = closure(pairs, dates, data)
     breaks = [(dates[i - 1], dates[i]) for i in range(1, len(dates)) if groups[i] != groups[i - 1]]
     coh_mean = np.nanmean(np.where(np.isfinite(data["coh"]), data["coh"], np.nan), 0).astype("f4")
@@ -270,12 +277,14 @@ def main() -> None:
     ap.add_argument("--sign", type=int, choices=(-1, 1), default=PHASE_SIGN, help="phase sign (T3 tests both)")
     ap.add_argument("--gunw-corrections", action="store_true", help="subtract the product's troposphere and tide screens")
     ap.add_argument("--out", help="output name (default ts.npz)")
+    ap.add_argument("--annual", action="store_true", help="force the annual term on a series shorter than 1.5 years")
     a = ap.parse_args()
     trs = [a.track] if a.track else C.tracks(a.site)
     if not trs:
         raise C.todo("02", f"no tracks under data/work/{a.site}/: run fetch.py first")
     for tr in trs:
-        run(a.site, tr, a.sign, a.out or ("ts.npz" if a.sign == PHASE_SIGN else f"ts_sign{a.sign:+d}.npz"), a.gunw_corrections)
+        run(a.site, tr, a.sign, a.out or ("ts.npz" if a.sign == PHASE_SIGN else f"ts_sign{a.sign:+d}.npz"), a.gunw_corrections,
+            True if a.annual else None)
 
 
 if __name__ == "__main__":

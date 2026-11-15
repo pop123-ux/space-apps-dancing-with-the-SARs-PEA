@@ -493,7 +493,7 @@ function renderLayersMenu() {
   const up = hasUpLayer();
   $('#exp').disabled = !up;
   $('#exp').checked = S.exp && up;
-  $('#exp').closest('label').title = up ? '' : 'No supported up/east export yet (O-19)';
+  $('#exp').closest('label').title = up ? '' : 'No supported up/east export yet (open team decision: how to compare the two radars)';
   $('#exp-why').hidden = up;
 }
 
@@ -1029,8 +1029,8 @@ function agreementSheet() {
   const head = `<h2>Do the two radars agree?</h2><p class="lead">NISAR next to Sentinel-1 over the months both cover${w ? ` (${human(w[0], false)} to ${human(w[1])})` : ''}, each in its own line of sight. The verdict comes from the validator's checks, never from this page.</p>`;
   if (!(measured('nisar') && measured('s1'))) {
     const why = !measured('nisar') ? 'NISAR displacement fit pending' : !measured('s1') ? 'Sentinel-1 measurements pending' : (S.man.compare.reason || 'not ready');
-    return `${head}<div class="verdict na">Not testable yet · ${esc(why)}. O-19 (the shared quantity and geometry) is also open.</div>
-      <p class="reason">NISAR and Sentinel-1 look from different sides, so their line-of-sight values are different quantities until 03 and 04 settle O-19.</p>${egmsPanel()}`;
+    return `${head}<div class="verdict na">Not testable yet · ${esc(why)}. How to compare the two radars on one shared quantity is also still undecided.</div>
+      <p class="reason">NISAR and Sentinel-1 look from different sides, so their line-of-sight values are different quantities until the team decides how to put them on one shared quantity.</p>${egmsPanel()}`;
   }
   const ctl = control(); const trk = S.track;
   const minus = (z, s) => {
@@ -1049,7 +1049,7 @@ function agreementSheet() {
     return block(`a-${z.id}`, esc(zoneName(z)), badge, lines, { range, window: w, foot });
   });
   const block_ = S.man.compare?.ready === false ? `<div class="verdict warn"><span>!</span> ${esc(S.man.compare.reason)}</div>` : '';
-  return `${head}${block_}<p class="sub small">Shown as the zone minus the outer comparison area, a proposed contrast until O-19 decides. Select a zone (chips above the map) for its parallel observations.</p>
+  return `${head}${block_}<p class="sub small">Shown as the zone minus the outer comparison area, a proposed contrast until the team decides how to compare the two radars. Select a zone (chips above the map) for its parallel observations.</p>
     ${keys(['nisar', 's1'].map(s => ({ label: `${sensors()[s].label} ${trk[s]}`, color: SATS[s].color })))}${blocks.join('')}<h3 class="sub-h">Historical context</h3>${egmsPanel()}`;
 }
 // every exported date of a track across Sentinel-1's windows (Jan to Oct and Jul to Oct), for the coverage overview
@@ -1223,7 +1223,7 @@ function zoneCompare(id) {
   const c = checkForZone(z);
   const word = c ? (c.status === 'pass' ? 'Agree' : c.status === 'fail' ? 'Disagree' : c.status === 'warn' ? 'Inconclusive' : 'Not testable') : 'Not tested yet';
   const blockers = [S.man.compare?.ready === false ? S.man.compare.reason : null, sensors().nisar?.pending,
-    'The two satellites look from opposite sides, so their line-of-sight values are different quantities until O-19 sets a shared quantity and geometry.'].filter(Boolean);
+    'The two satellites look from opposite sides, so their line-of-sight values are different quantities until the team decides on a shared quantity and geometry.'].filter(Boolean);
   return `<h2>${esc(zoneName(z))}: compare</h2><div class="kicker">Zone minus the outer comparison area (6.5 to 8 km), each track in its own line of sight${w ? ` · common window ${esc(w[0])} to ${esc(w[1])}` : ''}</div>
     <div class="verdict ${c ? esc(c.status) : 'na'}"><span>${c ? STATUS_ICON[c.status] : '?'}</span> ${esc(word)} <span class="sub">(validator)</span></div>
     ${c ? `<p class="reason">${esc(c.detail)} <button type="button" class="linkbtn" data-chk="${esc(c.id)}">Evidence</button></p>` : '<p class="reason">The validator has not reported on this zone.</p>'}

@@ -30,7 +30,7 @@ and adds the site to products/index.json.
 
 Choices (logged in DECISIONS.md): colours fixed at ±20 mm for change and ±40 mm/yr for rate on every track, so both
 satellites share one legend; values beyond the scale are drawn at full colour and the legend says so. Missing pixels
-stay transparent. No experimental up/east layer is exported (03 and 04 have not signed it off, O-19).
+stay transparent. No experimental up/east layer is exported (03 and 04 have not signed it off; how to compare the two radars is still undecided).
 """
 from __future__ import annotations
 
@@ -316,7 +316,8 @@ NISAR_FLAG = {
     "094D": "Failed the phase-sign test T3: the zones read +23.5 mm/yr against far stable ground, where they should "
             "sink. Unwrapping is ruled out, and neither the ECMWF weather model nor NASA's own troposphere screens "
             "(in the product) remove it; the signal covers the whole valley. Shown for inspection, not interpretation "
-            "(notebooks/03/t3_094d_checks.json).",
+            "(notebooks/03/t3_094d_checks.json). Summer to autumn only: with June to October dates alone, a seasonal "
+            "cycle can bias its rate by about half (test T6, notebooks/03/t5_t6_synthetic.json).",
 }    # dots only within this half-size of the site centre (the Sentinel-1 window)
 
 
@@ -527,7 +528,7 @@ def run(site_key: str) -> None:
                      pairs={"129A": "007D", "094D": "029A"},   # same east sensitivity: NISAR looks left, Sentinel-1 right
                      reason=("Side by side, each satellite in its own line of sight. Tracks are paired by geometry (NISAR "
                              "129A with Sentinel-1 007D: both see east-west motion the same way). The verdict per zone "
-                             "comes from the validator; a shared quantity (O-19) is still open.")),
+                             "comes from the validator; a shared quantity (open team decision: how to compare the two radars) is still open.")),
         windows={k: v["label"] for k, v in windows.items()}, default_window=WINDOW,
         checks={k: sum(c.get("status") == k for c in checks) for k in ("pass", "warn", "fail", "info")},
         zone_notes=ZONE_NOTES, track_notes=TRACK_NOTES,
