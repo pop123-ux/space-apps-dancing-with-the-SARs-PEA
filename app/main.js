@@ -1397,19 +1397,44 @@ function openMenu(sel) {
 }
 function closeMenu() {
   S.menu = null; $('#dmenu').hidden = true; document.body.classList.remove('dmenu-open');
-  setTimeout(() => mapA?.resize(), 220); drawSelection(null); drawVectors(null); showPin(null); changed(false);
+  setTimeout(() => mapA?.resize(), 220); drawSelection(null); showPin(null); S.menuRange = null; changed(false);
 }
 const insideBox = (coords, [w, s, e, n]) => coords[0] >= w && coords[0] <= e && coords[1] >= s && coords[1] <= n;
+function pinCursor() {
+  let el = $('#pin-cursor');
+  if (!el) { el = document.createElement('div'); el.id = 'pin-cursor'; el.innerHTML = `<div class="pc-in"><svg viewBox="0 0 40 48" aria-hidden="true"><path d="M20 46 C20 46 4 28 4 18 A16 16 0 0 1 36 18 C36 28 20 46 20 46 Z" fill="#DC2626" stroke="#1C1917" stroke-width="2.4"/><circle cx="20" cy="18" r="10.5" fill="#FFF" stroke="#1C1917" stroke-width="1.6"/><path d="M13.5 19 L20 13 L26.5 19" fill="#7C2D12" stroke="#1C1917" stroke-width="1.2" stroke-linejoin="round"/><rect x="15" y="18.5" width="10" height="7" fill="#C2410C" stroke="#1C1917" stroke-width="1.1"/><rect x="18.6" y="21" width="2.8" height="4.5" fill="#7C2D12"/></svg></div>`; el.hidden = true; document.body.append(el); }
+  return el;
+}
 function setPinMode(on) {
   S.pinMode = on; const b = $('#pin-btn'); b?.setAttribute('aria-pressed', String(on));
-  if (mapA) mapA.getCanvas().style.cursor = on ? 'crosshair' : '';
+  if (mapA) mapA.getCanvas().style.cursor = on ? 'none' : '';
   document.body.classList.toggle('pin-mode', on);
+  const c = pinCursor(); c.classList.remove('drop'); if (!on) c.hidden = true;
+  if (on) { try { localStorage.setItem('dos-pin-used', '1'); } catch (e) { /* storage blocked */ } $('#pin-hint')?.remove(); }
+}
+function movePinCursor(e) {
+  const c = pinCursor(); if (!S.pinMode) return;
+  const r = mapA.getContainer().getBoundingClientRect(); const inside = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+  c.hidden = !inside; c.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
+}
+function dropPinCursor(e) {   // the held pin straightens, points down and drops onto the spot
+  const c = pinCursor(); c.style.transform = `translate(${e.originalEvent.clientX}px, ${e.originalEvent.clientY}px)`;
+  c.hidden = false; c.classList.add('drop');
+  setTimeout(() => { c.hidden = true; c.classList.remove('drop'); }, 380);
 }
 function showPin(at) {
+  if (S.pinMarker && at && S.pinMarker._at === at) return;
   if (S.pinMarker) { S.pinMarker.remove(); S.pinMarker = null; }
   if (!at || !mapA) return;
   const el = document.createElement('div'); el.className = 'pin-mark'; el.innerHTML = `<svg viewBox="0 0 40 48" aria-hidden="true"><path d="M20 46 C20 46 4 28 4 18 A16 16 0 0 1 36 18 C36 28 20 46 20 46 Z" fill="#DC2626" stroke="#1C1917" stroke-width="2.4"/><circle cx="20" cy="18" r="10.5" fill="#FFF" stroke="#1C1917" stroke-width="1.6"/><path d="M13.5 19 L20 13 L26.5 19" fill="#7C2D12" stroke="#1C1917" stroke-width="1.2" stroke-linejoin="round"/><rect x="15" y="18.5" width="10" height="7" fill="#C2410C" stroke="#1C1917" stroke-width="1.1"/><rect x="18.6" y="21" width="2.8" height="4.5" fill="#7C2D12"/></svg>`;
-  S.pinMarker = new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat(at).addTo(mapA);
+  el.classList.add('landed');
+  S.pinMarker = new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat(at).addTo(mapA); S.pinMarker._at = at;
+}
+function pinBadge(chk) {
+  const el = S.pinMarker?.getElement(); if (!el) return;
+  el.querySelector('.pin-badge')?.remove(); if (!chk) return;
+  const b = document.createElement('div'); b.className = `pin-badge ${chk.ok ? 'ok' : 'no'}`;
+  b.textContent = chk.ok ? '✔ No warning sign' : '✘ Not recommended'; el.prepend(b);
 }
 // the measured point nearest the pin (within 120 m) on the shown satellite and track
 const PIN_RADIUS_M = 120;
@@ -1455,18 +1480,21 @@ async function pinCards(d) {
   const at = S.menu.at; const p = await pinPoint(at, d.sat);
   if (!p || p.pts.length < 2) {
     const z = zones().find(q => metres(at, [q.lon, q.lat]) <= (q.r_m || 250));
+    pinBadge(z ? { ok: false } : null);
+    if (z) return `<div class="block dm-card verdict hero no"><div class="verdict-q">Can you build here?</div><p class="verdict-word">✘ Not recommended</p><p>It lies inside ${esc(zoneName(z))}, one of the salt-brine fields where the ground has sunk or collapsed before. No radar point within ${PIN_RADIUS_M} m to show more.</p></div>`;
     return `<div class="block dm-card"><p class="reason">No measured point within ${PIN_RADIUS_M} m of this spot on ${esc(sensors()[d.sat].label)} ${esc(d.trk)} (forest and steep slopes lose the radar signal). ${z ? `It lies inside ${esc(zoneName(z))}, a salt-brine field: <b>not advised</b> for building.` : 'Try another track or a spot on open ground.'}</p></div>`;
   }
   const fc = lineForecast(p.pts); const chk = buildCheck(at, fc);
   const first = p.pts[0], last = p.pts.at(-1);
   const gaps = gapsOf(d.sat, d.trk);
-  let html = `<div class="block dm-card"><h3>The history of this spot <span class="badge">${p.pts.length} dates</span></h3>
+  pinBadge(chk);
+  let html = chk ? `<div class="block dm-card verdict hero ${chk.ok ? 'ok' : 'no'}"><div class="verdict-q">Can you build here?</div>
+    <p class="verdict-word">${chk.ok ? '✔ No warning sign' : '✘ Not recommended'}</p><p>${esc(chk.why)}</p>
+    <p class="sub small">A screen from satellite data, not a ground survey: ask for a geotechnical study before building.</p></div>` : '';
+  html += `<div class="block dm-card"><h3>The history of this spot <span class="badge">${p.pts.length} dates</span></h3>
     <div class="sub small">Line-of-sight change, mm · median of ${p.n} measured point${p.n > 1 ? 's' : ''} within ${PIN_RADIUS_M} m</div>
     ${miniChart(p.pts, { from: first[0], to: last[0], gaps, on: S.date, color: SATS[d.sat].color, height: 140, upto: S.playing ? S.date : null })}
     <p class="dm-big">From ${esc(human(first[0]))} to ${esc(human(last[0]))}: <b>${sgn(last[1] - first[1])} mm</b></p></div>`;
-  if (chk) html += `<div class="block dm-card verdict ${chk.ok ? 'ok' : 'no'}"><h3>Build here?</h3>
-    <p class="verdict-word">${chk.ok ? '✔ No warning sign' : '✘ Not advised'}</p><p class="sub small">${esc(chk.why)}</p>
-    <p class="sub small">A screen from satellite data, not a ground survey: ask for a geotechnical study before building.</p></div>`;
   if (fc) {
     const endV = fc.line.at(-1)[1], bb = fc.band.at(-1);
     html += `<div class="block dm-card"><h3>Where it heads</h3><div class="sub small">This spot's own straight-line trend, carried on to ${esc(human(fc.end))}</div>
@@ -1480,6 +1508,8 @@ async function menuData() {
   const out = { sat, trk, pts: [], label: '', shape: null, test: null };
   if (S.menu.kind === 'pin') {
     out.label = `${S.menu.hall ? 'Ocnele Mari town hall' : 'The spot you pinned'} · ${sensors()[sat].label} ${trk}`;
+    const at = S.menu.at; out.test = (c) => metres(c, at) <= PIN_RADIUS_M;
+    out.shape = zoneCircle({ lon: at[0], lat: at[1], r_m: PIN_RADIUS_M });
     return out;
   }
   if (S.menu.kind === 'zone') {
@@ -1574,38 +1604,16 @@ async function arrowsCard(test) {
     ${S.date ? `<p class="dm-big">By ${esc(human(S.date))}: <b>${sgn(up * elapsedYears())} mm</b> up-down, <b>${sgn(east * elapsedYears())} mm</b> east-west</p>` : ''}
     <p class="sub small">Dashed circle: the uncertainty.</p></div>`;
 }
-// arrows inside the selected area: each measured point's east-west motion (length) coloured by up-down (red down, blue up)
 function elapsedYears() {   // from the first acquisition of the shown track to the date on the map
   const sat = S.sat === 'compare' ? 'nisar' : S.sat; const ds = frames(sat)?.[S.track[sat]]?.dates || [];
   if (!ds.length || !S.date) return 1;
   return Math.max(0, (Date.parse(S.date) - Date.parse(ds[0])) / 3.15576e10);
 }
-async function drawVectors(test) {
-  if (!mapA) return;
-  if (!mapA.getSource('mvec')) {
-    mapA.addSource('mvec', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-    mapA.addLayer({ id: 'mvec', type: 'line', source: 'mvec', layout: { 'line-cap': 'round' },
-      paint: { 'line-color': ['case', ['<', ['get', 'up'], 0], '#B2182B', '#2166AC'], 'line-width': ['interpolate', ['linear'], ['zoom'], 11, 2, 14, 3.5, 16, 5] } });
-  }
-  const ue = test && await loadUpEast();
-  const feats = [];
-  if (ue) for (let i = 0; i < ue.lon.length; i++) {
-    const c = [ue.lon[i], ue.lat[i]]; if (!test(c)) continue;
-    const east = ue.east[i] * ue.scale, up = ue.up[i] * ue.scale;
-    const shift = east * elapsedYears();                           // mm moved east-west by the date on the map
-    if (Math.abs(east) < 2) continue;                               // under 2 mm/yr east-west: no arrow
-    const m = Math.sign(shift || east) * (60 + Math.min(1, Math.abs(shift) / 25) * 160);   // 60 m at the start, 220 m by 25 mm moved
-    const dl = m / (111320 * Math.cos(c[1] * Math.PI / 180)), hd = dl * 0.35, hh = Math.abs(m) * 0.35 / 110540;
-    const tip = [c[0] + dl, c[1]];
-    feats.push({ type: 'Feature', properties: { up }, geometry: { type: 'MultiLineString', coordinates: [[c, tip], [tip, [tip[0] - hd, tip[1] + hh]], [tip, [tip[0] - hd, tip[1] - hh]]] } });
-  }
-  mapA.getSource('mvec').setData({ type: 'FeatureCollection', features: feats });
-}
 // lowest and highest value of the measured points inside the selection, for the layer on the map
 async function areaRange(d, L) {
   const file = pointFile(d.sat); const f = frames(d.sat)?.[S.track[d.sat]];
-  if (!file || !L || !d.test || S.view === 'coverage') return null;
-  const key = L.kind === 'rate' ? 'r' : L.kind === 'change' && L.date && f ? `c${f.dates.indexOf(L.date)}` : null;
+  if (!file || !L || !d.test) return null;
+  const key = S.view === 'coverage' || L.kind === 'rate' ? 'r' : L.kind === 'change' && L.date && f ? `c${f.dates.indexOf(L.date)}` : null;
   if (!key) return null;
   const gj = await loadPoints(file); const v = [];
   for (const p of gj.features) { const x = p.properties[key]; if (x != null && d.test(p.geometry.coordinates)) v.push(x); }
@@ -1629,13 +1637,104 @@ function colourAt(stops, v) {
 }
 const rangeExpr = (key, lo, hi) => ['interpolate', ['linear'], ['get', key], ...rangeStops(lo, hi).flat()];
 const rampCss = (lo, hi) => `linear-gradient(90deg, ${rangeStops(lo, hi).map(([v, c]) => `${c} ${((v - lo) / (hi - lo) * 100).toFixed(1)}%`).join(', ')})`;
+// ------------------------------------------------------------------------------------------------ arrow field
+// Off by default; the "Arrows" button (lower left of the map) turns it on. On a screen grid (one arrow every 46 px,
+// so they never overlap) a plane is fitted to the measured points around each node at the shown date. The arrow points
+// down that plane: towards where the ground moved further away from the satellite (often: sank more). Its colour is the
+// legend's colour for the value at the node; its length grows with the steepness, relative to the steepest in view.
+// A light pulse runs along each arrow, like a wind map. Nodes with fewer than 4 points nearby (forest) get no arrow.
+const field = (() => {
+  const STEP = 46; let canvas = null, arrows = [], raf = 0, busy = 0;
+  const shownKey = (sat) => {
+    const L = layerFor(sat); const f = frames(sat)?.[S.track[sat]];
+    if (!L) return null;
+    return L.kind === 'rate' ? 'r' : L.kind === 'change' && L.date && f ? `c${f.dates.indexOf(L.date)}` : null;
+  };
+  const stops = (sat) => S.menuRange ? rangeStops(...S.menuRange) : rangeStops(-Math.abs(layerFor(sat)?.meta?.vmax ?? 20), Math.abs(layerFor(sat)?.meta?.vmax ?? 20));
+  const buckets = {};
+  async function index(file) {
+    if (buckets[file]) return buckets[file];
+    const gj = await loadPoints(file); const b = new Map();
+    for (const f of gj.features) { const [x, y] = f.geometry.coordinates; const k = `${Math.floor(x / 0.002)},${Math.floor(y / 0.0015)}`; (b.get(k) || b.set(k, []).get(k)).push(f); }
+    return (buckets[file] = b);
+  }
+  function ensureCanvas() {
+    if (canvas || !mapA) return;
+    canvas = document.createElement('canvas'); canvas.className = 'field-canvas';
+    const cc = mapA.getCanvasContainer(); cc.insertBefore(canvas, mapA.getCanvas().nextSibling);
+    mapA.on('moveend', () => refresh()); mapA.on('resize', () => refresh());
+  }
+  async function refresh() {
+    if (!S.arrows || !mapA) { arrows = []; if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height); cancelAnimationFrame(raf); raf = 0; return; }
+    ensureCanvas();
+    const sat = S.sat === 'compare' ? 'nisar' : S.sat; const file = pointFile(sat); const key = shownKey(sat);
+    if (!file || !key || S.view === 'coverage') { arrows = []; return; }
+    const job = ++busy; const b = await index(file); if (job !== busy) return;
+    const st = stops(sat); const r = mapA.getContainer().getBoundingClientRect();
+    const out = [];
+    for (let y = STEP / 2; y < r.height; y += STEP) for (let x = STEP / 2; x < r.width; x += STEP) {
+      const c = mapA.unproject([x, y]); const lon = c.lng, lat = c.lat;
+      const far = mapA.unproject([x + STEP, y]); const rad = Math.max(120, 0.75 * metres([far.lng, far.lat], [lon, lat]));
+      const kx = Math.floor(lon / 0.002), ky = Math.floor(lat / 0.0015), span = Math.ceil(rad / 150) + 1, pts = [];
+      for (let i = -span; i <= span; i++) for (let j = -span; j <= span; j++) for (const f of b.get(`${kx + i},${ky + j}`) || []) {
+        const v = f.properties[key]; if (v == null) continue;
+        const dx = (f.geometry.coordinates[0] - lon) * 111320 * Math.cos(lat * Math.PI / 180), dy = (f.geometry.coordinates[1] - lat) * 110540;
+        if (dx * dx + dy * dy <= rad * rad) pts.push([dx, dy, v]);
+      }
+      if (pts.length < 4) continue;
+      // least-squares plane v = a + gx*dx + gy*dy
+      let n = pts.length, sx = 0, sy = 0, sv = 0, sxx = 0, syy = 0, sxy = 0, sxv = 0, syv = 0;
+      for (const [dx, dy, v] of pts) { sx += dx; sy += dy; sv += v; sxx += dx * dx; syy += dy * dy; sxy += dx * dy; sxv += dx * v; syv += dy * v; }
+      const mx = sx / n, my = sy / n, mv = sv / n;
+      const cxx = sxx / n - mx * mx, cyy = syy / n - my * my, cxy = sxy / n - mx * my, cxv = sxv / n - mx * mv, cyv = syv / n - my * mv;
+      const det = cxx * cyy - cxy * cxy; if (Math.abs(det) < 1e-6) continue;
+      const gx = (cxv * cyy - cyv * cxy) / det, gy = (cyv * cxx - cxv * cxy) / det;
+      const val = mv - gx * mx - gy * my; const g = Math.hypot(gx, gy); if (!(g > 0)) continue;
+      const head = [lon - gx / g * 10 / (111320 * Math.cos(lat * Math.PI / 180)), lat - gy / g * 10 / 110540];   // 10 m downhill
+      out.push({ at: [lon, lat], head, g, col: colourAt(st, Math.max(st[0][0], Math.min(st.at(-1)[0], val))), ph: Math.random() });
+    }
+    const gs = out.map(a => a.g).sort((p, q) => p - q); const gref = gs[Math.floor(gs.length * 0.9)] || 1;
+    for (const a of out) a.len = STEP * (0.35 + 0.5 * Math.min(1, a.g / gref));
+    arrows = out; if (!raf) raf = requestAnimationFrame(draw);
+  }
+  function draw(now) {
+    raf = 0; if (!S.arrows || !canvas) return;
+    const r = mapA.getContainer().getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    if (canvas.width !== Math.round(r.width * dpr)) { canvas.width = Math.round(r.width * dpr); canvas.height = Math.round(r.height * dpr); }
+    const ctx = canvas.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, r.width, r.height);
+    ctx.lineCap = 'round';
+    for (const a of arrows) {
+      const p = mapA.project(a.at), q = mapA.project(a.head); let ux = q.x - p.x, uy = q.y - p.y; const u = Math.hypot(ux, uy) || 1; ux /= u; uy /= u;
+      const sx = p.x - ux * a.len / 2, sy = p.y - uy * a.len / 2, ex = p.x + ux * a.len / 2, ey = p.y + uy * a.len / 2;
+      const hx = -uy, hy = ux, hl = Math.min(9, a.len * 0.38);
+      const path = () => { ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.moveTo(ex - ux * hl + hx * hl * 0.55, ey - uy * hl + hy * hl * 0.55); ctx.lineTo(ex, ey); ctx.lineTo(ex - ux * hl - hx * hl * 0.55, ey - uy * hl - hy * hl * 0.55); };
+      ctx.strokeStyle = 'rgba(12,10,9,.55)'; ctx.lineWidth = 4.5; path(); ctx.stroke();
+      ctx.strokeStyle = a.col; ctx.lineWidth = 2.4; path(); ctx.stroke();
+      const k = ((now / 1400) + a.ph) % 1, px = sx + (ex - sx) * k, py = sy + (ey - sy) * k;   // the travelling pulse
+      ctx.fillStyle = `rgba(255,255,255,${(0.85 * Math.sin(Math.PI * k)).toFixed(2)})`; ctx.beginPath(); ctx.arc(px, py, 2.2, 0, 7); ctx.fill();
+    }
+    raf = requestAnimationFrame(draw);
+  }
+  return { refresh: () => refresh(), redraw: () => { if (S.arrows && !raf) raf = requestAnimationFrame(draw); } };
+})();
+function addArrowToggle(m) {
+  const box = document.createElement('div'); box.className = 'maplibregl-ctrl arrow-ctrl';
+  box.innerHTML = `<button type="button" id="arrow-btn" aria-pressed="false" title="Show arrows pointing to where the ground sank more">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17 L13 7 M13 7 H7 M13 7 V13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M11 21 L21 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2 3" stroke-linecap="round"/></svg>
+      <span>Arrows</span></button><div class="arrow-note" hidden>Arrows point to where the ground moved further from the satellite (often: sank more). Colour = the legend.</div>`;
+  box.classList.remove('maplibregl-ctrl'); m.getContainer().append(box);   // lower-left corner of the map
+  box.querySelector('button').addEventListener('click', (e) => {
+    e.stopPropagation(); S.arrows = !S.arrows; e.currentTarget.setAttribute('aria-pressed', String(S.arrows));
+    box.querySelector('.arrow-note').hidden = !S.arrows; field.refresh();
+  });
+}
 async function renderMenu() {
   if (!S.menu) return;
   const want = S.menu;
   const d = await menuData();
   if (S.menu !== want) return;
-  drawSelection(d.shape); drawVectors(d.test); showPin(S.menu.kind === 'pin' && !S.menu.hall ? S.menu.at : null);
-  let html = `<div class="dm-head"><h2>${S.menu.kind === 'pin' ? 'This spot' : 'How the ground moved here'}</h2><div class="kicker">${esc(d.label)}${d.n ? ` · ${d.n} measured points` : ''}</div></div>`;
+  drawSelection(d.shape); showPin(S.menu.kind === 'pin' && !S.menu.hall ? S.menu.at : null);
+  let html = `<div class="dm-head"><h2>${S.menu.kind === 'pin' ? 'Can you build here?' : 'How the ground moved here'}</h2><div class="kicker">${esc(d.label)}${d.n ? ` · ${d.n} measured points` : ''}</div></div>`;
   if (S.menu.kind === 'pin') html += await pinCards(d);
   else if (!d.pts.length) html += `<div class="block dm-card"><p class="reason">No measurement here on this satellite.</p></div>`;
   else {
@@ -1659,6 +1758,7 @@ async function renderMenu() {
   const vm = Math.abs(L?.meta?.vmax ?? 20); let lo = -vm, hi = vm;
   $('#dm-legend').style.removeProperty('--ramp');
   if (rng) { [lo, hi] = rng; mapA.setPaintProperty('pts', 'circle-color', rangeExpr(rng.key, lo, hi)); $('#dm-legend').style.setProperty('--ramp', rampCss(lo, hi)); }
+  S.menuRange = rng ? [lo, hi] : null; field.refresh();
   const f1 = (v) => `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toFixed(1)}`;
   const lat = mapA.getCenter().lat, mpp = 40075016.686 * Math.cos(lat * Math.PI / 180) / (512 * 2 ** mapA.getZoom());
   const cmPx = 96 / 2.54, perCm = mpp * cmPx;
@@ -1752,7 +1852,7 @@ function changed(full = true) {
   renderLayersMenu();
   renderCompare(); renderOverlays();
   renderTimeline(); renderStatus(); renderLegend(); renderFlags(); renderSheet();
-  renderContext(); renderZoneChips(); renderFootprint(); renderChecksButton(); if (S.menu) renderMenu();
+  renderContext(); renderZoneChips(); renderFootprint(); renderChecksButton(); if (S.menu) renderMenu(); else field.refresh();
   writeHash();
   requestAnimationFrame(measure);
 }
@@ -1778,8 +1878,16 @@ async function main() {
     b.innerHTML = `<svg viewBox="0 0 40 48" aria-hidden="true"><path d="M20 46 C20 46 4 28 4 18 A16 16 0 0 1 36 18 C36 28 20 46 20 46 Z" fill="#DC2626" stroke="#1C1917" stroke-width="2.4"/><circle cx="20" cy="18" r="10.5" fill="#FFF" stroke="#1C1917" stroke-width="1.6"/><path d="M13.5 19 L20 13 L26.5 19" fill="#7C2D12" stroke="#1C1917" stroke-width="1.2" stroke-linejoin="round"/><rect x="15" y="18.5" width="10" height="7" fill="#C2410C" stroke="#1C1917" stroke-width="1.1"/><rect x="18.6" y="21" width="2.8" height="4.5" fill="#7C2D12"/></svg>`;
     b.addEventListener('click', (e) => { e.stopPropagation(); setPinMode(!S.pinMode); });
     const comp = document.querySelector('#map .maplibregl-ctrl-compass'); comp?.parentNode.insertBefore(b, comp);
+    let used = false; try { used = localStorage.getItem('dos-pin-used') === '1'; } catch (e) { /* storage blocked */ }
+    if (!used) {   // a hint for first-time visitors, gone once the pin has been used
+      const h = document.createElement('div'); h.id = 'pin-hint'; h.textContent = 'Can I build here? Pick up the pin';
+      h.addEventListener('click', (e) => { e.stopPropagation(); setPinMode(true); });
+      mapA.getContainer().append(h);
+    }
+    document.addEventListener('mousemove', movePinCursor);
   }
   mapA.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
+  addArrowToggle(mapA);
   addMarkers(mapA);
   // Docked layout (v4): the map shrinks to the space left of the menu column, then redraws at its new size.
   const side = () => {
@@ -1795,7 +1903,7 @@ async function main() {
   mapA.on('click', (e) => {
     closeMenus();
     const at = [e.lngLat.lng, e.lngLat.lat];
-    if (S.pinMode) { setPinMode(false); return openMenu({ kind: 'pin', at }); }
+    if (S.pinMode) { dropPinCursor(e); S.pinMode = false; setTimeout(() => { setPinMode(false); openMenu({ kind: 'pin', at }); }, 330); return; }
     openMenu({ kind: 'area', at });
   });
   mapA.on('mouseenter', 'pts', () => { mapA.getCanvas().style.cursor = 'pointer'; });
