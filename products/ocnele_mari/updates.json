@@ -1,5 +1,5 @@
 {
- "checked": "2026-11-15T08:40:42+00:00",
+ "checked": "2026-11-16T15:44:29+00:00",
  "s1": {
   "029A": {
    "last_fitted": "20261110",
@@ -7,15 +7,11 @@
    "granules": []
   },
   "007D": {
-   "last_fitted": "20261109",
-   "new": [
-    "20261115"
-   ],
-   "granules": [
-    "S1_013694_IW2_20261115T042923_VV_25CC-BURST"
-   ]
+   "last_fitted": "20261115",
+   "new": [],
+   "granules": []
   }
  },
  "nisar": [],
- "summary": "1 new acquisitions since the fits: Sentinel-1 007D: 1 (after 20261109). Not fitted yet."
+ "summary": "Up to date."
 }
